@@ -1,0 +1,34 @@
+name: Auto format Markdown
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  formatter:
+    name: formatter
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        golang-version: [1.25.3]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Set up Go ${{ matrix.golang-version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.golang-version }}
+      - name: Install markdownfmt
+        run: |
+          go install github.com/shurcooL/markdownfmt@latest
+      - name: markdownfmt
+        run: find . -name '*.md' -type f -not -path "./vendor/*" -exec markdownfmt -w {} +
+      - name: Auto Commit
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto format markdown files"
+          branch: ${{ github.head_ref }}
