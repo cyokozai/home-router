@@ -5,3 +5,7 @@
 .env
 # Claude Code worktrees
 .claude/worktrees/
+
+# Python
+__pycache__/
+.pytest_cache/
