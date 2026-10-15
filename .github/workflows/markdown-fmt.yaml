@@ -8,25 +8,24 @@ jobs:
   formatter:
     name: formatter
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        golang-version: [1.25.3]
     permissions:
       contents: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
-      - name: Set up Go ${{ matrix.golang-version }}
-        uses: actions/setup-go@v4
+      # markdownfmt has no go.mod, so `@latest` pulls the newest dependencies,
+      # which may require a newer Go than a pinned version (1.25.3 broke on golang.org/x/term).
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
-          go-version: ${{ matrix.golang-version }}
+          go-version: stable
       - name: Install markdownfmt
         run: |
           go install github.com/shurcooL/markdownfmt@latest
       - name: markdownfmt
-        run: find . -name '*.md' -type f -not -path "./vendor/*" -exec markdownfmt -w {} +
+        run: find . -name '*.md' -type f -not -path "./vendor/*" -not -path "./.claude/*" -exec markdownfmt -w {} +
       - name: Auto Commit
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
