@@ -40,10 +40,30 @@ docker network connect "${c}-lan" "${c}"
 docker network connect "${c}-wan" "${c}"
 docker start "${c}" >/dev/null
 "${here}/vyos-wait-ready.sh" "${c}"
+# Docker は IPv6 の無いネットワークにつないだ veth で IPv6 を無効にする（disable_ipv6=1）。
+# このままだと VyOS がリンクローカルや 2001:db8:: を付けられず commit が落ちるので、有効に戻す
+# shellcheck disable=SC2016
+docker exec "${c}" sh -c 'for f in /proc/sys/net/ipv6/conf/*/disable_ipv6; do echo 0 > "$f"; done'
 docker exec "${c}" ip -br link
 
 echo "== 起動直後の設定を保存する"
 "${here}/vyos-apply.sh" --save "${initial}" "${c}" - < /dev/null
+
+# 検査器の自己検査: 失敗を失敗として返せるか（set / commit は失敗しても 0 で返ることがあるため）
+expect_rc() {
+  local want="$1" text="$2" got=0
+  printf '%s\n' "${text}" | "${here}/vyos-apply.sh" --load "${initial}" "${c}" - || got=$?
+  if [[ "${got}" -ne "${want}" ]]; then
+    echo "NG 自己検査: 「${text}」の終了コードが ${got}（期待 ${want}）" >&2
+    exit 1
+  fi
+  echo "OK 自己検査: 「${text}」は ${want} で返る"
+}
+echo "== vyos-apply.sh の自己検査"
+expect_rc 2 "set system option no-such-node 'x'"
+expect_rc 3 "set firewall ipv4 forward filter rule 999 action 'offload'"
+expect_rc 0 "set system host-name 'vyos-self-test'"
+"${here}/vyos-apply.sh" --load "${initial}" "${c}" - < /dev/null
 
 failed=()
 echo "== フェーズ1: ${phase1}"
