@@ -1,3 +1,4 @@
+# PR と king's への push で、CLAUDE.md の数値・アドレス・設定の整合性検査（tests/）を実行する。
 name: Test
 
 on:

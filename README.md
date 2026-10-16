@@ -28,7 +28,4 @@ docker run --rm -v "$PWD":/w -w /w python:3.13-slim \
 CI
 --
 
-| ワークフロー                          | 内容                                                |
-|---------------------------------------|-----------------------------------------------------|
-| `.github/workflows/test.yaml`         | PRと `king's` へのpushで `pytest` を実行する        |
-| `.github/workflows/markdown-fmt.yaml` | PRで `markdownfmt` を実行し、差分があれば自動commit |
+ワークフローは `.github/workflows/` にある。各ファイルの冒頭のコメントに、何を検査するかを書いている。
