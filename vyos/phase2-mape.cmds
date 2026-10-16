@@ -6,6 +6,9 @@ set interfaces tunnel tun0 source-address '2001:db8:20::c'
 set interfaces tunnel tun0 remote '2001:db8:20::b'
 set interfaces tunnel tun0 address '192.0.2.18/32'
 set interfaces tunnel tun0 mtu '1460'
+# 既定の encaplimit 4 では Destination Options ヘッダが付き、外側の Next Header が 60・実効 MTU が 1452 になる。
+# 実際の BR は素の IPIP（Next Header 4）なので外す（scripts/lab-e2e.sh の P2-2 / P2-5 / P2-6 で確認）
+set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'
 set interfaces tunnel tun0 ip adjust-mss '1420'
 set protocols static route 0.0.0.0/0 interface 'tun0'
 set nat source rule 101 outbound-interface name 'tun0'
