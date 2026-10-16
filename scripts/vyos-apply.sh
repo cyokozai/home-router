@@ -67,11 +67,19 @@ script="$(
   if [[ -n "${load_file}" ]]; then
     echo "load $(quote "${load_file}") || rc=4"
   fi
+  # set / delete / commit は失敗しても 0 で返る（2026-10 の rolling で確認）。
+  # 終了コードには頼らず、結果を設定セッションに問い合わせて判定する
   for i in "${!lines[@]}"; do
-    echo "if [ \$rc -eq 0 ]; then ${lines[$i]} || { rc=2; echo \"VYOS_APPLY_REJECTED $((i + 1))\"; }; fi"
+    line="${lines[$i]}" path="${lines[$i]#* }"
+    if [[ "${line}" == set\ * ]]; then check="\$API exists ${path}"; else check="! \$API exists ${path}"; fi
+    echo "if [ \$rc -eq 0 ]; then ${line}; if ! { ${check}; }; then rc=2; echo \"VYOS_APPLY_REJECTED $((i + 1))\"; fi; fi"
   done
   echo 'if [ $rc -eq 0 ]; then'
-  echo '  if $API sessionChanged; then commit || rc=3; else echo "VYOS_APPLY_NO_CHANGES"; fi'
+  echo '  if $API sessionChanged; then'
+  echo '    commit'
+  # commit が通ればセッションは稼働中の設定と一致する。一致しないままなら失敗
+  echo '    if $API sessionChanged; then rc=3; fi'
+  echo '  else echo "VYOS_APPLY_NO_CHANGES"; fi'
   echo 'fi'
   if [[ -n "${save_file}" ]]; then
     echo "if [ \$rc -eq 0 ]; then save $(quote "${save_file}") || rc=4; fi"
@@ -95,6 +103,11 @@ printf '%s\n' "${output}" | grep -v '^VYOS_APPLY_' || true
 while read -r _ n; do
   echo "vyos-apply: 拒否された行: ${lines[$((n - 1))]}" >&2
 done < <(printf '%s\n' "${output}" | grep '^VYOS_APPLY_REJECTED ' || true)
+
+# 念のため出力も見る（commit の一部だけが失敗してもセッションが一致してしまう場合に備える）
+if [[ "${rc}" -eq 0 ]] && grep -qE '^(Commit failed|Set failed|Delete failed)' <<< "${output}"; then
+  rc=3
+fi
 
 case "${rc}" in
   0) if grep -q '^VYOS_APPLY_NO_CHANGES' <<< "${output}"; then
