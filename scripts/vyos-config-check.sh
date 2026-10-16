@@ -61,6 +61,9 @@ expect_rc() {
 }
 echo "== vyos-apply.sh の自己検査"
 expect_rc 2 "set system option no-such-node 'x'"
+# 値の制約で落ちる set も拒否として返すこと。CLAUDE.md §6-4 の set-dscp 'CS0' はこれに当たる
+# （vyos/qos-ngn-out.cmds では 'default' に直してある。tests/test_vyos_cmds.py の DOC_CORRECTIONS）
+expect_rc 2 "set qos policy shaper SELF-TEST class 10 set-dscp 'CS0'"
 expect_rc 3 "set firewall ipv4 forward filter rule 999 action 'offload'"
 expect_rc 0 "set system host-name 'vyos-self-test'"
 "${here}/vyos-apply.sh" --load "${initial}" "${c}" - < /dev/null
