@@ -1,0 +1,12 @@
+# VyOS コンテナイメージ（home-router/vyos:rolling）の版。ここが唯一の固定箇所。
+# scripts/build-vyos-image.sh が source し、.github/actions/vyos-image がキャッシュのキーに使う。
+#
+# VYOS_VERSION: https://github.com/vyos/vyos-nightly-build のリリース名。
+#   QoS の set-dscp（2026-06-30 の rolling で実装）が入った 2026-07 以降のビルドを使う（CLAUDE.md §5-2）。
+#   nightly のリリースは直近 30 本程度しか残らないので、取得できなくなったら新しいものへ上げ、
+#   VYOS_ISO_SHA256 も更新する。
+# VYOS_BUILD_REF / ISO_TO_OCI_SHA256: ISO を OCI の rootfs にする vyos/vyos-build の scripts/iso-to-oci の版。
+VYOS_VERSION=2026.10.16-0024-rolling
+VYOS_ISO_SHA256=dcd4b4328495e70de067ec806ee4aabdd6b3f6f4cae90aebe571ee7cacd1556c
+VYOS_BUILD_REF=00180790db298ffb86aabc316cef5837bc7db8cb
+ISO_TO_OCI_SHA256=53b0b22f032c46d4a59970c7749684f712bd99441edb422a322ef7836ccb1ea9

@@ -1,0 +1,16 @@
+# CLAUDE.md §6-1 フェーズ1: 素のルーティング（FWもNATもなし）
+# §8 の baseline.cmds の元になる設定。各チューニング・フェーズ2・QoS はこの状態に差分として入れる。
+set system host-name 'pc02-vyos'
+set interfaces ethernet eth0 address '172.16.0.12/24'
+set interfaces ethernet eth0 description 'MGMT-1G'
+set service ssh listen-address '172.16.0.12'
+set interfaces ethernet eth1 description 'LAN-10G-to-PC01'
+set interfaces ethernet eth1 address '192.168.10.1/24'
+set interfaces ethernet eth1 address '2001:db8:10::1/64'
+set interfaces ethernet eth2 description 'WAN-10G-to-PC03'
+set interfaces ethernet eth2 address '192.168.20.1/30'
+set interfaces ethernet eth2 address '2001:db8:20::1/64'
+set protocols static route 0.0.0.0/0 next-hop '192.168.20.2'
+set protocols static route6 ::/0 next-hop '2001:db8:20::2'
+set service ntp server '172.16.0.13'
+set service monitoring prometheus node-exporter listen-address '172.16.0.12'
