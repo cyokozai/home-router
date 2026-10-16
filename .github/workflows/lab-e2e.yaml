@@ -1,0 +1,99 @@
+# containerlab で検証環境（lab/home-router.clab.yml）を起動し、PC02（VyOS）を通した通信を端から端まで確かめる。
+#
+# 何を検査するか:
+#   - pc01 / pc03（netshoot）と pc02（vyos/VERSION で固定した rolling のコンテナ）を、
+#     CLAUDE.md §3 のとおり pc01:sfp0–pc02:eth1、pc02:eth2–pc03:sfp0 で結び、管理系は 172.16.0.0/24 で起動する
+#   - フェーズ1（vyos/phase1.cmds）: pc01 → pc03 の IPv4 / IPv6 ping、traceroute が pc02（192.168.10.1）を経由すること、
+#     ping -M do -s 1472 が通ること（-s 1473 は通らない）、pc02 の SSH と node-exporter が管理系（172.16.0.12）
+#     でだけ待ち受け、10G 側（192.168.10.1）では届かないこと。
+#     containerlab の既定の config.boot に入る ssh / https の 0.0.0.0 待ち受けは lab/pc02-clab-defaults.cmds で外す
+#     （外す前は NG になることを対照として見る）
+#   - QoS（vyos/qos-ngn-out.cmds、§6-4）: pc01 から IPv6・UDP・送信元ポート 51820・Traffic Class 0x88 で送ると
+#     pc03 で 0x00 になって届くこと。対照として、QoS を入れる前は 0x88 のまま届くこと、51821 は書き換えないこと
+#   - フェーズ2（vyos/phase2-mape.cmds と lab/pc03-br.sh、§8 T7）: 基準に戻して入れ、pc01 → 198.51.100.1 が通ること、
+#     pc03 の sfp0 で外側 IPv6 の Next Header が 4、内側の送信元が 192.0.2.18 でポートが 8160-8175、
+#     SYN の MSS が 1420 以下（pc02 の手前では超えることを対照に見る）、ping -M do -s 1432 は通り -s 1472 は
+#     Frag needed（mtu = 1460）が返ること
+#   - 判定は scripts/lab-judge.py（tests/test_lab_e2e_judge.py で検査）。項目ごとの OK / NG はジョブの要約に出る
+#   - あわせて scripts/lab-*.sh と lab/*.sh を shellcheck にかける
+# 何を検査しないか: 性能（veth の上の数字は実機の 10G と無関係。T0〜T8 は実機で測る）、
+#   チューニング①〜④（commit できるかは VyOS config で見る）、MAP-E の 15 ポートセットの全数利用（§6-3 の既知の課題）、
+#   NGN の実回線での DSCP の扱い、§6-5（本番向け）。
+name: Lab E2E
+
+on:
+  pull_request:
+  push:
+    branches: ["king's"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # containerlab は版と sha256 を固定して入れる（リリースの checksums.txt の値）
+  CLAB_VERSION: "0.81.1"
+  CLAB_SHA256: 3a257dc329774dff598c7f1277bb7c2723f76ff620cdab33f83a9f381f4e64ae
+
+jobs:
+  e2e:
+    name: containerlab E2E (phase1 / QoS / phase2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: shellcheck
+        run: shellcheck scripts/lab-*.sh lab/*.sh
+
+      - name: Prepare VyOS image
+        id: vyos
+        uses: ./.github/actions/vyos-image
+
+      - name: Install containerlab
+        run: |
+          set -euo pipefail
+          tarball="containerlab_${CLAB_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "${RUNNER_TEMP}/${tarball}" \
+            "https://github.com/srl-labs/containerlab/releases/download/v${CLAB_VERSION}/${tarball}"
+          echo "${CLAB_SHA256}  ${RUNNER_TEMP}/${tarball}" | sha256sum -c -
+          mkdir -p "${RUNNER_TEMP}/clab"
+          tar -xzf "${RUNNER_TEMP}/${tarball}" -C "${RUNNER_TEMP}/clab"
+          sudo install -m 0755 "${RUNNER_TEMP}/clab/containerlab" /usr/local/bin/containerlab
+          containerlab version
+
+      - name: Load kernel modules
+        # ipip6 の BR 役（pc03 の br0）は netshoot の中で作るので、ホストで ip6_tunnel を読み込んでおく
+        run: sudo modprobe -a ip6_tunnel tunnel6
+
+      - name: Deploy topology
+        env:
+          VYOS_IMAGE: ${{ steps.vyos.outputs.image }}
+        run: |
+          set -euo pipefail
+          grep -q "image: ${VYOS_IMAGE}$" lab/home-router.clab.yml
+          sudo containerlab deploy -t lab/home-router.clab.yml
+          sudo containerlab inspect -t lab/home-router.clab.yml
+
+      - name: Run E2E checks
+        run: bash scripts/lab-e2e.sh
+
+      - name: Dump state on failure
+        if: failure()
+        run: |
+          for c in clab-home-router-pc01 clab-home-router-pc02 clab-home-router-pc03; do
+            echo "::group::${c}"
+            docker exec "${c}" ip -d addr || true
+            docker exec "${c}" ip route || true
+            docker exec "${c}" ip -6 route || true
+            echo "::endgroup::"
+          done
+          echo "::group::pc02 configuration"
+          docker exec clab-home-router-pc02 /bin/cli-shell-api showCfg --show-active-only || true
+          docker logs --tail 100 clab-home-router-pc02 || true
+          echo "::endgroup::"
+
+      - name: Destroy topology
+        if: always()
+        run: sudo containerlab destroy -t lab/home-router.clab.yml --cleanup || true
