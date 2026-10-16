@@ -7,7 +7,8 @@
 # vyos/phase2-mape.cmds の tun0 に encaplimit の指定が無く、VyOS の既定（encaplimit 4）で
 # Tunnel Encapsulation Limit（Destination Options ヘッダ、8 バイト）が付く。外側の Next Header が 60 になり、
 # トンネルの実効 MTU も 1460 から 1452 に下がる。
-# 「set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'」を足すと 3 項目とも通る（2026-10-17 に CI で確認）
+# 「set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'」を足すと 3 項目とも通る
+# （2026-10-17 に CI で確認: Lab E2E の run 38957801912。scripts/lab-e2e.sh の LAB_PHASE2_EXTRA で足した）
 P2-2 | tun0 の encaplimit が既定の 4 のため外側の Next Header が 60（vyos/phase2-mape.cmds に encaplimit none が無い）
-P2-5 | tun0 の encaplimit が既定の 4 のため実効 MTU が 1452 で、1460 バイトの ping が通らない
-P2-6 | tun0 の encaplimit が既定の 4 のため Frag needed の mtu が 1452 になる
+P2-5 | tun0 の encaplimit が既定の 4 のため実効 MTU が 1452 で、1460 バイトの ping が通らない（pc02 が Frag needed mtu = 1452 を返す）
+P2-6 | tun0 の encaplimit が既定の 4 のため実効 MTU が 1452。P2-5 で pc01 が PMTU 1452 を覚え、1500 バイトの ping は手元で止まる

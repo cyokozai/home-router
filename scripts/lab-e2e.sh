@@ -295,10 +295,12 @@ cap_start "${pc01}" sfp0 p2-lan tcp
 cap_start "${pc03}" sfp0 p2-wan ip6
 warm_up "${pc01}" "${inet}"
 ping_out="$(run_log "${pc01}" ping -c 3 -W 2 "${inet}")"
-# 性能は測らない。NAT のポートと MSS を見るための TCP を数本だけ流す（帯域を絞ってパケットの記録を小さく保つ）
-iperf_out="$(run_log "${pc01}" iperf3 -c "${inet}" -t 1 -b 1M -P 4)"
+# PMTU は TCP より先に見る。トンネルの実効 MTU が小さいと TCP の途中で pc01 が PMTU を覚えてしまい、
+# 後の ping が pc02 に届かず手元で止まる（Frag needed を観測できない）
 pmtu_ok="$(run_log "${pc01}" ping -M "do" -s 1432 -c 2 -W 2 "${inet}")"
 pmtu_ng="$(run_log "${pc01}" ping -M "do" -s 1472 -c 2 -W 2 "${inet}")"
+# 性能は測らない。NAT のポートと MSS を見るための TCP を数本だけ流す（帯域を絞ってパケットの記録を小さく保つ）
+iperf_out="$(run_log "${pc01}" iperf3 -c "${inet}" -t 1 -b 1M -P 4)"
 lan="$(cap_stop "${pc01}" p2-lan)"
 wan="$(cap_stop "${pc03}" p2-wan)"
 echo "${iperf_out}" | tail -n 4
