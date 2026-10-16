@@ -18,7 +18,7 @@
 #     BR 役は実際の BR に揃えて encaplimit none で作る（lab/pc03-br.sh）
 #   - 判定は scripts/lab-judge.py（tests/test_lab_e2e_judge.py で検査）。項目ごとの OK / NG はジョブの要約に出る。
 #     設定の誤りが分かっていて直すまで NG になる項目は lab/e2e-known-ng.txt に理由つきで載せ、KNOWN として扱う
-#     （載せた項目が通ったら落とす）。現在は vyos/phase2-mape.cmds の tun0 の encaplimit が原因の 3 項目
+#     （載せた項目が通ったら落とす）。現在は載せている項目は無い
 #   - あわせて scripts/lab-*.sh と lab/*.sh を shellcheck にかける
 # 何を検査しないか: 性能（veth の上の数字は実機の 10G と無関係。T0〜T8 は実機で測る）、
 #   チューニング①〜④（commit できるかは VyOS config で見る）、MAP-E の 15 ポートセットの全数利用（§6-3 の既知の課題）、
