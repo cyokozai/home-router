@@ -1,0 +1,13 @@
+# scripts/lab-e2e.sh で、設定の誤りが分かっていて直すまで NG になる項目の一覧。
+# 書式: <ID> | <理由>
+#
+# ここに載せた項目の NG は KNOWN として数えない（CI は落ちない。ジョブの要約に KNOWN で出る）。
+# 載せた項目が通ったら NG にする。原因を直したら、ここから外す。
+
+# vyos/phase2-mape.cmds の tun0 に encaplimit の指定が無く、VyOS の既定（encaplimit 4）で
+# Tunnel Encapsulation Limit（Destination Options ヘッダ、8 バイト）が付く。外側の Next Header が 60 になり、
+# トンネルの実効 MTU も 1460 から 1452 に下がる。
+# 「set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'」を足すと 3 項目とも通る（2026-10-17 に CI で確認）
+P2-2 | tun0 の encaplimit が既定の 4 のため外側の Next Header が 60（vyos/phase2-mape.cmds に encaplimit none が無い）
+P2-5 | tun0 の encaplimit が既定の 4 のため実効 MTU が 1452 で、1460 バイトの ping が通らない
+P2-6 | tun0 の encaplimit が既定の 4 のため Frag needed の mtu が 1452 になる
