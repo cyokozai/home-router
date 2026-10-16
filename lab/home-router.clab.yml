@@ -1,0 +1,52 @@
+# 10G VyOS ルータ検証の物理構成を containerlab で再現する（CLAUDE.md §3）。
+#
+#   PC01 sfp0 ──(LAN)── eth1 PC02 VyOS eth2 ──(WAN)── sfp0 PC03
+#   管理系は containerlab の mgmt ネットワーク（172.16.0.0/24）。VyOS の eth0 が管理系になる点は実機と同じ。
+#
+# アドレスと経路はここに書かない。
+#   - VyOS: vyos/ の set コマンドを scripts/vyos-apply.sh でデプロイ後に投入する
+#   - 端末: lab/pc01.sh・lab/pc03.sh を exec で流す。フェーズ2 の BR 役は lab/pc03-br.sh を後から流す
+# endpoint に ipv4/ipv6 を書くと containerlab が VyOS に address を自動投入し、
+# 設定の正典（vyos/ と CLAUDE.md §6）が二重になるので使わない。
+name: home-router
+
+mgmt:
+  network: home-router-mgmt
+  ipv4-subnet: 172.16.0.0/24
+
+# VyOS のイメージは amd64 のみ。arm64 の Mac では pc02 が起動しないので、デプロイは amd64 の Linux で行う
+topology:
+  nodes:
+    pc01:
+      kind: linux
+      # iperf3 / tcpdump / ping / nc / iproute2 入り。amd64 と arm64 の両方がある版に固定する
+      image: nicolaka/netshoot:v0.14
+      mgmt-ipv4: 172.16.0.11
+      binds:
+        - pc01.sh:/lab/pc01.sh:ro
+      exec:
+        - sh /lab/pc01.sh
+
+    pc02:
+      kind: vyosnetworks_vyos
+      # VyOS イメージ作成タスクが ISO から作るタグ（契約。変えるなら両方を直す）
+      image: home-router/vyos:rolling
+      mgmt-ipv4: 172.16.0.12
+      # startup-config は渡さない。containerlab が既定の config.boot（管理系 eth0 と SSH）を作り、
+      # フェーズ1 以降の設定は vyos/*.cmds を投入して入れる
+
+    pc03:
+      kind: linux
+      image: nicolaka/netshoot:v0.14
+      mgmt-ipv4: 172.16.0.13
+      binds:
+        - pc03.sh:/lab/pc03.sh:ro
+        - pc03-br.sh:/lab/pc03-br.sh:ro
+      exec:
+        - sh /lab/pc03.sh
+
+  links:
+    # LAN: PC01 ⇄ PC02（§3 の表、PC02 側 eth1）
+    - endpoints: ["pc01:sfp0", "pc02:eth1"]
+    # WAN（NGN 役）: PC02 ⇄ PC03（§3 の表、PC02 側 eth2）
+    - endpoints: ["pc02:eth2", "pc03:sfp0"]
