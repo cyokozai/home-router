@@ -1,0 +1,233 @@
+# VyOS rolling の版（vyos/VERSION）を、月 1 回 vyos-nightly-build の最新へ上げる PR を作る。
+#
+# 何をするか:
+#   - https://github.com/vyos/vyos-nightly-build のリリース一覧から、generic amd64 の ISO がある
+#     2026-07 以降（QoS の set-dscp 入り。CLAUDE.md §5-2）の最新の rolling を選ぶ
+#     （判定と vyos/VERSION の書き換えは scripts/vyos-bump.py。tests/test_vyos_bump.py で検査する）
+#   - 今の VYOS_VERSION より新しければ、VYOS_VERSION と VYOS_ISO_SHA256 の 2 行だけを書き換える。
+#     sha256 はチェックサムの asset → GitHub の asset の digest → ISO を取得して計算、の順で求める
+#   - 新しい版で VyOS の commit 検査を走らせる（vyos-config.yaml を workflow_call で再利用する）。
+#     GITHUB_TOKEN で作った PR や push では pull_request / push のワークフローが起動しないため、
+#     PR を作る前にこの run の中で検査し、結果を PR 本文に書く
+#   - bot/vyos-bump ブランチへ push し、king's 宛ての PR を作る。開いている PR があれば、新しい PR は
+#     作らずにそのブランチと本文を更新する
+#   - 検査が落ちたら、PR は作るが本文とラベル（vyos-bump:check-failed）で明示し、この run も失敗にする
+#   - pull_request で bump 関連のファイルが変わったとき、または workflow_dispatch の dry-run では、
+#     判定と検査だけを行う（push も PR 作成もしない）
+# 何をしないか: VYOS_BUILD_REF / ISO_TO_OCI_SHA256 の更新、PR のマージ、古い版への戻し、
+#   ISO の minisign 署名の検証。
+name: VyOS bump
+
+on:
+  schedule:
+    # 毎月 1 日 03:17 UTC（12:17 JST）。nightly は直近 30 本程度しか残らないので月 1 回で間に合う
+    - cron: "17 3 1 * *"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 判定と検査だけを行い、push も PR 作成もしない
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - .github/workflows/vyos-bump.yaml
+      - .github/workflows/vyos-config.yaml
+      - scripts/vyos-bump.py
+      - tests/test_vyos_bump.py
+      - tests/fixtures/vyos-bump/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vyos-bump-${{ github.event_name == 'pull_request' && github.ref || 'bump' }}
+  cancel-in-progress: false
+
+env:
+  BUMP_BRANCH: bot/vyos-bump
+  BASE_BRANCH: "king's"
+
+jobs:
+  detect:
+    name: detect latest rolling
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      current: ${{ steps.detect.outputs.current }}
+      latest: ${{ steps.detect.outputs.latest }}
+      update: ${{ steps.detect.outputs.update }}
+      sha256: ${{ steps.detect.outputs.sha256 }}
+      sha256_source: ${{ steps.detect.outputs.sha256_source }}
+      iso_url: ${{ steps.detect.outputs.iso_url }}
+      dry_run: ${{ steps.mode.outputs.dry_run }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Mode
+        id: mode
+        env:
+          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry-run == true }}
+        run: echo "dry_run=${DRY_RUN}" | tee -a "${GITHUB_OUTPUT}"
+
+      - name: Fetch nightly releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api 'repos/vyos/vyos-nightly-build/releases?per_page=100' > "${RUNNER_TEMP}/releases.json"
+
+      - name: Detect
+        id: detect
+        run: >-
+          python3 scripts/vyos-bump.py detect
+          --releases "${RUNNER_TEMP}/releases.json"
+          --github-output "${GITHUB_OUTPUT}"
+
+      - name: Summary
+        env:
+          CURRENT: ${{ steps.detect.outputs.current }}
+          LATEST: ${{ steps.detect.outputs.latest }}
+          UPDATE: ${{ steps.detect.outputs.update }}
+          SHA256: ${{ steps.detect.outputs.sha256 }}
+          SHA256_SOURCE: ${{ steps.detect.outputs.sha256_source }}
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+        run: |
+          {
+            echo "## VyOS bump の判定"
+            echo
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| 今の版 | \`${CURRENT}\` |"
+            echo "| 最新の rolling | \`${LATEST}\` |"
+            echo "| 上げるか | ${UPDATE} |"
+            echo "| ISO の sha256 | \`${SHA256}\`（${SHA256_SOURCE}） |"
+            echo "| dry-run | ${DRY_RUN} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  check:
+    name: check
+    needs: detect
+    # 上げるときは新しい版で検査する。dry-run では版が同じでも検査して、再利用の配線を確かめる
+    if: needs.detect.outputs.update == 'true' || needs.detect.outputs.dry_run == 'true'
+    uses: ./.github/workflows/vyos-config.yaml
+    with:
+      vyos-version: ${{ needs.detect.outputs.latest }}
+      vyos-iso-sha256: ${{ needs.detect.outputs.sha256 }}
+
+  pr:
+    name: create or update PR
+    needs: [detect, check]
+    if: >-
+      always() && needs.detect.result == 'success'
+      && needs.detect.outputs.update == 'true'
+      && needs.detect.outputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # bot/vyos-bump への push
+      pull-requests: write   # PR の作成・更新
+      issues: write          # ラベルの作成と付け外し（PR のラベルは issues の API）
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+
+      - name: Commit and push
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ needs.detect.outputs.latest }}
+          SHA256: ${{ needs.detect.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          pr="$(gh pr list --head "${BUMP_BRANCH}" --base "${BASE_BRANCH}" --state open --json number --jq '.[0].number // empty')"
+          if git ls-remote --exit-code --heads origin "${BUMP_BRANCH}" >/dev/null; then
+            if [[ -n "${pr}" ]]; then
+              # 開いている PR のブランチに積む（force push はしない）
+              git fetch origin "${BUMP_BRANCH}"
+              git checkout -B "${BUMP_BRANCH}" "origin/${BUMP_BRANCH}"
+            else
+              # 閉じた PR の残りのブランチは消して、king's から作り直す
+              git push origin --delete "${BUMP_BRANCH}"
+              git checkout -B "${BUMP_BRANCH}"
+            fi
+          else
+            git checkout -B "${BUMP_BRANCH}"
+          fi
+          python3 scripts/vyos-bump.py write --version "${LATEST}" --sha256 "${SHA256}"
+          if git diff --quiet -- vyos/VERSION; then
+            echo "ブランチは既に ${LATEST}"
+          else
+            git add vyos/VERSION
+            git commit -m "chore(vyos): VyOS rolling を ${LATEST} に上げる"
+            git push origin "HEAD:refs/heads/${BUMP_BRANCH}"
+          fi
+          echo "pr=${pr}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create or update PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.push.outputs.pr }}
+          CURRENT: ${{ needs.detect.outputs.current }}
+          LATEST: ${{ needs.detect.outputs.latest }}
+          SHA256: ${{ needs.detect.outputs.sha256 }}
+          SHA256_SOURCE: ${{ needs.detect.outputs.sha256_source }}
+          ISO_URL: ${{ needs.detect.outputs.iso_url }}
+          CHECK_RESULT: ${{ needs.check.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          ok_label="vyos-bump"
+          ng_label="vyos-bump:check-failed"
+          gh label create "${ok_label}" --color 0e8a16 --description "VyOS rolling の版の自動更新" --force
+          gh label create "${ng_label}" --color b60205 --description "新しい版で VyOS の commit 検査が落ちた" --force
+          if [[ "${CHECK_RESULT}" == "success" ]]; then
+            title="chore(vyos): VyOS rolling を ${LATEST} に上げる"
+            verdict="**通った**（新しい版で vyos/*.cmds がすべて commit できた）"
+          else
+            title="[検査失敗] chore(vyos): VyOS rolling を ${LATEST} に上げる"
+            verdict="**落ちた（${CHECK_RESULT}）**。このままマージしないこと。run のログで落ちた cmds を確かめ、このブランチで直す"
+          fi
+          body="${RUNNER_TEMP}/bump-body.md"
+          {
+            echo "## 概要"
+            echo
+            echo "vyos-bump.yaml による自動更新。vyos/VERSION の 2 行だけを書き換える。"
+            echo
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| VYOS_VERSION | \`${CURRENT}\` → \`${LATEST}\` |"
+            echo "| VYOS_ISO_SHA256 | \`${SHA256}\` |"
+            echo "| sha256 の求め方 | ${SHA256_SOURCE} |"
+            echo "| ISO | ${ISO_URL} |"
+            echo
+            echo "## 検査"
+            echo
+            echo "新しい版での VyOS の commit 検査（vyos-config.yaml）: ${verdict}"
+            echo
+            echo "- run: ${RUN_URL}"
+            echo "- この PR は GITHUB_TOKEN で作っているので、PR 上では pull_request のワークフローが起動しない。検査結果は上の run を見る"
+            echo
+            echo "## 据え置き"
+            echo
+            echo "- VYOS_BUILD_REF / ISO_TO_OCI_SHA256（iso-to-oci の版）は変えていない"
+          } > "${body}"
+          if [[ -n "${PR}" ]]; then
+            gh pr edit "${PR}" --title "${title}" --body-file "${body}" --add-label "${ok_label}"
+            target="${PR}"
+          else
+            if ! gh pr create --base "${BASE_BRANCH}" --head "${BUMP_BRANCH}" --title "${title}" --body-file "${body}" --label "${ok_label}"; then
+              echo "::error::PR を作れない。ブランチ ${BUMP_BRANCH} は push 済み。リポジトリの Settings → Actions → General → Workflow permissions で「Allow GitHub Actions to create and approve pull requests」が有効かを確かめる"
+              exit 1
+            fi
+            target="${BUMP_BRANCH}"
+          fi
+          if [[ "${CHECK_RESULT}" == "success" ]]; then
+            gh pr edit "${target}" --remove-label "${ng_label}" || true
+          else
+            gh pr edit "${target}" --add-label "${ng_label}"
+            echo "::error::新しい版 ${LATEST} で VyOS の commit 検査が落ちた（PR に明示した）"
+            exit 1
+          fi

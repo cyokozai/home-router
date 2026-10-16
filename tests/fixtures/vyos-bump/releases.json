@@ -1,0 +1,121 @@
+[
+  {
+    "tag_name": "2026.10.20-0010-rolling",
+    "name": "2026.10.20-0010-rolling",
+    "draft": true,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-2026.10.20-0010-rolling-generic-amd64.iso",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.20-0010-rolling/vyos-2026.10.20-0010-rolling-generic-amd64.iso",
+        "digest": "sha256:2020202020202020202020202020202020202020202020202020202020202020"
+      }
+    ]
+  },
+  {
+    "tag_name": "2026.10.19-0011-rolling",
+    "name": "2026.10.19-0011-rolling",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-2026.10.19-0011-rolling-generic-amd64.cdx.json",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.19-0011-rolling/vyos-2026.10.19-0011-rolling-generic-amd64.cdx.json",
+        "digest": "sha256:1919191919191919191919191919191919191919191919191919191919191919"
+      },
+      {
+        "name": "vyos-2026.10.19-0011-rolling-generic-amd64.iso.minisig",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.19-0011-rolling/vyos-2026.10.19-0011-rolling-generic-amd64.iso.minisig",
+        "digest": "sha256:1818181818181818181818181818181818181818181818181818181818181818"
+      }
+    ]
+  },
+  {
+    "tag_name": "2026.10.18-0024-rolling",
+    "name": "2026.10.18-0024-rolling",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-2026.10.18-0024-rolling-generic-arm64.iso",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.18-0024-rolling/vyos-2026.10.18-0024-rolling-generic-arm64.iso",
+        "digest": "sha256:1717171717171717171717171717171717171717171717171717171717171717"
+      }
+    ]
+  },
+  {
+    "tag_name": "1.5-stream-2026-Q3",
+    "name": "1.5-stream-2026-Q3",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-1.5-stream-2026-Q3-generic-amd64.iso",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/1.5-stream-2026-Q3/vyos-1.5-stream-2026-Q3-generic-amd64.iso",
+        "digest": "sha256:1515151515151515151515151515151515151515151515151515151515151515"
+      }
+    ]
+  },
+  {
+    "tag_name": "2026.10.07-0712-rolling",
+    "name": "2026.10.07-0712-rolling",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-2026.10.07-0712-rolling-generic-amd64.iso",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.07-0712-rolling/vyos-2026.10.07-0712-rolling-generic-amd64.iso",
+        "digest": "sha256:1417a2fd96183672f43e83d680e02ccfce5cd5ae3851978e9a37efd11edbd5a0"
+      }
+    ]
+  },
+  {
+    "tag_name": "2026.10.17-0024-rolling",
+    "name": "2026.10.17-0024-rolling",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-2026.10.17-0024-rolling-generic-amd64.cdx.json",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.17-0024-rolling/vyos-2026.10.17-0024-rolling-generic-amd64.cdx.json",
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+        "name": "vyos-2026.10.17-0024-rolling-generic-amd64.iso",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.17-0024-rolling/vyos-2026.10.17-0024-rolling-generic-amd64.iso",
+        "digest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"
+      },
+      {
+        "name": "vyos-2026.10.17-0024-rolling-generic-amd64.iso.minisig",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.17-0024-rolling/vyos-2026.10.17-0024-rolling-generic-amd64.iso.minisig",
+        "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      }
+    ]
+  },
+  {
+    "tag_name": "2026.10.16-0024-rolling",
+    "name": "2026.10.16-0024-rolling",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-2026.10.16-0024-rolling-generic-amd64.iso",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.10.16-0024-rolling/vyos-2026.10.16-0024-rolling-generic-amd64.iso",
+        "digest": "sha256:dcd4b4328495e70de067ec806ee4aabdd6b3f6f4cae90aebe571ee7cacd1556c"
+      }
+    ]
+  },
+  {
+    "tag_name": "2026.06.29-0010-rolling",
+    "name": "2026.06.29-0010-rolling",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "vyos-2026.06.29-0010-rolling-generic-amd64.iso",
+        "browser_download_url": "https://github.com/vyos/vyos-nightly-build/releases/download/2026.06.29-0010-rolling/vyos-2026.06.29-0010-rolling-generic-amd64.iso",
+        "digest": "sha256:0629062906290629062906290629062906290629062906290629062906290629"
+      }
+    ]
+  }
+]

@@ -11,6 +11,8 @@
 #   - QoS は commit 後に eth2 の tc filter に pedit（set-dscp）が入ったことまで確かめる
 #   - あわせてシェルスクリプトを shellcheck にかける
 # 何を検査しないか: 性能（10G の転送性能は実機の試験 T0〜T8 で測る）、§6-5（本番向け）。
+# workflow_call: vyos-bump.yaml が、上げる候補の版（vyos-version / vyos-iso-sha256）を渡して同じ検査を
+#   再利用する。渡されたときだけ、検査の前に作業ツリーの vyos/VERSION の 2 行を書き換える（push はしない）。
 name: VyOS config
 
 on:
@@ -18,6 +20,16 @@ on:
   push:
     branches: ["king's"]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      vyos-version:
+        description: 検査に使う VyOS rolling のリリース名（空なら vyos/VERSION のまま）
+        type: string
+        default: ""
+      vyos-iso-sha256:
+        description: その ISO の sha256
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -30,6 +42,15 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
+
+      - name: Override VyOS version (workflow_call)
+        if: inputs.vyos-version != ''
+        env:
+          VYOS_VERSION: ${{ inputs.vyos-version }}
+          VYOS_ISO_SHA256: ${{ inputs.vyos-iso-sha256 }}
+        run: |
+          python3 scripts/vyos-bump.py write --version "${VYOS_VERSION}" --sha256 "${VYOS_ISO_SHA256}"
+          git diff -- vyos/VERSION
 
       - name: shellcheck
         run: shellcheck scripts/build-vyos-image.sh scripts/vyos-*.sh
