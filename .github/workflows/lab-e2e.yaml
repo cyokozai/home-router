@@ -40,6 +40,11 @@ jobs:
     name: containerlab E2E (phase1 / QoS / phase2)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # 一時的な調査用（encaplimit none で T7 が通るかを見る）。結果を見たら外す
+    strategy:
+      fail-fast: false
+      matrix:
+        extra: ["", "set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'"]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
@@ -77,6 +82,8 @@ jobs:
           sudo containerlab inspect -t lab/home-router.clab.yml
 
       - name: Run E2E checks
+        env:
+          LAB_PHASE2_EXTRA: ${{ matrix.extra }}
         run: bash scripts/lab-e2e.sh
 
       - name: Dump state on failure

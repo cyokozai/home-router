@@ -145,6 +145,34 @@ def test_traceroute_via_fails_when_the_target_is_not_reached():
     ng("traceroute-via", "192.168.10.1", "192.168.20.2", stdin=TRACE_LOST)
 
 
+# ---- ip -4 route show default（既定経路） ---------------------------------------
+
+# フェーズ1 の static（FRR が入れる）
+ROUTE_STATIC = "default nhid 20 via 192.168.20.2 dev eth2 proto static metric 20\n"
+# Docker が管理系に入れる既定経路。カーネルの経路なので FRR の static より優先され、static が入らない
+ROUTE_DOCKER = "default via 172.16.0.1 dev eth0 \n"
+ROUTE_TUN0 = "default nhid 31 dev tun0 proto static scope link metric 20\n"
+
+
+def test_route_default_passes_on_the_expected_next_hop():
+    ok("route-default", "192.168.20.2", stdin=ROUTE_STATIC)
+
+
+def test_route_default_accepts_an_interface_route():
+    ok("route-default", "dev:tun0", stdin=ROUTE_TUN0)
+
+
+def test_route_default_fails_on_the_docker_mgmt_gateway():
+    out = ng("route-default", "192.168.20.2", stdin=ROUTE_DOCKER)
+    assert "172.16.0.1" in out
+    ng("route-default", "dev:tun0", stdin=ROUTE_DOCKER)
+
+
+def test_route_default_fails_when_there_are_two_defaults_or_none():
+    ng("route-default", "192.168.20.2", stdin=ROUTE_DOCKER + ROUTE_STATIC)
+    ng("route-default", "192.168.20.2", stdin="")
+
+
 # ---- ss（待ち受け） ----------------------------------------------------------
 
 SS_MGMT_ONLY = """\
