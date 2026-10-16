@@ -5,3 +5,15 @@
 # さらに載った行を 1 本ずつ足して commit が「失敗すること」を確かめる。
 # 載せた行が実は通る、または載っていない行が落ちる、のどちらでも CI を落とす。
 # 実機（PC02）では全行を投入する。
+
+# ① リングバッファ: veth のドライバはリングバッファの変更に対応していない。
+#    commit 時に「Driver does not support RX ring-buffer configuration!」で落ちる（tx の行でも同じ文言）。
+#    同じファイルの offload gro / gso / sg / tso は veth でも commit できる（性能上の意味は実機でしか測れない）
+tuning-1-offload.cmds | set interfaces ethernet eth1 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+tuning-1-offload.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+tuning-1-offload.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+tuning-1-offload.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+
+# ④ 性能プロファイル: vyos-build の scripts/iso-to-oci がコンテナ用イメージから
+#    system option performance の定義（templates/system/option/performance）を削除しているため、set の段階で拒否される
+tuning-4-performance.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
