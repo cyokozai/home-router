@@ -11,6 +11,7 @@
   ping-fails                     返事が 1 つも無かった（対照用）
   ping-frag-needed <MTU>         ルータが Frag needed（mtu = MTU）を返し、返事は無かった
   traceroute-via <HOP> <DEST>    1 ホップ目が HOP で、最後に DEST へ届いた
+  route-default <GW|dev:IF>      ip -4 route show default の既定経路が 1 本だけで、GW（か IF）を向く
   listen-only <PORT> <ADDR>      PORT で待ち受けているのは ADDR だけ（1 つ以上ある）
   outer-nh <NH> <SRC6> <DST6>    SRC6 → DST6 の IPv6 パケットの Next Header がすべて NH
   inner-src <SRC6> <ADDR> <LO-HI>
@@ -217,6 +218,23 @@ def check_traceroute_via(text: str, hop: str, dest: str) -> tuple[bool, str]:
     return True, path
 
 
+def check_route_default(text: str, want: str) -> tuple[bool, str]:
+    found = []
+    for line in text.splitlines():
+        cols = line.split()
+        if not cols or cols[0] != "default":
+            continue
+        if "via" in cols:
+            found.append(cols[cols.index("via") + 1])
+        elif "dev" in cols:
+            found.append("dev:" + cols[cols.index("dev") + 1])
+    if not found:
+        return False, "既定経路が無い"
+    if len(found) > 1:
+        return False, f"既定経路が {len(found)} 本ある: {', '.join(found)}"
+    return found[0] == want, f"既定経路は {found[0]}" + ("" if found[0] == want else f"（期待 {want}）")
+
+
 def check_listen_only(text: str, port: str, addr: str) -> tuple[bool, str]:
     locals_ = []
     for line in text.splitlines():
@@ -298,6 +316,7 @@ CHECKS = {
     "ping-fails": (check_ping_fails, 0),
     "ping-frag-needed": (check_ping_frag_needed, 1),
     "traceroute-via": (check_traceroute_via, 2),
+    "route-default": (check_route_default, 1),
     "listen-only": (check_listen_only, 2),
     "outer-nh": (check_outer_nh, 3),
     "inner-src": (check_inner_src, 3),

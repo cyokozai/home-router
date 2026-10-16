@@ -10,8 +10,11 @@
 #   2. QoS: 入れる前に DSCP 0x88 がそのまま届くこと（対照）を見てから vyos/qos-ngn-out.cmds を入れる
 #   3. フェーズ2: 基準に戻して vyos/phase2-mape.cmds を入れ、PC03 に BR 役（lab/pc03-br.sh）を足す（§8 T7）
 # 判定は scripts/lab-judge.py。項目ごとに OK / NG を出し、最後に一覧を出す。NG が 1 つでもあれば 1 で終わる。
+# 設定（vyos/*.cmds）の誤りが分かっていて、直すまで NG になる項目は lab/e2e-known-ng.txt に理由つきで載せる。
+# 載せた項目の NG は KNOWN として数えない。載せた項目が通ったら NG にする（直ったら一覧から外させる）。
 #
-# 環境変数: LAB_PREFIX（既定 clab-home-router）、GITHUB_STEP_SUMMARY（あれば一覧を書き足す）
+# 環境変数: LAB_PREFIX（既定 clab-home-router）、GITHUB_STEP_SUMMARY（あれば一覧を書き足す）、
+#           LAB_PHASE2_EXTRA（調査用。フェーズ2 の後ろに足して投入する set 行。直し方を試すときに使う）
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,6 +22,7 @@ root="$(cd "${here}/.." && pwd)"
 prefix="${LAB_PREFIX:-clab-home-router}"
 pc01="${prefix}-pc01" pc02="${prefix}-pc02" pc03="${prefix}-pc03"
 baseline=/config/lab-e2e-baseline.config
+known_ng="${root}/lab/e2e-known-ng.txt"
 
 # MAP-E（§6-3）の値
 ce6=2001:db8:20::c br6=2001:db8:20::b ce4=192.0.2.18 ports=8160-8175 inet=198.51.100.1
@@ -28,17 +32,40 @@ failures=0
 
 # ---- 記録 -----------------------------------------------------------------------
 
+# known_reason <ID>   lab/e2e-known-ng.txt（書式: <ID> | <理由>）に載っていれば理由を出す
+known_reason() {
+  local line id reason
+  [[ -f "${known_ng}" ]] || return 0
+  while IFS= read -r line; do
+    line="${line%%#*}"
+    [[ "${line}" == *"|"* ]] || continue
+    id="${line%%|*}" reason="${line#*|}"
+    id="$(echo "${id}" | xargs)"
+    if [[ "${id}" == "$1" ]]; then
+      echo "${reason}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+      return 0
+    fi
+  done < "${known_ng}"
+}
+
 # record <ID> <OK|NG> <項目> <詳細>
 record() {
-  local id="$1" verdict="$2" item="$3" detail="$4"
-  summary+=("${verdict}	${id}	${item}	${detail}")
-  if [[ "${verdict}" == OK ]]; then
-    echo "[OK] ${id} ${item}: ${detail}"
-  else
-    failures=$((failures + 1))
-    echo "[NG] ${id} ${item}: ${detail}"
-    echo "::error title=lab-e2e ${id}::${item}: ${detail}"
+  local id="$1" verdict="$2" item="$3" detail="$4" reason
+  reason="$(known_reason "${id}")"
+  if [[ -n "${reason}" && "${verdict}" == NG ]]; then
+    verdict=KNOWN detail="${detail}（既知: ${reason}）"
+  elif [[ -n "${reason}" ]]; then
+    verdict=NG detail="${detail}（lab/e2e-known-ng.txt に載っているのに通った。一覧から外す）"
   fi
+  summary+=("${verdict}	${id}	${item}	${detail}")
+  echo "[${verdict}] ${id} ${item}: ${detail}"
+  case "${verdict}" in
+    KNOWN) echo "::warning title=lab-e2e ${id}::${item}: ${detail}" ;;
+    NG)
+      failures=$((failures + 1))
+      echo "::error title=lab-e2e ${id}::${item}: ${detail}"
+      ;;
+  esac
 }
 
 # check <ID> <項目> <ログ> <lab-judge.py の引数...>   判定器が OK を返せば OK
@@ -103,10 +130,12 @@ print_summary() {
     } >> "${GITHUB_STEP_SUMMARY}"
   fi
   echo
+  local known
+  known="$(printf '%s\n' "${summary[@]}" | grep -c '^KNOWN' || true)"
   if [[ "${failures}" -gt 0 ]]; then
-    echo "lab-e2e: NG が ${failures} 件" >&2
+    echo "lab-e2e: NG が ${failures} 件（ほかに既知の NG が ${known} 件）" >&2
   else
-    echo "lab-e2e: ${#summary[@]} 項目すべて OK"
+    echo "lab-e2e: ${#summary[@]} 項目のうち NG 0 件（既知の NG ${known} 件は lab/e2e-known-ng.txt）"
   fi
 }
 # 投入に失敗したら、その先は検査しない
@@ -186,6 +215,11 @@ section "1. フェーズ1（${root}/vyos/phase1.cmds）"
 listen="$(run_log "${pc02}" ss -ltnH)"
 echo "${listen}"
 expect_ng P1-0 "対照: containerlab の既定のままでは SSH が管理系以外でも待ち受ける" "${listen}" listen-only 22 172.16.0.12
+# Docker は管理系（eth0）に既定経路（172.16.0.1）を入れる。カーネルの経路は FRR の static より優先されるので、
+# 残すとフェーズ1・2 の既定経路が入らない。実機の管理系にはゲートウェイが無い（§4）ので、消して実機に揃える
+expect_ng P1-0r "対照: Docker の既定経路が残っていると static の既定経路にならない" \
+  "$(run_log "${pc02}" ip -4 route show default)" route-default 192.168.20.2
+x "${pc02}" ip -4 route del default dev eth0
 
 if ! cat "${root}/lab/pc02-clab-defaults.cmds" "${root}/vyos/phase1.cmds" | apply --save "${baseline}" "${pc02}" -; then
   abort P1-apply "フェーズ1 の投入" "vyos-apply.sh が失敗した"
@@ -194,6 +228,7 @@ x "${pc02}" ip -br addr
 
 warm_up "${pc01}" 192.168.20.2
 warm_up "${pc01}" 2001:db8:20::2
+check P1-0d "pc02 の既定経路が 192.168.20.2（§6-1 の static）" "$(run_log "${pc02}" ip -4 route show default)" route-default 192.168.20.2
 check P1-1 "pc01 → pc03 IPv4 ping" "$(run_log "${pc01}" ping -c 3 -W 2 192.168.20.2)" ping-ok
 check P1-2 "pc01 → pc03 IPv6 ping" "$(run_log "${pc01}" ping -6 -c 3 -W 2 2001:db8:20::2)" ping-ok
 check P1-3 "traceroute が pc02（192.168.10.1）を経由する" \
@@ -239,13 +274,18 @@ check Q-3 "対照: 送信元ポート 51821 は書き換えない（0x88 のま�
 # ---- 3. フェーズ2（§6-3 MAP-E、§8 T7） --------------------------------------------
 
 section "3. フェーズ2（${root}/vyos/phase2-mape.cmds と lab/pc03-br.sh）"
-if ! apply --load "${baseline}" "${pc02}" "${root}/vyos/phase2-mape.cmds"; then
+if [[ -n "${LAB_PHASE2_EXTRA:-}" ]]; then
+  echo "LAB_PHASE2_EXTRA を足して投入する（調査用）:"
+  printf '%s\n' "${LAB_PHASE2_EXTRA}"
+fi
+if ! { cat "${root}/vyos/phase2-mape.cmds"; printf '%s\n' "${LAB_PHASE2_EXTRA:-}"; } | apply --load "${baseline}" "${pc02}" -; then
   abort P2-apply "フェーズ2 の投入" "vyos-apply.sh が失敗した"
 fi
 x "${pc03}" sh /lab/pc03-br.sh
 x "${pc02}" ip -d link show tun0 || true
 x "${pc03}" ip -d link show br0 || true
 x -d "${pc03}" iperf3 -s -B "${inet}"
+check P2-0 "pc02 の既定経路が tun0" "$(run_log "${pc02}" ip -4 route show default)" route-default dev:tun0
 
 cap_start "${pc01}" sfp0 p2-lan tcp
 cap_start "${pc03}" sfp0 p2-wan ip6
