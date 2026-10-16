@@ -1,7 +1,7 @@
 10G VyOSルータ検証 引き継ぎ資料
 ===============================
 
--	最終更新: 2026-10-15
+-	最終更新: 2026-10-17
 -	オーナー: Yusuke（cyokozai）
 
 > 新しいClaude Codeセッションへの引き継ぎ用。このリポジトリの `CLAUDE.md` として置いてあり、セッション開始時に自動で読み込まれる。
@@ -33,6 +33,7 @@
 4.	**試験の結果は `results/<試験ID>/` にJSONとログで保存する。** 手入力で丸めた数字だけを残さない。
 5.	**ハードウェアの作業が必要になったら止まって依頼する。** BIOS、再インストール、配線、NICの差し替えなどは、Yusukeへの依頼文を出して待つ。
 6.	**10Gの経路でSSHや監視をしない。** 計測の邪魔になるため。
+7.	**VyOSへスクリプトから設定を投入するときは `scripts/vyos-apply.sh` を使う。** VyOS rollingの `set` や `commit` は、失敗しても終了コード 0 を返す（2026-10のrollingで確認）。このスクリプトは、設定セッションの状態（各行が反映されたか、commit後に未反映の差分が残っていないか）で成否を判定し、拒否は 2、commitの失敗は 3 で返す。
 
 ### このリポジトリのgit運用
 
@@ -119,6 +120,22 @@ Host pc0*
 
 鍵の登録とユーザー名はYusukeが決めて追記する（2026-10-15時点で `~/.ssh/config` に `pc0*` の項目はまだ無い）。VyOSでは、鍵を `set system login user vyos authentication public-keys ...` で登録する。
 
+### 検証環境の仮想再現（`lab/`）
+
+`lab/home-router.clab.yml` が、この節の構成（PC01 ⇄ PC02 ⇄ PC03の10G経路と管理系）をcontainerlabで再現する。実機が揃う前に、設定と手順を確かめるためのもの。性能は測れない。
+
+| ノード | イメージ                                       | 10G側の設定                                                                                       |
+|--------|------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| pc01   | netshoot（`nicolaka/netshoot`、タグ固定）      | `lab/pc01.sh`（§5-3のnetplanと同じアドレスと経路）                                                |
+| pc02   | VyOSコンテナ（`home-router/vyos:rolling`）     | `vyos/*.cmds` を `scripts/vyos-apply.sh` で投入する（§6）。トポロジーにはアドレスを書かない       |
+| pc03   | netshoot（pc01と同じ）                         | `lab/pc03.sh`（§5-3の注記のアドレスと戻り経路）。フェーズ2のBR役は `lab/pc03-br.sh` を後から流す |
+
+-	`tests/test_lab_topology.py` が、トポロジーと端末用のスクリプトが §3・§5-3・§6 と一致しているかを静的に検査する（コンテナは起動しない）。
+-	**labの管理系は実機と同じ 172.16.0.0/24（各ノードの管理アドレスも上の表と同じ）。実機の管理系につながったマシンでは起動しない。** 起動はCIで行う。
+-	VyOSのイメージ（`scripts/build-vyos-image.sh` が `vyos/VERSION` の版のISOから作る）はamd64のみ。arm64のMacではpc02が起動しない。
+-	BR役のipip6には、ホストのカーネルの ip6_tunnel モジュールが要る。
+-	labを起動して疎通を確かめるCIは、別のPRで追加中。
+
 ---
 
 §4 Aruba 1930の初期設定（Yusukeの作業）
@@ -149,6 +166,7 @@ Host pc0*
 ### 5-2. PC02: VyOS
 
 -	**イメージ**: **rollingの2026年7月以降のビルド**を使う。理由は、QoSの `set-dscp` が2026-06-30のコミット `a726455aa`（T8996、PR #5305）で初めて実装されたため（§6-4）。旧安定系列のブランチ（sagitta / circinus）は public-unmaintained で、この修正は入っていない。
+-	**CIで使う版**: CI（§6の冒頭）でcommitを検査するVyOSコンテナの版は、`vyos/VERSION` で固定している（vyos-nightly-buildのリリース名とISOのsha256など）。nightlyのリリースは直近30本程度しか残らないので、定期的に新しい版へ上げる。上げる作業は別のPRで自動化する予定。
 -	インストールはYusukeが行う。USBから起動 → `install image` → 再起動 → 物理コンソールで管理系の `eth0` に 172.16.0.12/24 を設定し、SSHを有効にする。ここまで終われば、以降はClaude CodeがSSHで作業する。
 
 確認するコマンド:
@@ -230,6 +248,26 @@ sudo ip addr add 198.51.100.1/32 dev lo    # インターネット役。iperf3 -
 -------------
 
 構文は1.5系 / rollingを前提にしている。ノード名は `?` の補完で必ず確認すること。
+
+**設定の置き場所と検査**
+
+この節のコマンドは、そのまま投入できる形で `vyos/*.cmds` にファイル化してある（§6-5は本番向けなので対象外）。
+
+| ファイル                         | 対応する節               |
+|----------------------------------|--------------------------|
+| `vyos/phase1.cmds`               | §6-1（基準。baseline）   |
+| `vyos/tuning-1-offload.cmds`     | §6-2の①                  |
+| `vyos/tuning-2-rps.cmds`         | §6-2の②                  |
+| `vyos/tuning-3-flowtable.cmds`   | §6-2の③                  |
+| `vyos/tuning-4-performance.cmds` | §6-2の④                  |
+| `vyos/phase2-mape.cmds`          | §6-3                     |
+| `vyos/qos-ngn-out.cmds`          | §6-4                     |
+
+-	`tests/test_vyos_cmds.py` が、この節のコードブロックの `set` / `delete` 行がすべて対応するファイルに入っていることを検査する（ファイル側は「eth2も同様」「ipv6も同様」で省いた行も書き下してある）。
+-	`.github/workflows/vyos-config.yaml` が、`vyos/VERSION`（§5-2）で固定したVyOS rollingのコンテナで、§6-1を基準にして各差分を1本ずつ入れ、commitできるかを検査する。QoSの差分では、eth2のtc filterにpeditが入ったことまで見る。性能と§6-5は検査しない。
+-	コンテナのvethでは確かめられない行（§6-2①のring-bufferの4行と、④の `system option performance`）は、`vyos/container-unsupported.txt` に理由つきで載せ、CIではその行を除いて検査する。実機（PC02）では全行を投入する。
+-	**運用ルール: この節のコマンドを書き換えたら、`vyos/*.cmds` も同じ内容に直す。** 食い違うとpytestが落ちる。
+-	スクリプトから投入するときは `scripts/vyos-apply.sh` を使う（§1 ルール7）。
 
 ### 6-1. フェーズ1: 素のルーティング（FWもNATもなし）
 
@@ -328,16 +366,18 @@ set qos policy shaper NGN-OUT bandwidth '10gbit'
 set qos policy shaper NGN-OUT class 10 bandwidth '100%'
 set qos policy shaper NGN-OUT class 10 match WG-HS ipv6 protocol 'udp'
 set qos policy shaper NGN-OUT class 10 match WG-HS ipv6 source port '51820'
-set qos policy shaper NGN-OUT class 10 set-dscp 'CS0'
+set qos policy shaper NGN-OUT class 10 set-dscp 'default'
 set qos policy shaper NGN-OUT default bandwidth '100%'
 # NGNへ出る通信をすべて0にするなら次の行を追加
-# set qos policy shaper NGN-OUT default set-dscp 'CS0'
+# set qos policy shaper NGN-OUT default set-dscp 'default'
 set qos interface eth2 egress 'NGN-OUT'    # 検証環境ではWAN役のeth2。本番では本番のWAN側IF
 ```
 
+-	**値の書き方**: DSCP 0 は `'default'` と書く。VyOS rollingの `set-dscp` は 0〜63 の数値か決まった名前の一覧しか受け付けず、一覧に CS0 は無いので、`set` の段階で拒否される（vyos-1x の `interface-definitions/include/qos/set-dscp.xml.i`）。
+
 -	**注意**: 検証環境の `eth0` は管理系（§1 ルール1）。shaperを `eth0` に付けない。本番（§6-5）ではWAN側の名前が変わるので、そのときのWAN IFに読み替える。
 
--	確認: `sudo tc filter show dev <WAN> egress` に `pedit ... traffic_class` が付いているかを見る。`tcpdump -v` で class 0x00 になっていることを確認する。
+-	確認: `sudo tc filter show dev <WAN>` に `pedit ... traffic_class` が付いているかを見る。filterはroot qdisc（HTB）側に付くので、`egress` を付けると何も表示されない。`tcpdump -v` で class 0x00 になっていることを確認する。
 
 -	NGNでの実地確認: `nc -u -v -T 0x88 <相手のIPv6> 52528` で送り、相手側で `tcpdump -X` を見る。
 

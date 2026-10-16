@@ -84,10 +84,12 @@ for delta in "$@"; do
     continue
   fi
   if [[ "$(basename "${delta}")" == qos-*.cmds ]]; then
-    echo "-- tc filter（eth2 の root と egress）"
-    filters="$(docker exec "${c}" sh -c 'tc filter show dev eth2; tc filter show dev eth2 egress' 2>&1 || true)"
+    # shaper の filter は root qdisc（HTB）に付く。egress（clsact）を指定すると何も出ないので見ない
+    echo "-- tc filter（eth2 の root qdisc）"
+    filters="$(docker exec "${c}" tc filter show dev eth2 2>&1 || true)"
     echo "${filters}"
-    if grep -q 'set-dscp' "${delta}" && ! grep -q 'pedit' <<< "${filters}"; then
+    # コメント行の set-dscp は数えない
+    if grep -qE '^[[:space:]]*set .* set-dscp ' "${delta}" && ! grep -q 'pedit' <<< "${filters}"; then
       echo "NG ${delta}: set-dscp を入れたのに eth2 の tc filter に pedit が無い" >&2
       failed+=("${delta}")
     else
