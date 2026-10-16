@@ -10,5 +10,5 @@
 # 「set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'」を足すと 3 項目とも通る
 # （2026-10-17 に CI で確認: Lab E2E の run 38957801912。scripts/lab-e2e.sh の LAB_PHASE2_EXTRA で足した）
 P2-2 | tun0 の encaplimit が既定の 4 のため外側の Next Header が 60（vyos/phase2-mape.cmds に encaplimit none が無い）
-P2-5 | tun0 の encaplimit が既定の 4 のため実効 MTU が 1452 で、1460 バイトの ping が通らない（pc02 が Frag needed mtu = 1452 を返す）
-P2-6 | tun0 の encaplimit が既定の 4 のため実効 MTU が 1452。P2-5 で pc01 が PMTU 1452 を覚え、1500 バイトの ping は手元で止まる
+P2-5 | tun0 の encaplimit が既定の 4 のため実効 MTU が 1452（pc02 は Frag needed mtu = 1452 を返す）で、1460 バイトの ping が通らない
+P2-6 | 同じ原因。pc01 が PMTU 1452 を覚えるので 1500 バイトの ping は手元で止まり、mtu = 1460 の Frag needed にならない
