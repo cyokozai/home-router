@@ -108,9 +108,12 @@ expect_rc() {
     show_log "${id}" "${out}"
   fi
 }
+# show_log <ID> <ログ>   NG の手がかりに先頭 40 行だけ出す（パケットの記録は長くなるため）
 show_log() {
-  echo "----- ${1} のログ -----"
-  printf '%s\n' "${2}"
+  local lines
+  lines="$(printf '%s\n' "${2}" | wc -l)"
+  echo "----- ${1} のログ（${lines} 行のうち先頭 40 行） -----"
+  printf '%s\n' "${2}" | head -n 40
   echo "-----"
 }
 section() {
@@ -291,7 +294,8 @@ cap_start "${pc01}" sfp0 p2-lan tcp
 cap_start "${pc03}" sfp0 p2-wan ip6
 warm_up "${pc01}" "${inet}"
 ping_out="$(run_log "${pc01}" ping -c 3 -W 2 "${inet}")"
-iperf_out="$(run_log "${pc01}" iperf3 -c "${inet}" -t 2 -P 4)"
+# 性能は測らない。NAT のポートと MSS を見るための TCP を数本だけ流す（帯域を絞ってパケットの記録を小さく保つ）
+iperf_out="$(run_log "${pc01}" iperf3 -c "${inet}" -t 1 -b 1M -P 4)"
 pmtu_ok="$(run_log "${pc01}" ping -M "do" -s 1432 -c 2 -W 2 "${inet}")"
 pmtu_ng="$(run_log "${pc01}" ping -M "do" -s 1472 -c 2 -W 2 "${inet}")"
 lan="$(cap_stop "${pc01}" p2-lan)"
