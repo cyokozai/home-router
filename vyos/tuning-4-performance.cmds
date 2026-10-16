@@ -1,0 +1,2 @@
+# CLAUDE.md §6-2 ④ CPUの性能プロファイル
+set system option performance 'network-throughput'

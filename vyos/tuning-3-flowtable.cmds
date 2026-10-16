@@ -1,0 +1,12 @@
+# CLAUDE.md §6-2 ③ flowtable（資料で「ipv6も同様」と省略した分も書く）
+set firewall flowtable FT10G interface 'eth1'
+set firewall flowtable FT10G interface 'eth2'
+set firewall flowtable FT10G offload 'software'
+set firewall ipv4 forward filter rule 10 action 'offload'
+set firewall ipv4 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv4 forward filter rule 10 state 'established'
+set firewall ipv4 forward filter rule 10 state 'related'
+set firewall ipv6 forward filter rule 10 action 'offload'
+set firewall ipv6 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv6 forward filter rule 10 state 'established'
+set firewall ipv6 forward filter rule 10 state 'related'

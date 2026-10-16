@@ -1,0 +1,52 @@
+# VyOS の設定ファイル（vyos/*.cmds）が、VyOS rolling で実際に commit できるかを検査する。
+#
+# 何を検査するか:
+#   - vyos/VERSION で固定した rolling の ISO から作ったコンテナ（home-router/vyos:rolling）を、
+#     eth0〜eth2 の 3 本の veth 付きで起動する
+#   - フェーズ1（vyos/phase1.cmds）を入れて commit し、それを基準（CLAUDE.md §8 の baseline）にする
+#   - 差分（チューニング①〜④、フェーズ2の MAP-E、QoS の NGN-OUT）を、基準に戻してから 1 本ずつ入れて
+#     commit できるかを見る。差分同士は独立に検査する
+#   - veth では検証できない行は vyos/container-unsupported.txt に理由つきで載せ、その行だけ除いて検査する。
+#     載せた行が実は通る、または載っていない行が落ちる、のどちらでも失敗にする
+#   - QoS は commit 後に eth2 の tc filter に pedit（set-dscp）が入ったことまで確かめる
+#   - あわせてシェルスクリプトを shellcheck にかける
+# 何を検査しないか: 性能（10G の転送性能は実機の試験 T0〜T8 で測る）、§6-5（本番向け）。
+name: VyOS config
+
+on:
+  pull_request:
+  push:
+    branches: ["king's"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  commit-check:
+    name: commit check in VyOS container
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: shellcheck
+        run: shellcheck scripts/build-vyos-image.sh scripts/vyos-*.sh
+
+      - name: Prepare VyOS image
+        id: vyos
+        uses: ./.github/actions/vyos-image
+
+      - name: Check vyos/*.cmds
+        env:
+          VYOS_IMAGE: ${{ steps.vyos.outputs.image }}
+        run: >-
+          bash scripts/vyos-config-check.sh
+          vyos/phase1.cmds
+          vyos/tuning-1-offload.cmds
+          vyos/tuning-2-rps.cmds
+          vyos/tuning-3-flowtable.cmds
+          vyos/tuning-4-performance.cmds
+          vyos/phase2-mape.cmds
+          vyos/qos-ngn-out.cmds
