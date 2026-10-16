@@ -113,7 +113,8 @@ show_log() {
   local lines
   lines="$(printf '%s\n' "${2}" | wc -l)"
   echo "----- ${1} のログ（${lines} 行のうち先頭 40 行） -----"
-  printf '%s\n' "${2}" | head -n 40
+  # head だと残りを書く側が SIGPIPE で落ち、pipefail で全体が止まる。sed は最後まで読む
+  printf '%s\n' "${2}" | sed -n '1,40p'
   echo "-----"
 }
 section() {
