@@ -4,7 +4,7 @@
 # pc03.sh の後に、pc03 コンテナの中で実行する。2 回実行しても壊れない。
 # ipip6 にはホストのカーネルの ip6_tunnel モジュールが要る。
 #
-# §5-3 との違い: encaplimit none を付ける。Linux の ip6 トンネルは既定で Tunnel Encapsulation Limit
+# encaplimit none を付ける（§5-3・§6-3 と同じ）。Linux の ip6 トンネルは既定で Tunnel Encapsulation Limit
 # （Destination Options ヘッダ、8 バイト）を付けるため、外側の Next Header が 4 ではなく 60 になり、
 # トンネルの実効 MTU も 1452 に下がる。実際の BR（RFC 7597 の MAP-E）は素の IPv4-in-IPv6 を返すので、それに揃える。
 set -eu
