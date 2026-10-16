@@ -1,0 +1,13 @@
+# CLAUDE.md §6-2 ① オフロードとリングバッファ（資料で「eth2も同様」と省略した分も書く）
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 offload gso
+set interfaces ethernet eth1 offload sg
+set interfaces ethernet eth1 offload tso
+set interfaces ethernet eth1 ring-buffer rx '4096'
+set interfaces ethernet eth1 ring-buffer tx '4096'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth2 offload gso
+set interfaces ethernet eth2 offload sg
+set interfaces ethernet eth2 offload tso
+set interfaces ethernet eth2 ring-buffer rx '4096'
+set interfaces ethernet eth2 ring-buffer tx '4096'

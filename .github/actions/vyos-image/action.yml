@@ -1,0 +1,53 @@
+name: VyOS image
+description: >-
+  vyos/VERSION で固定した VyOS rolling の ISO から、Docker イメージ home-router/vyos:rolling を用意する。
+  ISO から作った rootfs tar を、版をキーに actions/cache で持ち回す（2 回目以降は docker import だけ）。
+  VyOS のコンテナは amd64 なので、ubuntu-latest（x86_64）のランナーで使う。
+
+inputs:
+  version-file:
+    description: 版を固定したファイル（scripts/build-vyos-image.sh が source する）
+    required: false
+    default: vyos/VERSION
+
+outputs:
+  image:
+    description: 作ったイメージのタグ（常に home-router/vyos:rolling）
+    value: home-router/vyos:rolling
+  version:
+    description: VyOS のリリース名（例 2026.10.16-0024-rolling）
+    value: ${{ steps.version.outputs.version }}
+  cache-hit:
+    description: rootfs tar をキャッシュから取れたか（"true" / それ以外）
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read VyOS version
+      id: version
+      shell: bash
+      run: |
+        set -euo pipefail
+        # shellcheck source=/dev/null
+        source "${{ inputs.version-file }}"
+        echo "version=${VYOS_VERSION}" >> "${GITHUB_OUTPUT}"
+        echo "dir=${RUNNER_TEMP}/vyos-image" >> "${GITHUB_OUTPUT}"
+
+    - name: Cache VyOS rootfs tar
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.version.outputs.dir }}
+        key: vyos-image-${{ steps.version.outputs.version }}-${{ hashFiles(inputs.version-file, 'scripts/build-vyos-image.sh', 'scripts/vyos-iso-to-oci.Dockerfile') }}
+
+    - name: Build and import VyOS image
+      shell: bash
+      env:
+        VYOS_IMAGE_CACHE_DIR: ${{ steps.version.outputs.dir }}
+        VYOS_IMAGE_TAG: home-router/vyos:rolling
+        VYOS_VERSION_FILE: ${{ inputs.version-file }}
+      run: |
+        set -euo pipefail
+        bash scripts/build-vyos-image.sh
+        docker image inspect home-router/vyos:rolling --format 'image: {{.RepoTags}} {{.Size}} bytes {{.Config.Labels}}'
