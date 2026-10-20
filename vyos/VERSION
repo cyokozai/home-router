@@ -2,7 +2,7 @@
 # scripts/build-vyos-image.sh が source し、.github/actions/vyos-image がキャッシュのキーに使う。
 #
 # VYOS_VERSION: https://github.com/vyos/vyos-nightly-build のリリース名。
-#   QoS の set-dscp（2026-06-30 の rolling で実装）が入った 2026-07 以降のビルドを使う（CLAUDE.md §5-2）。
+#   QoS の set-dscp（PR #5305、2026-08-06 に rolling へマージ）が入った 2026-08-06 以降のビルドを使う（CLAUDE.md §5-2）。
 #   nightly のリリースは直近 30 本程度しか残らないので、取得できなくなったら新しいものへ上げ、
 #   VYOS_ISO_SHA256 も更新する。
 # VYOS_BUILD_REF / ISO_TO_OCI_SHA256: ISO を OCI の rootfs にする vyos/vyos-build の scripts/iso-to-oci の版。
