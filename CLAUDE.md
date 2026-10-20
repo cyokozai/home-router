@@ -48,7 +48,7 @@
 
 | ID       | 機種                                                         | CPU / メモリ                                                                              | 役割                                                                             | 状態（2026-10-15時点）                                                                                   |
 |----------|--------------------------------------------------------------|-------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| **PC01** | HP ProDesk 600 G4/G5系 SFF（BIOS P07 Ver.02.49、2023-12-08） | 不明（第8〜9世代 Core i系の想定）                                                         | 送信側の端末（Ubuntu 24.04 Desktop。**外付けSSD 500GBから起動**、内蔵ディスクは使わない） | **F10を押すと「セットアップメニューに移行しています...」で止まる**（§9で切り分け中）。OSは未インストール |
+| **PC01** | HP ProDesk 600 G4/G5系 SFF（BIOS P07 Ver.02.49、2023-12-08） | 不明（第8〜9世代 Core i系の想定）                                                         | 送信側の端末（Ubuntu 24.04 Server、内蔵ディスク）                                     | **F10を押すと「セットアップメニューに移行しています...」で止まる**（§9で切り分け中）。OSは未インストール |
 | **PC02** | HP ProDesk 400 G7 SFF（BIOS S08 Ver.02.23.00、2025-07-04）   | Core i5-10500（6コア12スレッド、3.1〜4.5GHz）/ DDR4 8GB（1枚か2枚かは未確認） / SSD 240GB | **ルータ本体（VyOS）**。このまま本番ルータにする予定で、入れ替えはしない         | OSは未インストール                                                                                       |
 | **PC03** | MSI MAG B550 TOMAHAWK（BIOS E7C91AMS.AE0、2023-06-28）       | Ryzen 7 5700G（8コア16スレッド）/ DDR4 64GB（3200） / NVMe SSD（M2_2）                    | 受信側の端末、MAP-EのBR役、監視（Prometheus/Grafana）、NTPサーバ（Ubuntu 24.04 Server、内蔵NVMe） | OSは未インストール                                                                                       |
 | **SW**   | Aruba Instant On 1930（24ポート＋SFP 4口）                   | ―                                                                                         | 管理系の1Gスイッチ                                                               | 未設定。**CLIもシリアルコンソールもなく、Web画面のみ**                                                   |
@@ -61,7 +61,7 @@
 
 ### 機材ごとの注意点
 
--	**PC01（外付けSSDから起動、2026-10-19決定）**: Ubuntu 24.04 Desktopを外付けSSD（500GB、USB接続）に入れる。SSDは**背面のUSB 3.x端子に直接**挿す（前面やハブは使わない）。インストール後に `lsusb -t` で `Driver=uas`、速度が5000Mか10000Mであることを確かめる（`usb-storage` や480Mなら端子かケーブルの問題）。内蔵ディスクの有無と型番は未確認。外付けSSDは試験の通信経路には入らないが、USB（xhci）の割り込みが10G NICのキューと同じコアに乗ると影響しうるので、T0で確かめる（§8）。
+-	**PC01**: Ubuntu 24.04 Serverを内蔵ディスクに直接入れる（2026-10-21決定。一時検討した外付けSSDからの起動は使わない）。内蔵ディスクの型番と容量は未確認。
 -	**PC02（400 G7 SFF）**: 拡張スロットはx16が1本とx1が1本。NICは必ずx16側に挿す（x1だと約7.9Gbpsが上限）。メモリが1枚挿しなら、4GB×2枚または8GB×2枚にしてデュアルチャネルにすると、64Bパケットの試験で差が出る可能性がある（`sudo dmidecode -t memory` で確認）。
 -	**PC03（5700G）**: APUのため、PCIeは**Gen3止まり**。NICはCPU直結の一番上のx16スロットに挿す。オンボードLANは2.5GbE（Realtek）と1GbE（Intel）の2口のはず。管理系にはIntel側を使う。BIOSの時計がずれていたので、chronyで時刻を合わせる。
 -	**SW（Aruba 1930）**: 型番が「24G 4SFP/SFP+」（JL682A）なら、右端の4口は10GのSFP+。今回の10G経路はPC同士の直結なので使わない。
@@ -146,12 +146,10 @@ Host pc0*
 | 起動モード                                                                                                  | UEFIのみ                        |
 | NICのオプションROM / PXE                                                                                    | 無効（UEFIのみ、またはPXE無効） |
 | SMT / Hyper-Threading                                                                                       | 試験ごとにON/OFFを記録する      |
-| **PC01のみ**: USBからの起動                                                                                 | 有効                            |
-| **PC01のみ**: 起動順                                                                                        | インストール時はUSBメモリ、インストール後は外付けSSDの「ubuntu」を先頭 |
 
 ### 5-2. PC02: VyOS
 
--	**イメージ**: **rollingの2026年7月以降のビルド**を使う。理由は、QoSの `set-dscp` が2026-06-30のコミット `a726455aa`（T8996、PR #5305）で初めて実装されたため（§6-4）。旧安定系列のブランチ（sagitta / circinus）は public-unmaintained で、この修正は入っていない。
+-	**イメージ**: **rollingの2026-08-06以降のビルド**を使う（このリポジトリでは `vyos/VERSION` の `2026.10.16-0024-rolling` に固定）。理由は、QoSの `set-dscp` がPR #5305（T8996、コミット `a726455aa` は2026-07-28作成、rollingへのマージは2026-08-06）で初めて実装されたため（§6-4）。旧安定系列のブランチ（sagitta / circinus）は public-unmaintained で、この修正は入っていない。VyOS Stream（最新は2026.03、circinusベース）にも入っていない（2026-10-21確認）。circinus系でも `set-dscp` は設定として書けてcommitも通るが、書き換えの処理（pedit）が無いので効かない。
 -	インストールはYusukeが行う。USBから起動 → `install image` → 再起動 → 物理コンソールで管理系の `eth0` に 172.16.0.12/24 を設定し、SSHを有効にする。ここまで終われば、以降はClaude CodeがSSHで作業する。
 
 確認するコマンド:
@@ -163,12 +161,11 @@ sudo ethtool -i eth1 ; sudo ethtool -l eth1 ; nproc
 show configuration commands > /config/baseline.cmds
 ```
 
-### 5-3. PC01 / PC03: Ubuntu 24.04 LTS（PC01はDesktop、PC03はServer）
+### 5-3. PC01 / PC03: Ubuntu 24.04 LTS Server
 
 **インストール（Yusukeの作業）**
 
--	**PC01（Desktop、外付けSSD）**: 内蔵ディスクを巻き込まないよう、**インストール中だけ内蔵ディスクのケーブルを外すか、BIOSで無効にする**。外付けSSDだけが見える状態で「ディスクを削除してUbuntuをインストール」を選べば、EFIシステムパーティションも外付けSSDに入る。終わったら内蔵ディスクを戻し、起動順（§5-1）を確かめる。ユーザー名 `yusuke`、ホスト名 `pc01`。
--	**PC03（Server、内蔵NVMe）**: 「Install OpenSSH server」にチェックする。ユーザー名 `yusuke`、ホスト名 `pc03`。
+-	PC01は内蔵ディスク、PC03は内蔵NVMe（M2_2）の全体を使う。「Install OpenSSH server」にチェックする。ユーザー名 `yusuke`、ホスト名 `pc01` / `pc03`。
 -	どちらも、**インターネットにつながる自宅LANにオンボード1Gを挿した状態**でインストールし、次のパッケージまで入れてから管理系へ移す。管理系（172.16.0.0/24）にはゲートウェイが無く、移したあとは `apt` が使えない。足りないものが後から出たら、その機体だけ一時的に自宅LANへ戻す。
 
 ```
@@ -182,23 +179,20 @@ git -C ~/linux sparse-checkout set samples/pktgen    # T3で使うpktgenのサ�
 ```
 
 -	`full-upgrade` でカーネルが上がったら、再起動してから `linux-tools-$(uname -r)` と `linux-modules-extra-$(uname -r)` を入れ直す（版がずれるとcpupowerとpktgenが使えない）。
--	PC01（Desktop）にはSSHサーバが入っていないので、`openssh-server` を入れて `sudo systemctl enable --now ssh` し、Macの公開鍵を `~/.ssh/authorized_keys` に置く。
 -	PC03だけ、`prometheus` と、公式のAPTリポジトリ（`https://apt.grafana.com stable main`）を追加してから `grafana` も入れる。
 
 Ubuntu 24.04のiperf3は3.16で、マルチスレッドに対応している。
 
 **管理系への移動（Yusukeの作業。§1 ルール1）**
 
--	PC01（Desktop）: GNOMEの設定 → ネットワーク → 有線（オンボード1G）で、IPv4を手動 `172.16.0.11/24`、**ゲートウェイとDNSは空欄**、IPv6は無効にする。管理系はNetworkManagerの管理のまま。
--	PC03（Server）: DHCPの `/etc/netplan/50-cloud-init.yaml` を消し、`/etc/netplan/50-mgmt.yaml` に `mgmt0`（Intel 1GのMACで照合、`addresses: [172.16.0.13/24]`、`dhcp4: false`）を書いて `sudo netplan apply`。
+-	DHCPの `/etc/netplan/50-cloud-init.yaml` を消し、`/etc/netplan/50-mgmt.yaml` に `mgmt0`（オンボード1GのMACで照合。PC03はIntel側。`addresses: [172.16.0.11/24]` / `[172.16.0.13/24]`、`dhcp4: false`、ゲートウェイは書かない）を書いて `sudo netplan apply`。
 -	ケーブルを自宅LANからArubaの1番（PC01）・3番（PC03）へ挿し替え、Macから `ssh pc01` / `ssh pc03` が通ったらClaude Codeに交代する。
 
-**netplan（10G側。Claude Codeの作業）**: PC01の例。`/etc/netplan/60-10g.yaml`（chmod 600）に置く。PC01はDesktopなのでNetworkManagerが標準だが、`renderer: networkd` で10G側だけをsystemd-networkdに任せる。netplanはnetworkdに渡したIFをNetworkManagerの管理外にするので、`sudo systemctl enable --now systemd-networkd` → `sudo netplan apply` のあと、`nmcli device status` で `sfp0` が `unmanaged` になっていることを確かめる。PC03は `192.168.20.2/30`、`2001:db8:20::2/64` にし、`192.168.10.0/24 via 192.168.20.1` などの戻り経路を入れる（Serverなので `renderer` の行は省く）。
+**netplan（10G側。Claude Codeの作業）**: PC01の例。`/etc/netplan/60-10g.yaml`（chmod 600）に置く。PC03は `192.168.20.2/30`、`2001:db8:20::2/64` にし、`192.168.10.0/24 via 192.168.20.1` などの戻り経路を入れる。
 
 ```yaml
 network:
   version: 2
-  renderer: networkd
   ethernets:
     sfp0:
       match: {macaddress: "<SFP+のMAC>"}
@@ -244,19 +238,13 @@ sudo ip addr add 198.51.100.1/32 dev lo    # インターネット役。iperf3 -
 -	chrony: `allow 172.16.0.0/24`、`local stratum 10` でNTPサーバにする。PC01、PC02、Arubaはこれを参照する。
 -	見るべきメトリクス: PC02の `rate(node_network_receive_packets_total{device="eth1"}[5s])`、`rate(node_network_receive_drop_total[5s])`、softirqのコアごとの偏り、`ethtool -S` の `rx_missed`、`rx_no_dma_resources`、`fdir_miss`。
 
-### 5-4. PC01: Desktopの静音化（試験の前に）
+### 5-4. PC01 / PC03: 試験中に動く常駐を止める
 
-Desktopは自動更新・スリープなど、試験中にCPUやディスクを使う常駐が多い。測る前に止める（Claude Codeの作業）。
+自動更新は試験中にCPUとディスクを使う。管理系からはインターネットに出られないので動いても失敗するだけだが、試験の邪魔になるので止めておく（Claude Codeの作業）。
 
 ```
-# 常に止めておくもの
-sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 sudo systemctl disable --now unattended-upgrades apt-daily.timer apt-daily-upgrade.timer
 sudo snap refresh --hold
-# 試験の直前（GUIを止める。SSHはそのまま使える）
-sudo systemctl isolate multi-user.target
-# 試験のあと（画面に戻す）
-sudo systemctl isolate graphical.target
 ```
 
 ---
@@ -434,8 +422,6 @@ set service router-advert interface eth1 prefix ::/64
 -	試験の前後で `ethtool -S` を保存し、差分を記録する。
 -	判定の基準は、ロス率0.1%未満。
 -	試験中はGrafanaを開かない。10Gの経路でtcpdumpを動かさない（T7のみ例外）。
--	PC01は試験の直前にGUIを止める（§5-4）。各試験の条件に「PC01: GUI停止（multi-user.target）、起動ディスクは外付けSSD（USB）」を記録する。
--	T0では、PC01の `/proc/interrupts` でUSB（xhci）と10G NICのキューが同じコアに乗っていないかを確かめ、重なっていればUSB側を別のコアへ寄せる。
 -	T8はフェーズ1のまま比べられるので、T6・T7（フェーズ2）より先に行う。
 
 ### 試験一覧
@@ -470,8 +456,8 @@ set service router-advert interface eth1 prefix ::/64
 -	[ ] PC02のメモリが1枚挿しかどうかを確認し、必要ならデュアルチャネルにする
 -	[ ] 3台のNICの型番を確認する（X520 / X710）。SFP+モジュールかDACかも確認する（インテルNICの相性問題に注意。X520なら `ixgbe.allow_unsupported_sfp=1` で回避できる）
 -	[ ] Aruba 1930の初期設定（§4）
--	[ ] 3台のBIOS設定（§5-1）とOSのインストール（PC01は外付けSSDにDesktop、PC03は内蔵NVMeにServer。§5-3）
--	[ ] PC01の内蔵ディスクの有無と型番を確認する（インストール中は外すか無効にする）
+-	[ ] 3台のBIOS設定（§5-1）とOSのインストール（§5-2・§5-3。VyOSのISOはMacの `~/Downloads/home-router-iso/` に取得済みで、sha256は `vyos/VERSION` と一致）
+-	[ ] PC01の内蔵ディスクの型番と容量を確認する
 -	[ ] 長時間の試験では、SFF筐体の中のNICの発熱を確認する
 
 ### ソフトウェア（Claude Codeの担当。OSのインストールが終わってから）
@@ -500,7 +486,8 @@ set service router-advert interface eth1 prefix ::/64
 
 -	10G VyOSルータ検証キット（ドキュメント。VyOSの設定、環境構築手順、実験手順書の3タブと構成図）: https://claude.ai/code/artifact/8ab86049-14f0-443e-abe8-d872b2fa9925
 -	VyOS v6プラス設定ノート（設定項目の一覧とポートセット計算機）: https://claude.ai/artifact/37T6WdL7EpdraBW4HGthm2
--	10G VyOSルータ検証 構築・試験手順（PC01を外付けSSDのDesktopで動かす前提。構築15段階とT0〜T8をチェックリストで並べたもの、2026-10-19）: https://claude.ai/artifact/DCGKyZLGHGLsLrFa6J3xqw
+-	10G VyOSルータ検証 構築・試験手順（構築の段階とT0〜T8をチェックリストで並べたもの）: https://claude.ai/artifact/DCGKyZLGHGLsLrFa6J3xqw
+-	VyOS rolling を使う理由（Streamの調査結果を含む、2026-10-21）: https://claude.ai/artifact/1ttpnf7h2TMQkv1cMZ2cR3
 
 ### 外部の資料
 
@@ -510,7 +497,7 @@ set service router-advert interface eth1 prefix ::/64
 	-	6.3節: 固定IP（IPIP）
 	-	8章: トラブルシューティング
 -	VyOS Performance Test Report: https://performance.vyos.dev/
--	VyOSのQoSで set-dscp を実装した変更: https://vyos.dev/T8996 / https://github.com/vyos/vyos-1x/pull/5305 （rollingのコミット a726455aa、2026-06-30）
+-	VyOSのQoSで set-dscp を実装した変更: https://vyos.dev/T8996 / https://github.com/vyos/vyos-1x/pull/5305 （コミット a726455aa は2026-07-28作成、rollingへのマージは2026-08-06）
 -	nekko-lab/vyos（旧WireGuardのDSCPパッチ）: https://github.com/nekko-lab/vyos
 -	UDP pkt/s performance issue（VyOSフォーラム）: https://forum.vyos.io/t/udp-pkt-s-performance-issue/10222
 -	Anyone using vyos for a 10G Router（VyOSフォーラム）: https://forum.vyos.io/t/anyone-using-vyos-for-a-10g-router/4113
