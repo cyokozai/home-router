@@ -1,0 +1,17 @@
+# 再起動で戻る 10G 向けの調整を、起動時に入れ直す（CLAUDE.md §5-3）
+[Unit]
+Description=10G test tuning (cpupower performance, ring buffer, flow control off)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# PC03 は cpufreq が無い（amd_pstate: _CPC が BIOS に無い）。周波数は BIOS 任せ。失敗しても止めない
+ExecStart=-/usr/bin/cpupower frequency-set -g performance
+# BCM57840（bnx2x）のリングの上限は 4078（4096 は拒否される）
+ExecStart=-/usr/sbin/ethtool -G sfp0 rx 4078 tx 4078
+ExecStart=-/usr/sbin/ethtool -A sfp0 autoneg off rx off tx off
+
+[Install]
+WantedBy=multi-user.target
