@@ -1,0 +1,175 @@
+{
+ "test": "T3",
+ "started": "2026-10-26T02:28:11.839198+09:00",
+ "frame": 64,
+ "flows": "single",
+ "threads": 4,
+ "burst": 1,
+ "wire_rate_pps": 14880952.38095238,
+ "tolerance": 0.001,
+ "precision": 0.01,
+ "trial_seconds": 10,
+ "final_seconds": 60,
+ "result_pps": 1051936.8782219396,
+ "searched_upper_pps": 2695600.5,
+ "result_ratio_of_wire": 0.07069015821651434,
+ "sender_limited": true,
+ "final_counters": {
+  "pc01_tx": 63018201,
+  "pc02_rx": 62964685,
+  "pc02_tx": 62964688,
+  "pc03_rx": 32205885
+ },
+ "trials": [
+  {
+   "rate_pps": 14880952.38095238,
+   "seconds": 10,
+   "sent_pps": 2695600.5,
+   "dut_lost": 14204168,
+   "dut_loss_ratio": 0.5269389139822462,
+   "receiver_lost": 7416141,
+   "sender_limited": true,
+   "passed": false
+  },
+  {
+   "rate_pps": 2695600.5,
+   "seconds": 10,
+   "sent_pps": 2675986.4,
+   "dut_lost": 13929911,
+   "dut_loss_ratio": 0.5205523839732519,
+   "receiver_lost": 7509585,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1347800.25,
+   "seconds": 10,
+   "sent_pps": 1340061.5,
+   "dut_lost": 633616,
+   "dut_loss_ratio": 0.047282606059498015,
+   "receiver_lost": 7460953,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 673900.125,
+   "seconds": 10,
+   "sent_pps": 672741.2,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 1372284,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 1010850.1875,
+   "seconds": 10,
+   "sent_pps": 1009750.1,
+   "dut_lost": 6857,
+   "dut_loss_ratio": 0.0006790789126933486,
+   "receiver_lost": 4728431,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 1179325.21875,
+   "seconds": 10,
+   "sent_pps": 1169672.8,
+   "dut_lost": 34501,
+   "dut_loss_ratio": 0.0029496283063092515,
+   "receiver_lost": 6339451,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1095087.703125,
+   "seconds": 10,
+   "sent_pps": 1085203.4,
+   "dut_lost": 6430,
+   "dut_loss_ratio": 0.0005925156519045186,
+   "receiver_lost": 5524097,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 1137206.4609375,
+   "seconds": 10,
+   "sent_pps": 1134352.3,
+   "dut_lost": 17535,
+   "dut_loss_ratio": 0.0015458160573218744,
+   "receiver_lost": 5960132,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1116147.08203125,
+   "seconds": 10,
+   "sent_pps": 1106987.9,
+   "dut_lost": 30170,
+   "dut_loss_ratio": 0.0027254137104840985,
+   "receiver_lost": 5730845,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1105617.392578125,
+   "seconds": 10,
+   "sent_pps": 1104665.3,
+   "dut_lost": 29297,
+   "dut_loss_ratio": 0.0026521155321887996,
+   "receiver_lost": 5638531,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1095087.703125,
+   "seconds": 60,
+   "sent_pps": 1094741.7166666666,
+   "dut_lost": 152256,
+   "dut_loss_ratio": 0.002317989678630894,
+   "receiver_lost": 33337606,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1084136.82609375,
+   "seconds": 60,
+   "sent_pps": 1084087.0666666667,
+   "dut_lost": 107727,
+   "dut_loss_ratio": 0.0016561861636451587,
+   "receiver_lost": 32671710,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1073295.4578328126,
+   "seconds": 60,
+   "sent_pps": 1071958.9833333334,
+   "dut_lost": 104545,
+   "dut_loss_ratio": 0.0016254508742941797,
+   "receiver_lost": 32014399,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1062562.5032544844,
+   "seconds": 60,
+   "sent_pps": 1062612.35,
+   "dut_lost": 69568,
+   "dut_loss_ratio": 0.001091147365891867,
+   "receiver_lost": 31337103,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1051936.8782219396,
+   "seconds": 60,
+   "sent_pps": 1050303.35,
+   "dut_lost": 53513,
+   "dut_loss_ratio": 0.0008491673699158756,
+   "receiver_lost": 30758803,
+   "sender_limited": false,
+   "passed": true
+  }
+ ]
+}
