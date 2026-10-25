@@ -1,0 +1,57 @@
+# PC02 inventory 2026-10-25T18:29:07+00:00
+Version:          VyOS 2026.10.16-0024-rolling
+Built on:         Fri 16 Oct 2026 00:25 UTC
+Hardware vendor:  HP
+Hardware model:   HP ProDesk 400 G7 Small Form Factor PC
+Hardware S/N:     JPH116W0QN
+Hardware UUID:    d6128ed8-159a-4299-b984-efcdfec01741
+6.18.55-vyos
+CPU(s):                                  12
+Model name:                              Intel(R) Core(TM) i5-10500 CPU @ 3.10GHz
+Thread(s) per core:                      2
+CPU(s) scaling MHz:                      61%
+               total        used        free      shared  buff/cache   available
+Mem:           7.5Gi       813Mi       6.5Gi       2.1Mi       468Mi       6.8Gi
+NAME    SIZE MODEL       TRAN
+loop0 525.1M             
+sda   223.6G ADATA SU650 sata
+	Size: No Module Installed
+	Locator: DIMM1
+	Size: 8 GB
+	Locator: DIMM3
+	Speed: 2400 MT/s
+	Configured Memory Speed: 2400 MT/s
+
+00:1f.6 Ethernet controller [0200]: Intel Corporation Ethernet Connection (11) I219-LM [8086:0d4c]
+01:00.0 Ethernet controller [0200]: Intel Corporation Ethernet Controller X710 for 10GbE SFP+ [8086:1572] (rev 02)
+01:00.1 Ethernet controller [0200]: Intel Corporation Ethernet Controller X710 for 10GbE SFP+ [8086:1572] (rev 02)
+
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP> 
+eth0             UP             b0:22:7a:1e:20:6b <BROADCAST,MULTICAST,UP,LOWER_UP> 
+eth1             UP             6c:fe:54:6e:27:a0 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+eth2             UP             6c:fe:54:6e:27:a1 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+pim6reg@NONE     UNKNOWN        <NOARP,UP,LOWER_UP> 
+0000:00:1f.6 link cur= x max= x
+0000:01:00.0 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+0000:01:00.1 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+== eth0
+driver: e1000e
+version: 6.18.55-vyos
+firmware-version: 0.4-4
+	Speed: 1000Mb/s
+	Link detected: yes
+== eth1
+driver: i40e
+version: 2.30.18
+firmware-version: 9.00 0x8000cfed 21.5.9
+	Speed: 10000Mb/s
+	Link detected: yes
+Combined:	12
+== eth2
+driver: i40e
+version: 2.30.18
+firmware-version: 9.00 0x8000cfed 21.5.9
+	Speed: 10000Mb/s
+	Link detected: yes
+Combined:	12
+intel_pstate
