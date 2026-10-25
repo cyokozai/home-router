@@ -1,5 +1,5 @@
 # PC03 の Prometheus（CLAUDE.md §5-3）。管理系のアドレスだけを見る（10G 側では監視しない。§1 ルール 6）。
-# PC02 のアドレスは VyOS の eth0 に DHCP が付いたら足す。
+# PC02 の node-exporter は VRF MGMT の中で待ち受けている（192.168.2.14）。
 global:
   scrape_interval: 1s
   evaluation_interval: 15s
@@ -9,5 +9,7 @@ scrape_configs:
     static_configs:
       - targets: ['192.168.2.190:9100']
         labels: {host: pc01}
+      - targets: ['192.168.2.14:9100']
+        labels: {host: pc02}
       - targets: ['192.168.2.13:9100']
         labels: {host: pc03}

@@ -1,0 +1,8 @@
+# PC02 の管理系を VRF MGMT に分ける（2026-10-25）。
+# 管理系は自宅 LAN（RTX830 配下、192.168.2.0/24、DHCP）。DHCP の既定経路は MGMT の経路表にだけ入り、
+# 試験用の既定経路（main の経路表、192.168.20.2 向け）と混ざらない。
+# SSH・NTP・node-exporter は MGMT の中だけで待ち受ける（10G 側では待ち受けない。§1 ルール 6）。
+set vrf name MGMT table '100'
+set interfaces ethernet eth0 description 'MGMT-1G'
+set interfaces ethernet eth0 vrf 'MGMT'
+set service ssh vrf 'MGMT'
