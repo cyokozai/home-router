@@ -114,7 +114,47 @@ def plot_t2(path: Path) -> None:
     save(fig, "T2-udp-frame-rate", "iperf3 -u -P 4、ワイヤーレート分を送信。点は 3 回の中央値、ひげは最小〜最大。pps は ethtool -S の差分。2026-10-25")
 
 
+def plot_t3(base: Path) -> None:
+    import json
+
+    def load(name):
+        p = base / name / "result.json"
+        return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+    groups = [("single", "1 フロー"), ("many", "多数フロー")]
+    bars = [("NDR（ロス 0%）", "tol0", "#2ca02c"), ("PDR（ロス 0.1% 未満）", "tol0.001", "#98df8a"),
+            ("送信上限での転送", "sendermax", "#1f77b4")]
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    width = 0.26
+    sent = []
+    for gi, (key, glabel) in enumerate(groups):
+        for bi, (blabel, suffix, color) in enumerate(bars):
+            j = load(f"64B-{key}-{suffix}")
+            if not j:
+                continue
+            if suffix == "sendermax":
+                val = j["counters"]["pc02_tx"] / 60 / 1e6
+                sent.append(j["sender_max_pps"] / 1e6)
+            else:
+                val = j["result_pps"] / 1e6
+            x = gi + (bi - 1) * width
+            ax.bar(x, val, width, color=color, label=blabel if gi == 0 else None)
+            ax.text(x, val, f"{val:.2f}", ha="center", va="bottom", fontsize=9)
+    if sent:
+        ax.axhline(st.median(sent), color=COLORS["PC01 送信"], ls=":", lw=1.5, label=f"PC01 の送信上限（約 {st.median(sent):.2f} Mpps）")
+    ax.axhline(wire_pps(64) / 1e6, color=COLORS["理論値"], ls="--", lw=1, label="10GbE の理論値 14.88 Mpps")
+    ax.set_ylim(0, 16)
+    ax.set_xticks(range(len(groups)), [g[1] for g in groups])
+    ax.set_ylabel("フレームレート [Mpps]")
+    ax.legend(fontsize=9, loc="upper left")
+    ax.set_title("T3: 64B の転送レート（PC02 = VyOS フェーズ1、チューニングなし）")
+    save(fig, "T3-64B-ndr-pdr", "pktgen 4 スレッド。ロスは PC01 の送信数 − PC02 の送信数（NIC のカウンタ）。NDR・PDR は二分探索（幅 1%）、最終 60 秒。2026-10-25")
+
+
 if __name__ == "__main__":
+    t3 = ROOT / "results" / "T3" / "20261025"
+    if t3.exists():
+        plot_t3(t3)
     t1 = ROOT / "results" / "T1" / "20261025" / "runs.csv"
     t2 = ROOT / "results" / "T2" / "20261025" / "runs.csv"
     if t1.exists():
