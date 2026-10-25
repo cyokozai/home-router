@@ -151,7 +151,40 @@ def plot_t3(base: Path) -> None:
     save(fig, "T3-64B-ndr-pdr", "pktgen 4 スレッド。ロスは PC01 の送信数 − PC02 の送信数（NIC のカウンタ）。NDR・PDR は二分探索（幅 1%）、最終 60 秒。2026-10-25")
 
 
+def plot_t4(t3_base: Path, t4_base: Path) -> None:
+    import json
+
+    stages = [("基準", t3_base, "64B-{f}-tol{t}"), ("①", t4_base / "stage1-tuning-1-offload" / "T3", "64B-{f}-tol{t}"),
+              ("①②", t4_base / "stage2-tuning-2-rps" / "T3", "64B-{f}-tol{t}"),
+              ("①②③", t4_base / "stage3-tuning-3-flowtable" / "T3", "64B-{f}-tol{t}"),
+              ("①〜④", t4_base / "stage4-tuning-4-performance" / "T3", "64B-{f}-tol{t}")]
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.3), sharey=True)
+    width = 0.38
+    for ax, (f, title) in zip(axes, [("single", "1 フロー"), ("many", "多数フロー")]):
+        for k, (t, label, color) in enumerate([("0", "NDR（ロス 0%）", "#2ca02c"), ("0.001", "PDR（ロス 0.1% 未満）", "#98df8a")]):
+            vals = []
+            for _, base, pat in stages:
+                p = base / pat.format(f=f, t=t) / "result.json"
+                vals.append(json.loads(p.read_text())["result_pps"] / 1e6 if p.exists() else float("nan"))
+            xs = [i + (k - 0.5) * width for i in range(len(stages))]
+            ax.bar(xs, vals, width, color=color, label=label)
+            for x, v in zip(xs, vals):
+                ax.text(x, v, f"{v:.2f}", ha="center", va="bottom", fontsize=8)
+        ax.axhline(2.84, color=COLORS["PC01 送信"], ls=":", lw=1.5, label="PC01 の送信上限 約 2.84")
+        ax.set_xticks(range(len(stages)), [s[0] for s in stages])
+        ax.set_title(title)
+        ax.set_xlabel("チューニングの段階（積み上げ）")
+    axes[0].set_ylabel("64B のフレームレート [Mpps]")
+    axes[0].set_ylim(0, 3.2)
+    axes[0].legend(fontsize=8, loc="upper left")
+    fig.suptitle("T4: チューニングの段階ごとの 64B 転送レート（各条件 1 回の探索）")
+    save(fig, "T4-tuning-64B", "①リング 4096 ②RPS ③flowtable ④性能プロファイル。各条件は二分探索 1 回（最終 60 秒）で n=1。ばらつきの幅は未測定。2026-10-25")
+
+
 if __name__ == "__main__":
+    t4 = ROOT / "results" / "T4" / "20261025"
+    if t4.exists():
+        plot_t4(ROOT / "results" / "T3" / "20261025", t4)
     t3 = ROOT / "results" / "T3" / "20261025"
     if t3.exists():
         plot_t3(t3)

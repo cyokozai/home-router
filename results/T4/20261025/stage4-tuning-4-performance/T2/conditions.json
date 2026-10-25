@@ -1,0 +1,3 @@
+{"test": "T2", "started": "2026-10-26T00:43:26+09:00", "runs": 3, "seconds": 60, "omit": 5,
+ "parallel": 4, "udp_payloads": "466", "path": "pc01 sfp0 -> pc02 eth1/eth2 -> pc03 sfp0",
+ "pc02_phase": "phase1 (baseline)"}
