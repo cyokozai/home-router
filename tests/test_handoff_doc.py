@@ -17,7 +17,10 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 DOC = Path(os.environ.get("HANDOFF_DOC", ROOT / "CLAUDE.md"))
 
-MGMT_NET = ipaddress.ip_network("172.16.0.0/24")
+# 実機の管理系は自宅LAN（RTX830配下、DHCP）。containerlab と CI は 172.16.0.0/24 を管理系に使い、
+# §6-1（vyos/phase1.cmds）の管理系の行はそちらの値。実機では §6-6 で置き換える。
+MGMT_NET = ipaddress.ip_network("192.168.2.0/24")
+LAB_MGMT_NET = ipaddress.ip_network("172.16.0.0/24")
 LINE_RATE_BPS = 10_000_000_000
 # プリアンブル7 + SFD1 + IFG12。FCS込みのフレーム長に足すと回線上の占有バイト数になる
 ETHERNET_GAP_BYTES = 20
@@ -123,11 +126,11 @@ def test_every_section_reference_points_to_an_existing_section(doc):
     assert referenced - existing == set()
 
 
-def test_pc01_status_points_to_the_section_with_its_triage_steps(doc):
-    row = next(line for line in doc.splitlines() if line.startswith("| **PC01**"))
-    m = re.search(r"§(\d+(?:-\d+)?)で切り分け中", row)
-    assert m, "PC01の状態欄に切り分け先の節が書かれていない"
-    assert "PC01でBIOSに入れない" in sections(doc)[m.group(1)]
+def test_hardware_table_has_no_uninstalled_hosts(doc):
+    # 2026-10-24 に3台ともOSを入れた。機材表に古い状態が残っていないこと
+    rows = [line for line in doc.splitlines() if line.startswith(("| **PC01**", "| **PC02**", "| **PC03**"))]
+    assert len(rows) == 3
+    assert all("未インストール" not in row for row in rows)
 
 
 # ---- ワイヤーレートの目標値（§8） ---------------------------------------------
@@ -272,10 +275,28 @@ def test_default_routes_point_to_pc03_inside_the_wan_subnets(phase1):
         assert any(hop in i.network and hop != i.ip for i in eth2), hop
 
 
-def test_mgmt_address_matches_the_mgmt_table(doc, phase1):
+@pytest.fixture(scope="module")
+def mgmt_home(doc):
+    return vyos_lines(sections(doc)["6-6"])
+
+
+def test_phase1_mgmt_is_the_lab_network(phase1):
+    # §6-1 の管理系は containerlab・CI 用（lab/home-router.clab.yml と同じ 172.16.0.0/24）
     (eth0,) = interfaces(phase1, "eth0")
-    assert eth0.network == MGMT_NET
-    assert str(eth0.ip) == table_value(doc, "PC02（VyOS）")
+    assert eth0.network == LAB_MGMT_NET
+
+
+def mgmt_table(doc: str) -> str:
+    # §3「管理系のアドレス」の表だけを切り出す（§2 の NIC 表にも PC01 などの行がある）
+    s3 = sections(doc)["3"]
+    rest = s3[s3.index("### 管理系のアドレス") :]
+    end = rest.find("\n### ", 1)
+    return rest if end < 0 else rest[:end]
+
+
+def test_mgmt_table_addresses_are_on_the_home_lan(doc):
+    for label in ("PC01", "PC02（VyOS）", "PC03"):
+        assert ipaddress.ip_address(table_value(mgmt_table(doc), label)) in MGMT_NET, label
 
 
 def test_10g_subnets_do_not_overlap_mgmt(phase1):
@@ -283,16 +304,42 @@ def test_10g_subnets_do_not_overlap_mgmt(phase1):
         for i in interfaces(phase1, name):
             if i.version == 4:
                 assert not i.network.overlaps(MGMT_NET)
+                assert not i.network.overlaps(LAB_MGMT_NET)
 
 
 # ---- 管理系の保護（§1 ルール1・6） ----------------------------------------------
 
 
 def test_ssh_and_exporter_listen_only_on_mgmt(phase1):
-    # ルール6: 10Gの経路でSSHや監視をしない
+    # ルール6: 10Gの経路でSSHや監視をしない（containerlab の管理系）
     listen = vyos_value(phase1, "set service ssh listen-address")
     listen += vyos_value(phase1, "set service monitoring prometheus node-exporter listen-address")
-    assert listen and all(ipaddress.ip_address(a) in MGMT_NET for a in listen)
+    assert listen and all(ipaddress.ip_address(a) in LAB_MGMT_NET for a in listen)
+
+
+def test_mgmt_home_replaces_every_lab_mgmt_line(phase1, mgmt_home):
+    # §6-6 は §6-1 の管理系の値（172.16.0.0/24）をすべて消す。残ると SSH が 172.16.0.12 だけで待ち受けて切れる
+    lab_lines = [line for line in phase1 if "172.16." in line]
+    assert lab_lines
+    deleted = {line.replace("delete ", "set ", 1) for line in mgmt_home if line.startswith("delete ")}
+    assert set(lab_lines) <= deleted
+
+
+def test_mgmt_home_keeps_services_inside_vrf(mgmt_home):
+    # ルール6: 実機では SSH・NTP・監視を VRF MGMT の中だけで待ち受ける
+    for prefix in (
+        "set interfaces ethernet eth0 vrf",
+        "set service ssh vrf",
+        "set service ntp vrf",
+        "set service monitoring prometheus node-exporter vrf",
+    ):
+        assert vyos_value(mgmt_home, prefix) == ["MGMT"], prefix
+    assert any(line.startswith("set vrf name MGMT table ") for line in mgmt_home)
+    assert "set service ssh disable-password-authentication" in mgmt_home
+
+
+def test_mgmt_home_ntp_points_to_pc03(doc, mgmt_home):
+    assert vyos_value(mgmt_home, "set service ntp server") == [table_value(mgmt_table(doc), "PC03")]
 
 
 def test_prometheus_scrapes_over_mgmt(doc):
