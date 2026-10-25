@@ -39,8 +39,9 @@ for ((i = 0; i < THREADS; i++)); do
     pg "${dev}" "udp_src_max 65535"
     pg "${dev}" "flag UDPSRC_RND"
   else
-    pg "${dev}" "udp_src_min $((9000 + i))"
-    pg "${dev}" "udp_src_max $((9000 + i))"
+    # 1 フロー: 全スレッドで同じ 5 タプルにする（PC02 では 1 つの受信キュー、つまり 1 コアに乗る）
+    pg "${dev}" "udp_src_min 9000"
+    pg "${dev}" "udp_src_max 9000"
   fi
   if ((rate > 0)); then
     pg "${dev}" "ratep $((rate / THREADS))"
