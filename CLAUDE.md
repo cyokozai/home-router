@@ -28,7 +28,7 @@
 ### Claude Codeが守るルール
 
 1.	**管理系（172.16.0.0/24、オンボードの1G）の設定は変更しない。** 変更が必要なときは事前にYusukeに確認する。SSHが切れると、物理コンソールでの復旧が必要になる。
-2.	**VyOSでは原則 `commit-confirm 5` を使う。** 確認後に `confirm` → `save`。管理系に影響しうる変更は必ずこの手順にする。
+2.	**VyOSでは原則 `commit-confirm 5` を使う。** 確認後に `confirm` → `save`。管理系に影響しうる変更は必ずこの手順にする。スクリプト（`vbash -s` と `script-template`）から使うときは、`commit-confirm 5` の**次の行に `y`** を書き、全体を `timeout 60` で包む。`commit-confirm` は「Proceed ? [Y/n]」と聞き、答えが無いと同じ質問を出し続けて止まらない（2026-10-25 実害: 出力が 5GB を超えて強制終了し、PC02 に処理が残った）。`confirm` は別の接続から鍵で入り直せることを確かめてから行う。
 3.	**変更の前後で設定を保存する。** VyOSは `show configuration commands`、Ubuntuは対象ファイルを、このリポジトリの `configs/<host>/` に保存してgitにcommitする。
 4.	**試験の結果は `results/<試験ID>/` にJSONとログで保存する。** 手入力で丸めた数字だけを残さない。
 5.	**ハードウェアの作業が必要になったら止まって依頼する。** BIOS、再インストール、配線、NICの差し替えなどは、Yusukeへの依頼文を出して待つ。
