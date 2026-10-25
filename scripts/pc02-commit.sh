@@ -25,6 +25,11 @@ fi
 script=$(printf 'source /opt/vyatta/etc/functions/script-template\nconfigure\n%s\ncompare\ncommit-confirm 5\ny\nexit\n' "${lines}")
 out=$(printf '%s\n' "${script}" | ssh pc02 'timeout 120 vbash -s' 2>&1) || true
 printf '%s\n' "${out}" | tail -5
+# すでに同じ設定なら commit-confirm は始まらない（「No configuration changes to commit」）。成功として扱う
+if grep -q "No configuration changes to commit" <<<"${out}"; then
+  echo "pc02-commit: 変更なし"
+  exit 0
+fi
 if ! grep -q "Initialized commit-confirm" <<<"${out}"; then
   echo "pc02-commit: commit-confirm が始まらなかった（設定は入っていない）" >&2
   exit 3
