@@ -1,0 +1,8 @@
+{
+  "test": "T0", "started": "2026-10-25T19:03:11+09:00",
+  "runs": 3, "seconds": 60, "omit": 5, "parallel": 4,
+  "pc01_iperf3": "iperf 3.16 (cJSON 1.7.15)",
+  "pc02_iperf3": "iperf 3.12 (cJSON 1.7.15)",
+  "pc03_iperf3": "iperf 3.16 (cJSON 1.7.15)",
+  "pc02_vyos": "VyOS 2026.10.16-0024-rolling"
+}
