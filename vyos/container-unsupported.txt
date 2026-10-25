@@ -17,3 +17,12 @@ tuning-1-offload.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | vet
 # ④ 性能プロファイル: vyos-build の scripts/iso-to-oci がコンテナ用イメージから
 #    system option performance の定義（templates/system/option/performance）を削除しているため、set の段階で拒否される
 tuning-4-performance.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
+
+# §6-6 実機の管理系の VRF: CI のコンテナには VRF デバイスを作る権限が無く、commit で
+#    「ip link add dev MGMT ... PermissionError」になる。VRF を参照する行も「VRF "MGMT" does not exist!」で落ちる。
+#    実機（PC02）では 2026-10-25 に commit が通ることを確認済み（configs/pc02/baseline.cmds）
+mgmt-home.cmds | set vrf name MGMT table '100' | コンテナでは VRF デバイスを作れない（ip link add dev MGMT が PermissionError）
+mgmt-home.cmds | set interfaces ethernet eth0 vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
+mgmt-home.cmds | set service ssh vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
+mgmt-home.cmds | set service ntp vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
+mgmt-home.cmds | set service monitoring prometheus node-exporter vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
