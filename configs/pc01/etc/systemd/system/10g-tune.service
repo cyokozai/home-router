@@ -1,0 +1,16 @@
+# 再起動で戻る 10G 向けの調整を、起動時に入れ直す（CLAUDE.md §5-3）
+[Unit]
+Description=10G test tuning (cpupower performance, ring buffer, flow control off)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/bin/cpupower frequency-set -g performance
+# X710（i40e）のリングの上限は 8160。CLAUDE.md の値 4096 に合わせる
+ExecStart=-/usr/sbin/ethtool -G sfp0 rx 4096 tx 4096
+ExecStart=-/usr/sbin/ethtool -A sfp0 autoneg off rx off tx off
+
+[Install]
+WantedBy=multi-user.target

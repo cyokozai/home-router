@@ -1,0 +1,59 @@
+# PC01 inventory 2026-10-25T09:06:15+00:00
+ Static hostname: pc01
+Operating System: Ubuntu 24.04.2 LTS
+          Kernel: Linux 6.8.0-147-generic
+ Hardware Vendor: HP
+  Hardware Model: HP ProDesk 600 G3 SFF
+BOOT_IMAGE=/vmlinuz-6.8.0-147-generic root=/dev/mapper/ubuntu--vg-ubuntu--lv ro
+CPU(s):                                  4
+Model name:                              Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz
+Thread(s) per core:                      1
+CPU(s) scaling MHz:                      98%
+               total        used        free      shared  buff/cache   available
+Mem:           7.6Gi       422Mi       7.2Gi       1.6Mi       301Mi       7.2Gi
+NAME   SIZE MODEL               TRAN
+sda  238.5G CSSD-S6L256MGAX     sata
+sr0   1024M hp HLDS DVDRW GUD1N sata
+	Size: No Module Installed
+	Locator: DIMM1
+	Size: 8 GB
+	Locator: DIMM2
+	Speed: 2400 MT/s
+	Configured Memory Speed: 2400 MT/s
+	Size: No Module Installed
+	Locator: DIMM3
+	Size: No Module Installed
+	Locator: DIMM4
+
+00:1f.6 Ethernet controller [0200]: Intel Corporation Ethernet Connection (5) I219-LM [8086:15e3]
+01:00.0 Ethernet controller [0200]: Intel Corporation Ethernet Controller X710 for 10GbE SFP+ [8086:1572] (rev 02)
+01:00.1 Ethernet controller [0200]: Intel Corporation Ethernet Controller X710 for 10GbE SFP+ [8086:1572] (rev 02)
+
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP> 
+eno1             UP             40:b0:34:f2:23:bb <BROADCAST,MULTICAST,UP,LOWER_UP> 
+enp1s0f0np0      DOWN           6c:fe:54:6d:f2:60 <BROADCAST,MULTICAST> 
+enp1s0f1np1      DOWN           6c:fe:54:6d:f2:61 <BROADCAST,MULTICAST> 
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eno1             UP             192.168.2.190/24 <global-ipv6>/64 fe80::42b0:34ff:fef2:23bb/64 
+enp1s0f0np0      DOWN           
+enp1s0f1np1      DOWN           
+cat: '/sys/bus/pci/devices/0000:00:1f.6/current_link_speed': No such file or directory
+cat: '/sys/bus/pci/devices/0000:00:1f.6/current_link_width': No such file or directory
+cat: '/sys/bus/pci/devices/0000:00:1f.6/max_link_speed': No such file or directory
+cat: '/sys/bus/pci/devices/0000:00:1f.6/max_link_width': No such file or directory
+0000:00:1f.6 link cur= x max= x
+0000:01:00.0 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+0000:01:00.1 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+== eno1
+driver: e1000e
+version: 6.8.0-147-generic
+firmware-version: 0.1-4
+== enp1s0f0np0
+driver: i40e
+version: 6.8.0-147-generic
+firmware-version: 9.00 0x8000cfed 21.5.9
+== enp1s0f1np1
+driver: i40e
+version: 6.8.0-147-generic
+firmware-version: 9.00 0x8000cfed 21.5.9
+intel_pstate
