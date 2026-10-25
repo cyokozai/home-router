@@ -234,17 +234,26 @@ def test_mgmt_interface_is_not_used_for_data_links(topo):
 # ---- 管理系（§3「管理系のアドレス」） ------------------------------------------
 
 
+# 実機の管理系は自宅LAN（§3「管理系のアドレス」）。lab は §3「containerlab の管理系」の表に合わせる
+LAB_MGMT_HEADING = "### containerlab の管理系"
+
+
+def lab_mgmt_table(doc: str) -> str:
+    s3 = sections(doc)["3"]
+    rest = s3[s3.index(LAB_MGMT_HEADING) :]
+    end = rest.find("\n### ", 1)
+    return rest if end < 0 else rest[:end]
+
+
 def test_mgmt_subnet_matches_the_design(doc, topo):
-    mgmt_row = table_value(sections(doc)["3"], "管理系")
+    mgmt_row = table_value(lab_mgmt_table(doc), "管理系")
     assert topo["mgmt"]["ipv4-subnet"] == mgmt_row.strip()
     assert ipaddress.ip_network(topo["mgmt"]["ipv4-subnet"]) == ipaddress.ip_network("172.16.0.0/24")
 
 
 @pytest.mark.parametrize(("node", "label"), [("pc01", "PC01"), ("pc02", "PC02（VyOS）"), ("pc03", "PC03")])
 def test_mgmt_addresses_match_the_table(doc, nodes, node, label):
-    s3 = sections(doc)["3"]
-    table = s3[s3.index("### 管理系のアドレス") :]
-    assert nodes[node]["mgmt-ipv4"] == table_value(table, label)
+    assert nodes[node]["mgmt-ipv4"] == table_value(lab_mgmt_table(doc), label)
 
 
 def test_mgmt_addresses_are_inside_the_mgmt_subnet(topo, nodes):
