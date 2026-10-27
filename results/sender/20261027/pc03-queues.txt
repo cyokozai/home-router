@@ -1,0 +1,5 @@
+pc03 4threads burst32: 1961974 pps
+pc03 combined 8 / 8threads burst32: 2160859 pps（試行 1 回）
+pc03 4threads burst32 rep: 2285412 pps
+pc03 4threads burst32 rep: 2471792 pps
+pc03 4threads burst32 rep: 2496205 pps
