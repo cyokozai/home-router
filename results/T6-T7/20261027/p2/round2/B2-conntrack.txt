@@ -1,0 +1,16 @@
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=32976 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8170 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33088 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8167 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=32994 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8168 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33086 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8166 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33074 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8163 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33028 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8172 [ASSURED] mark=0 use=1
+tcp      6 431985 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33098 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8175 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33002 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8169 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33030 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8164 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33062 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8165 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=32988 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8161 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33008 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8171 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33060 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8162 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33020 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8174 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33014 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8173 [ASSURED] mark=0 use=1
+tcp      6 431980 ESTABLISHED src=192.168.10.10 dst=198.51.100.1 sport=33046 dport=5201 src=198.51.100.1 dst=192.0.2.18 sport=5201 dport=8160 [ASSURED] mark=0 use=1
