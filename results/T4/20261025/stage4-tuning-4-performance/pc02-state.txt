@@ -1,0 +1,82 @@
+Ring parameters for eth1:
+Pre-set maximums:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+TX push buff len:	n/a
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+CQE Size:		n/a
+TX Push:		off
+RX Push:		off
+TX push buff len:	n/a
+TCP data split:		n/a
+scatter-gather: on
+	tx-scatter-gather: on
+	tx-scatter-gather-fraglist: off [fixed]
+tcp-segmentation-offload: on
+	tx-tcp-segmentation: on
+generic-segmentation-offload: on
+generic-receive-offload: on
+ffe
+Ring parameters for eth2:
+Pre-set maximums:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+TX push buff len:	n/a
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+CQE Size:		n/a
+TX Push:		off
+RX Push:		off
+TX push buff len:	n/a
+TCP data split:		n/a
+scatter-gather: on
+	tx-scatter-gather: on
+	tx-scatter-gather-fraglist: off [fixed]
+tcp-segmentation-offload: on
+	tx-tcp-segmentation: on
+generic-segmentation-offload: on
+generic-receive-offload: on
+ffe
+table inet mangle {
+}
+table ip raw {
+}
+table ip6 raw {
+}
+table inet vrf_zones {
+}
+table inet vrf_zones_nat {
+}
+table ip vyos_filter {
+	flowtable VYOS_FLOWTABLE_FT10G {
+		hook ingress priority filter
+		devices = { eth1, eth2 }
+		counter
+	}
+}
+table ip6 vyos_filter {
+	flowtable VYOS_FLOWTABLE_FT10G {
+		hook ingress priority filter
+		devices = { eth1, eth2 }
+		counter
+	}
+}
+table bridge vyos_filter {
+}
+table ip vyos_conntrack {
+}
+table ip6 vyos_conntrack {
+}

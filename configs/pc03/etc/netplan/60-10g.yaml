@@ -1,0 +1,14 @@
+# PC03 の 10G 側（CLAUDE.md §3・§5-3）。管理系（enp34s0、50-cloud-init.yaml）には触らない。
+# BCM57840 の 4 ポートのうち、PC02 の eth2 へつながっているのは enp16s0f3（2026-10-25 確認、10000Mb/s）。
+network:
+  version: 2
+  ethernets:
+    sfp0:
+      match: {macaddress: "0c:c4:7a:eb:56:2e"}
+      set-name: sfp0
+      mtu: 1500
+      addresses: [192.168.20.2/30, "2001:db8:20::2/64"]
+      routes:
+        - {to: 192.168.10.0/24, via: 192.168.20.1}
+        - {to: 192.0.2.0/24, via: 192.168.20.1}
+        - {to: "2001:db8:10::/64", via: "2001:db8:20::1"}

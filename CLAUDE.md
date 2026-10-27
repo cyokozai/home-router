@@ -27,13 +27,16 @@
 
 ### Claude Codeが守るルール
 
-1.	**管理系（172.16.0.0/24、オンボードの1G）の設定は変更しない。** 変更が必要なときは事前にYusukeに確認する。SSHが切れると、物理コンソールでの復旧が必要になる。
-2.	**VyOSでは原則 `commit-confirm 5` を使う。** 確認後に `confirm` → `save`。管理系に影響しうる変更は必ずこの手順にする。
+1.	**管理系（自宅LAN 192.168.2.0/24、オンボードの1G。PC02はVRF MGMT）の設定は変更しない。** 変更が必要なときは事前にYusukeに確認する。SSHが切れると、物理コンソールでの復旧が必要になる。
+2.	**VyOSでは原則 `commit-confirm 5` を使う。** 確認後に `confirm` → `save`。管理系に影響しうる変更は必ずこの手順にする。スクリプト（`vbash -s` と `script-template`）から使うときは、`commit-confirm 5` の**次の行に `y`** を書き、全体を `timeout 60` で包む。`commit-confirm` は「Proceed ? [Y/n]」と聞き、答えが無いと同じ質問を出し続けて止まらない（2026-10-25 実害: 出力が 5GB を超えて強制終了し、PC02 に処理が残った）。`confirm` は別の接続から鍵で入り直せることを確かめてから行う。
 3.	**変更の前後で設定を保存する。** VyOSは `show configuration commands`、Ubuntuは対象ファイルを、このリポジトリの `configs/<host>/` に保存してgitにcommitする。
 4.	**試験の結果は `results/<試験ID>/` にJSONとログで保存する。** 手入力で丸めた数字だけを残さない。
 5.	**ハードウェアの作業が必要になったら止まって依頼する。** BIOS、再インストール、配線、NICの差し替えなどは、Yusukeへの依頼文を出して待つ。
 6.	**10Gの経路でSSHや監視をしない。** 計測の邪魔になるため。
-7.	**VyOSへスクリプトから設定を投入するときは `scripts/vyos-apply.sh` を使う。** VyOS rollingの `set` や `commit` は、失敗しても終了コード 0 を返す（2026-10のrollingで確認）。このスクリプトは、設定セッションの状態（各行が反映されたか、commit後に未反映の差分が残っていないか）で成否を判定し、拒否は 2、commitの失敗は 3 で返す。
+7.	**VyOSへスクリプトから設定を投入するときは `scripts/vyos-apply.sh` を使う。** VyOS rollingの `set` や `commit` は、失敗しても終了コード 0 を返す（2026-10のrollingで確認）。このスクリプトは、設定セッションの状態（各行が反映されたか、commit後に未反映の差分が残っていないか）で成否を判定し、拒否は 2、commitの失敗は 3 で返す。実機のPC02へは `scripts/pc02-commit.sh`（`commit-confirm 5` → 鍵のSSHを確かめて `confirm`、戻すときは保存済みの設定を `load`）を使う。
+8.	**OSインストールの依頼文には、インストーラが出す質問をすべて答えと一緒に書く。** 特にRAID・インストール先の選択・「全データを消す」の確認。インストール先は容量と型番で特定させ、起動用以外のUSBメモリ・外付けディスクは先に抜いてもらう（2026-10-22 実害: 書き漏らしたため、PC02のVyOSインストーラが起動中のVentoy USBをRAID-1の相手に選び、ユーザーのUSBを上書きした）。
+9.	**ディスク装置を直接読み書きする操作（dd・diskutil erase・mkfs・パーティション操作・Ventoy2Diskなど）は自分で実行しない。** `bash-guard.sh` が拒否する。ユーザーに渡すときは、対象の装置・消えるもの・使う容量と時間・より軽い代わり（直接読む、公式から取り直す）を先に示し、ユーザーの道具（VentoyはWindowsのRufus）を確かめてからにする。
+10.	**本番で使う機能は、VyOSの `set` だけで設定でき、実機のPC02で動くことを確かめる（必須条件、2026-10-27）。** 機能ごとに「setで書けるか → commitが通るか → パケットを見て効くか」の3段で確かめる。setだけでできない機能は、シェル・生のnftables・起動スクリプトで補わず、根拠付きで報告してYusukeの判断を仰ぐ。
 
 ### このリポジトリのgit運用
 
@@ -47,24 +50,32 @@
 §2 機材一覧
 -----------
 
-| ID       | 機種                                                         | CPU / メモリ                                                                              | 役割                                                                             | 状態（2026-10-15時点）                                                                                   |
-|----------|--------------------------------------------------------------|-------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| **PC01** | HP ProDesk 600 G4/G5系 SFF（BIOS P07 Ver.02.49、2023-12-08） | 不明（第8〜9世代 Core i系の想定）                                                         | 送信側の端末（Ubuntu 24.04）                                                     | **F10を押すと「セットアップメニューに移行しています...」で止まる**（§9で切り分け中）。OSは未インストール |
-| **PC02** | HP ProDesk 400 G7 SFF（BIOS S08 Ver.02.23.00、2025-07-04）   | Core i5-10500（6コア12スレッド、3.1〜4.5GHz）/ DDR4 8GB（1枚か2枚かは未確認） / SSD 240GB | **ルータ本体（VyOS）**。このまま本番ルータにする予定で、入れ替えはしない         | OSは未インストール                                                                                       |
-| **PC03** | MSI MAG B550 TOMAHAWK（BIOS E7C91AMS.AE0、2023-06-28）       | Ryzen 7 5700G（8コア16スレッド）/ DDR4 64GB（3200） / NVMe SSD（M2_2）                    | 受信側の端末、MAP-EのBR役、監視（Prometheus/Grafana）、NTPサーバ（Ubuntu 24.04） | OSは未インストール                                                                                       |
-| **SW**   | Aruba Instant On 1930（24ポート＋SFP 4口）                   | ―                                                                                         | 管理系の1Gスイッチ                                                               | 未設定。**CLIもシリアルコンソールもなく、Web画面のみ**                                                   |
+実機で確かめた値（2026-10-25、各機の `configs/<host>/inventory.txt`）。
+
+| ID       | 機種                                       | CPU / メモリ / ディスク                                                         | OS                                          | 役割                                                            |
+|----------|--------------------------------------------|---------------------------------------------------------------------------------|---------------------------------------------|-----------------------------------------------------------------|
+| **PC01** | HP ProDesk 600 G3 SFF                      | Core i5-7500（4コア4スレッド）/ DDR4-2400 8GB **1枚** / SATA SSD 238.5GB        | Ubuntu 24.04.2 Server（カーネル 6.8.0-147） | 送信側の端末                                                    |
+| **PC02** | HP ProDesk 400 G7 SFF                      | Core i5-10500（6コア12スレッド）/ DDR4-2400 8GB **1枚** / ADATA SU650 223.6GB  | VyOS 2026.10.16-0024-rolling（6.18.55）     | **ルータ本体**。このまま本番ルータにする予定で、入れ替えはしない |
+| **PC03** | MSI MAG B550 TOMAHAWK（MS-7C91）           | Ryzen 7 5700G（8コア16スレッド）/ DDR4 64GB / NVMe 953.9GB                     | Ubuntu 24.04.5 Server（カーネル 6.8.0-147） | 受信側の端末、MAP-EのBR役、監視（Prometheus）、NTPサーバ        |
+| **SW**   | Aruba Instant On 1930（24ポート＋SFP 4口） | ―                                                                               | ―                                           | 自宅のRTX830につないだ1Gスイッチ（管理系）                      |
 
 ### NIC
 
--	**PC02**: インテルの2ポートSFP+カード1枚を、**x16スロット**に装着済み。型番（X520-DA2 / 82599ESか、X710-DA2 / XL710か）は**未確認**。
--	PC01、PC03のSFP+ NICの型番も未確認。
--	OSを入れたら最初に `lspci -nn | grep -i ether`、`ethtool -i`、`lspci -vv | grep LnkSta:` で確認し、この表を更新する。
+| 機器 | 10G NIC | ドライバ / FW | PCIe | 10G で使うポート（MAC） | 管理系 |
+|---|---|---|---|---|---|
+| PC01 | Intel X710 2ポート | i40e / 9.00 | 8GT/s x8 | `enp1s0f0np0` → `sfp0`（`6c:fe:54:6d:f2:60`） | `eno1`（I219-LM） |
+| PC02 | Intel X710 2ポート | i40e 2.30.18 / 9.00 | 8GT/s x8 | `eth1`（PC01側、`6c:fe:54:6e:27:a0`）、`eth2`（PC03側、`…:a1`） | `eth0`（I219-LM、`b0:22:7a:1e:20:6b`） |
+| PC03 | Broadcom BCM57840 4ポート | bnx2x / 7.6.55 | 8GT/s x8 | `enp16s0f3` → `sfp0`（`0c:c4:7a:eb:56:2e`）。他の3ポートは未配線 | `enp34s0`（Realtek RTL8111、1G） |
+
+-	10Gはすべて10000Mb/sでリンクしている。リングバッファの上限は、X710が8160、BCM57840が**4078**（4096は拒否される）。
+-	キュー数（Combined）は、PC01が4、PC02が12、PC03が4。
 
 ### 機材ごとの注意点
 
--	**PC02（400 G7 SFF）**: 拡張スロットはx16が1本とx1が1本。NICは必ずx16側に挿す（x1だと約7.9Gbpsが上限）。メモリが1枚挿しなら、4GB×2枚または8GB×2枚にしてデュアルチャネルにすると、64Bパケットの試験で差が出る可能性がある（`sudo dmidecode -t memory` で確認）。
--	**PC03（5700G）**: APUのため、PCIeは**Gen3止まり**。NICはCPU直結の一番上のx16スロットに挿す。オンボードLANは2.5GbE（Realtek）と1GbE（Intel）の2口のはず。管理系にはIntel側を使う。BIOSの時計がずれていたので、chronyで時刻を合わせる。
--	**SW（Aruba 1930）**: 型番が「24G 4SFP/SFP+」（JL682A）なら、右端の4口は10GのSFP+。今回の10G経路はPC同士の直結なので使わない。
+-	**PC01（600 G3）**: 4コア4スレッドで、メモリは1枚挿し（シングルチャネル）。64Bの試験（T3）では、ルータより先に送信側が頭打ちになる可能性がある。T3の前に送信能力の上限を必ず測る。
+-	**PC02（400 G7 SFF）**: 拡張スロットはx16が1本とx1が1本。NICはx16側に挿してある（x1だと約7.9Gbpsが上限）。メモリが1枚挿しなので、8GB×2枚にしてデュアルチャネルにすると、64Bパケットの試験で差が出る可能性がある。VyOSのインストール時にRAID-1を勧められたら `n`（§5-2）。
+-	**PC03（5700G）**: APUのため、PCIeは**Gen3止まり**（NICは8GT/s x8で足りている）。オンボードLANは2口とも**Realtek**（1Gの `enp34s0` を管理系に使う。2.5Gの `enp42s0` は未使用）。**IOMMUを有効にしていると、BCM57840で `AMD-Vi: IOTLB_INV_TIMEOUT` が出続けて起動が進まない**ので、BIOSで無効にした（MSIでは OC → CPU Features → IOMMU）。BIOSがCPPCの情報を渡さないため、cpufreq（`amd_pstate`）が無く、CPUの周波数はBIOS任せ。
+-	**SW（Aruba 1930）**: 自宅のRTX830にぶら下げて、管理系のスイッチとして使う。今回の10G経路はPC同士の直結なので、右端のSFP+は使わない。
 
 ---
 
@@ -78,47 +89,61 @@
   192.168.10.10/24   192.168.10.1/24  192.168.20.1/30     192.168.20.2/30
   2001:db8:10::10/64  2001:db8:10::1   2001:db8:20::1     2001:db8:20::2
     │                        │                              │
-    └──────── 管理系 1G（Aruba 1930、172.16.0.0/24）──────────┘
+    └──── 管理系 1G（Aruba 1930 → RTX830、192.168.2.0/24）────┘
 ```
 
 | 区間                      | IPv4                                              | IPv6                                 | PC02側のIF             |
 |---------------------------|---------------------------------------------------|--------------------------------------|------------------------|
 | PC01 ⇄ PC02（LAN）        | 192.168.10.0/24（PC02 .1 / PC01 .10）             | 2001:db8:10::/64（::1 / ::10）       | `eth1`（SFP+ #1）      |
 | PC02 ⇄ PC03（WAN、NGN役） | 192.168.20.0/30（PC02 .1 / PC03 .2）              | 2001:db8:20::/64（::1 / ::2）        | `eth2`（SFP+ #2）      |
-| 管理系                    | 172.16.0.0/24                                     | なし                                 | `eth0`（オンボード1G） |
+| 管理系                    | 192.168.2.0/24（自宅LAN、RTX830のDHCP）           | 自宅LANのまま                        | `eth0`（オンボード1G、VRF MGMT） |
 | MAP-E模擬                 | CE 192.0.2.18/32、PC03の外側アドレス 198.51.100.1 | CE 2001:db8:20::c、BR 2001:db8:20::b | `tun0`                 |
 
 ### 管理系のアドレス
 
-| 機器                                   | IP           | Arubaのポート |
-|----------------------------------------|--------------|---------------|
-| Aruba 1930                             | 172.16.0.2   | ―             |
-| PC01                                   | 172.16.0.11  | 1             |
-| PC02（VyOS）                           | 172.16.0.12  | 2             |
-| PC03                                   | 172.16.0.13  | 3             |
-| 作業用ノートPC / Claude Codeを動かすPC | 172.16.0.100 | 24            |
+管理系は自宅LAN（RTX830配下、192.168.2.0/24）で、アドレスはRTX830のDHCPが配る（2026-10-24 決定。当初の閉じた 172.16.0.0/24 はやめた）。インターネットに出られるので、パッケージはいつでも入れられる。作業用のMacは自宅のWi-Fiから届く。
 
--	VLANは全ポート初期値（VLAN 1、タグなし）のまま。
--	インターフェース名（eth0〜2、sfp0）は仮置き。インストール後にMACアドレスで対応づけて更新する。
+| 機器                                   | IP（DHCP）     | 管理系のIF |
+|----------------------------------------|----------------|------------|
+| PC01                                   | 192.168.2.190  | `eno1`     |
+| PC02（VyOS）                           | 192.168.2.14   | `eth0`（VRF MGMT） |
+| PC03                                   | 192.168.2.13   | `enp34s0`  |
+| 作業用Mac（Claude Code）               | 192.168.2.3（Wi-Fi） | ―    |
 
-### SSHの設定例（Claude Codeを動かすPCの `~/.ssh/config`）
+-	**アドレスが変わらないよう、RTX830のDHCPで各機のMACに固定割り当てを入れる**（未設定。§9）。変わった場合は `~/.ssh/config`・PC03のPrometheus・chronyの参照先を直す。
+-	**PC02は管理系をVRF MGMTに分けている**（§6-6）。DHCPの既定経路はMGMTの経路表にだけ入り、試験用の既定経路（main、192.168.20.2向け）と混ざらない。PC01・PC03は試験用の経路を個別に書いているので、管理系に既定経路があっても問題ない。
+-	containerlab の検証環境（`lab/`）とCIは、引き続き 172.16.0.0/24 を管理系として使う（`vyos/phase1.cmds` の管理系の行）。
+
+### containerlab の管理系（`lab/`・CI）
+
+| 機器         | IP            |
+|--------------|---------------|
+| 管理系       | 172.16.0.0/24 |
+| PC01         | 172.16.0.11   |
+| PC02（VyOS） | 172.16.0.12   |
+| PC03         | 172.16.0.13   |
+
+### SSHの設定（作業用Macの `~/.ssh/config`）
 
 ```
 Host pc01
-  HostName 172.16.0.11
-  User yusuke
-Host pc02 vyos
-  HostName 172.16.0.12
-  User vyos
+    HostName 192.168.2.190
+    User cyokozai
 Host pc03
-  HostName 172.16.0.13
-  User yusuke
-Host pc0*
-  IdentityFile ~/.ssh/id_ed25519
-  ServerAliveInterval 30
+    HostName 192.168.2.13
+    User cyokozai
+Host pc02 vyos
+    HostName 192.168.2.14
+    User vyos
+Host pc01 pc02 pc03 vyos
+    IdentityFile ~/.ssh/home-router-lab_ed25519
+    IdentitiesOnly yes
+    ServerAliveInterval 30
 ```
 
-鍵の登録とユーザー名はYusukeが決めて追記する（2026-10-15時点で `~/.ssh/config` に `pc0*` の項目はまだ無い）。VyOSでは、鍵を `set system login user vyos authentication public-keys ...` で登録する。
+-	鍵は検証環境専用の `~/.ssh/home-router-lab_ed25519`（2026-10-24 作成）。PC01・PC03には `ssh-copy-id`、PC02にはVyOSの設定（`system login user vyos authentication public-keys claude-lab`）で登録してある。
+-	PC01・PC03の `cyokozai` は、`/etc/sudoers.d/90-lab` でパスワードなしの sudo を許している（Claude CodeがSSHで設定するため）。
+-	PC02はSSHのパスワードログインを止めてある（`service ssh disable-password-authentication`）。物理コンソールはパスワードで入れる。
 
 ### 検証環境の仮想再現（`lab/`）
 
@@ -144,8 +169,10 @@ Host pc0*
 1.	中古や使い回しの機器なら、リセット穴を**5秒以上**押して初期化する。
 2.	ノートPCを `192.168.1.2/24` に固定し、DHCPのない状態で `http://192.168.1.1` を開く。
 3.	最初の画面で**ローカル管理（CONNECT）**を選ぶ。ユーザー名は `admin`、パスワードは空欄。初回に変更を求められる。
-4.	管理用IPを `172.16.0.2/24` に固定する（ゲートウェイとDNSは空欄）。適用後は、ノートPCを `172.16.0.100/24` に変えて入り直す。
-5.	SNTPのサーバは、PC03（172.16.0.13）が立ち上がってから設定する。
+4.	管理用IPはRTX830のDHCPに任せる（2026-10-24 に管理系を自宅LANへ変えたため。固定するならRTX830側で割り当てる）。
+5.	SNTPのサーバは、PC03（192.168.2.13）を指定する。
+
+いまはスイッチとして使うだけなので、Web画面での設定は必須ではない（2026-10-25 時点で未設定のまま動いている）。
 
 ---
 
@@ -165,41 +192,75 @@ Host pc0*
 
 ### 5-2. PC02: VyOS
 
--	**イメージ**: **rollingの2026年7月以降のビルド**を使う。理由は、QoSの `set-dscp` が2026-06-30のコミット `a726455aa`（T8996、PR #5305）で初めて実装されたため（§6-4）。旧安定系列のブランチ（sagitta / circinus）は public-unmaintained で、この修正は入っていない。
--	**CIで使う版**: CI（§6の冒頭）でcommitを検査するVyOSコンテナの版は、`vyos/VERSION` で固定している（vyos-nightly-buildのリリース名とISOのsha256など）。nightlyのリリースは直近30本程度しか残らないので、定期的に新しい版へ上げる。上げる作業は別のPRで自動化する予定。
--	インストールはYusukeが行う。USBから起動 → `install image` → 再起動 → 物理コンソールで管理系の `eth0` に 172.16.0.12/24 を設定し、SSHを有効にする。ここまで終われば、以降はClaude CodeがSSHで作業する。
-
-確認するコマンド:
+-	**イメージ**: **rollingの2026-08-06以降のビルド**を使う（このリポジトリでは `vyos/VERSION` の `2026.10.16-0024-rolling` に固定）。理由は、QoSの `set-dscp` がPR #5305（T8996、コミット `a726455aa` は2026-07-28作成、rollingへのマージは2026-08-06）で初めて実装されたため（§6-4）。旧安定系列のブランチ（sagitta / circinus）は public-unmaintained で、この修正は入っていない。VyOS Stream（最新は2026.03、circinusベース）にも入っていない（2026-10-21確認）。circinus系でも `set-dscp` は設定として書けてcommitも通るが、書き換えの処理（pedit）が無いので効かない。
+-	**インストーラの質問と答え**（`install image`）: 続行 `y` / イメージ名 既定のまま / vyosのパスワード 強いものを入力 / コンソール 既定（K） / **RAID-1 は `n`**（内蔵はSSD 223.6GBの1台だけ。2台見えたらもう1台は起動中のUSB） / インストール先 **`/dev/sda`（223.6GB）** / 全データ削除の確認 `y` / 空き領域をすべて使う `y` / 起動時の設定ファイル 既定（1）。始める前に起動用以外のUSBメモリを抜く。
+-	インストールはYusukeが行う。USBから起動 → `install image` → `reboot` と打って**画面が暗くなってから**USBを抜く（先に抜くと、終了処理の最後で止まることがある。その場合は電源ボタンの長押しで切ってよい）。
+-	**CIで使う版**: CI（§6の冒頭）でcommitを検査するVyOSコンテナの版は、`vyos/VERSION` で固定している（vyos-nightly-buildのリリース名とISOのsha256など）。実機のPC02も同じ版。nightlyのリリースは直近30本程度しか残らないので、ISOは手元に保存しておく。版を上げるのは手で行い、外から自動で上げる仕組み（自動PRなど）は作らない（2026-10-19 決定、PR #6 は close）。
+-	再起動したら、物理コンソールで次を入れる（`interfaces` と `eth0` のあいだの `ethernet` を落とさない）。
 
 ```
-sudo lspci -nn | grep -i ether
-sudo lspci -vv -s <BDF> | grep -E 'LnkCap|LnkSta'   # X520は5GT/s x8、X710は8GT/s x8
-sudo ethtool -i eth1 ; sudo ethtool -l eth1 ; nproc
-show configuration commands > /config/baseline.cmds
+configure
+set interfaces ethernet eth0 address dhcp
+set service ssh
+commit ; save
+run show interfaces
 ```
+
+-	鍵は、作業用MacからVyOSのパスワードで1回だけ入って、設定として登録する（コンソールで鍵を手打ちしない）。
+
+```
+ssh pc02 vbash -s <<'EOF'
+source /opt/vyatta/etc/functions/script-template
+configure
+set system login user vyos authentication public-keys claude-lab type 'ssh-ed25519'
+set system login user vyos authentication public-keys claude-lab key '<~/.ssh/home-router-lab_ed25519.pub の本体>'
+commit
+save
+exit
+EOF
+```
+
+-	ここから先はClaude CodeがSSHで行う: パスワードログインの停止 → 管理系のVRF分け（§6-6）→ フェーズ1（§6-1）→ `show configuration commands` を `/config/baseline.cmds` と `configs/pc02/baseline.cmds` に保存。
 
 ### 5-3. PC01 / PC03: Ubuntu 24.04 LTS Server
 
+**インストール（Yusukeの作業）**
+
+-	PC01は内蔵ディスク、PC03は内蔵NVMe（M2_2）の全体を使う。「Install OpenSSH server」にチェックする。ユーザー名 `cyokozai`、ホスト名 `pc01` / `pc03`。ネットワークの画面では、オンボード1GはDHCPのまま、10GのポートはDisabledのままでよい。
+-	PC03は、インストーラが `AMD-Vi: IOTLB_INV_TIMEOUT` で進まなくなったら、BIOSでIOMMUを無効にする（§2）。
+-	インストール後、作業用Macから `ssh-copy-id -i ~/.ssh/home-router-lab_ed25519.pub pc01`（pc03も）で鍵を入れ、次でパスワードなしのsudoを許す（ここまでYusukeの作業）。
+
+```
+ssh -t pc01 "echo 'cyokozai ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/90-lab && sudo chmod 440 /etc/sudoers.d/90-lab"
+```
+
+**パッケージ（Claude Codeの作業）**: 管理系からインターネットに出られるので、そのまま入れる。
+
 ```
 sudo apt update && sudo apt -y full-upgrade
-sudo apt -y install iperf3 ethtool tcpdump tshark nload sysstat \
-  linux-tools-common linux-tools-$(uname -r) chrony prometheus-node-exporter
+sudo apt -y install openssh-server iperf3 ethtool tcpdump tshark nload sysstat \
+  linux-tools-common linux-tools-$(uname -r) linux-modules-extra-$(uname -r) \
+  chrony prometheus-node-exporter jq git
+sudo modprobe pktgen && lsmod | grep pktgen
+git clone --depth 1 --filter=blob:none --sparse https://github.com/torvalds/linux.git ~/linux
+git -C ~/linux sparse-checkout set samples/pktgen    # T3で使うpktgenのサンプル
 ```
+
+-	`full-upgrade` でカーネルが上がったら、再起動してから `linux-tools-$(uname -r)` と `linux-modules-extra-$(uname -r)` を入れ直す（版がずれるとcpupowerとpktgenが使えない）。
+-	PC03だけ、`prometheus` と、公式のAPTリポジトリ（`https://apt.grafana.com stable main`）を追加してから `grafana` も入れる。
 
 Ubuntu 24.04のiperf3は3.16で、マルチスレッドに対応している。
 
-**netplan**（PC01の例。PC03は `192.168.20.2/30`、`2001:db8:20::2/64` にし、`192.168.10.0/24 via 192.168.20.1` などの戻り経路を入れる）:
+**管理系**: インストーラが作ったDHCPの `/etc/netplan/50-cloud-init.yaml` のまま触らない（§1 ルール1）。
+
+**netplan（10G側。Claude Codeの作業）**: PC01の例。`/etc/netplan/60-10g.yaml`（chmod 600）に置く。PC03は `192.168.20.2/30`、`2001:db8:20::2/64` にし、`192.168.10.0/24 via 192.168.20.1` などの戻り経路を入れる。実際に入れたファイルは `configs/pc01/etc/`・`configs/pc03/etc/` にある。
 
 ```yaml
 network:
   version: 2
   ethernets:
-    mgmt0:
-      match: {macaddress: "<オンボード1GのMAC>"}
-      set-name: mgmt0
-      addresses: [172.16.0.11/24]
     sfp0:
-      match: {macaddress: "<SFP+のMAC>"}
+      match: {macaddress: "6c:fe:54:6d:f2:60"}
       set-name: sfp0
       mtu: 1500
       addresses: [192.168.10.10/24, "2001:db8:10::10/64"]
@@ -220,7 +281,7 @@ net.ipv4.tcp_wmem = 4096 131072 268435456
 net.core.netdev_max_backlog = 250000
 ```
 
-あわせて `sudo cpupower frequency-set -g performance` と `sudo ethtool -G sfp0 rx 4096 tx 4096` を実行する。
+あわせて `sudo cpupower frequency-set -g performance`、`sudo ethtool -G sfp0 rx 4096 tx 4096`（PC03のBCM57840は上限の4078）、`sudo ethtool -A sfp0 autoneg off rx off tx off`（フロー制御を切る。pps試験で送信側が絞られないように）を実行する。どれも再起動で戻るので、起動時に流すsystemdのユニット `10g-tune.service` にまとめてある（PC03はcpufreqが無いので、cpupowerの失敗は無視する）。node-exporterは、DHCPのアドレスが付く前に起動するとbindに失敗するので、`network-online.target` を待ってから起動し、落ちたら再試行する（`configs/common/`）。
 
 **PC03だけ: BR役（フェーズ2で使う）**
 
@@ -237,10 +298,19 @@ sudo ip addr add 198.51.100.1/32 dev lo    # インターネット役。iperf3 -
 
 **PC03だけ: 監視とNTP**
 
--	Prometheus: `scrape_interval: 1s`。対象は `172.16.0.11/12/13:9100`。
--	Grafanaは、公式のAPTリポジトリを追加してから入れる。
--	chrony: `allow 172.16.0.0/24`、`local stratum 10` でNTPサーバにする。PC01、PC02、Arubaはこれを参照する。
+-	Prometheus: `scrape_interval: 1s`。対象は `192.168.2.190/14/13:9100`。node-exporterは各機の管理系のアドレスだけで待ち受ける（PC02はVRF MGMTの中）。
+-	Grafanaは、公式のAPTリポジトリを追加してから入れる（未導入）。
+-	chrony: 上流はインターネットの既定のプール。`allow 192.168.2.0/24`、`local stratum 10` でNTPサーバにする。PC01、PC02、Arubaはこれを参照する。
 -	見るべきメトリクス: PC02の `rate(node_network_receive_packets_total{device="eth1"}[5s])`、`rate(node_network_receive_drop_total[5s])`、softirqのコアごとの偏り、`ethtool -S` の `rx_missed`、`rx_no_dma_resources`、`fdir_miss`。
+
+### 5-4. PC01 / PC03: 試験中に動く常駐を止める
+
+自動更新は試験中にCPUとディスクを使う。管理系からはインターネットに出られないので動いても失敗するだけだが、試験の邪魔になるので止めておく（Claude Codeの作業）。
+
+```
+sudo systemctl disable --now unattended-upgrades apt-daily.timer apt-daily-upgrade.timer
+sudo snap refresh --hold
+```
 
 ---
 
@@ -270,6 +340,8 @@ sudo ip addr add 198.51.100.1/32 dev lo    # インターネット役。iperf3 -
 -	スクリプトから投入するときは `scripts/vyos-apply.sh` を使う（§1 ルール7）。
 
 ### 6-1. フェーズ1: 素のルーティング（FWもNATもなし）
+
+管理系の4行（`eth0`・`ssh listen-address`・`ntp server`・`node-exporter listen-address`）は、containerlab と CI の管理系（172.16.0.0/24）に合わせた値。**実機のPC02では、このあと同じcommitで §6-6 を入れて管理系の行を置き換える**（2026-10-25 に実機へ投入済み。結果は `configs/pc02/baseline.cmds`）。
 
 ```
 set system host-name 'pc02-vyos'
@@ -402,6 +474,29 @@ set service router-advert interface eth1 prefix ::/64
 -	ひかり電話ありでは、DHCPv6-PDで/56が来る。ひかり電話なしのネクストはRAで/64のみで、NDプロキシが必要になる。光クロスはPDで/56と言われているが、実機で要確認。
 -	プレフィックスは半固定なので変わりうる。MAP-EのCE値やIPIPトンネルを作り直す仕組みは自作が必要。
 
+### 6-6. 実機の管理系: 自宅LANとVRF MGMT
+
+実機のPC02では、§6-1 の管理系の行（containerlab用の 172.16.0.0/24）を、§6-1 と**同じcommitで**次に置き換える（`vyos/mgmt-home.cmds`）。別々にcommitすると、途中でSSHが 172.16.0.12 だけを待ち受けて切れる。
+
+```
+delete interfaces ethernet eth0 address '172.16.0.12/24'
+delete service ssh listen-address '172.16.0.12'
+delete service ntp server '172.16.0.13'
+delete service monitoring prometheus node-exporter listen-address '172.16.0.12'
+set vrf name MGMT table '100'
+set interfaces ethernet eth0 address 'dhcp'
+set interfaces ethernet eth0 vrf 'MGMT'
+set service ssh vrf 'MGMT'
+set service ssh disable-password-authentication
+set service ntp server '192.168.2.13'
+set service ntp vrf 'MGMT'
+set service monitoring prometheus node-exporter vrf 'MGMT'
+```
+
+-	DHCPの既定経路はMGMTの経路表（table 100）にだけ入り、試験用の既定経路（mainの経路表、192.168.20.2向け）と混ざらない。
+-	SSH・NTP・node-exporterはMGMTの中だけで待ち受けるので、10G側（192.168.10.1 など）からは届かない（2026-10-25 にPC01から22番・9100番とも届かないことを確認）。
+-	`eth0` をVRFへ移すcommitで、SSHは一度切れて数秒で戻る。必ず `commit-confirm 5` で入れる（§1 ルール2）。
+
 ---
 
 §7 VyOSかNixOS＋FRRか（未決定）
@@ -441,6 +536,7 @@ set service router-advert interface eth1 prefix ::/64
 -	試験の前後で `ethtool -S` を保存し、差分を記録する。
 -	判定の基準は、ロス率0.1%未満。
 -	試験中はGrafanaを開かない。10Gの経路でtcpdumpを動かさない（T7のみ例外）。
+-	T8はフェーズ1のまま比べられるので、T6・T7（フェーズ2）より先に行う。
 
 ### 試験一覧
 
@@ -465,25 +561,20 @@ set service router-advert interface eth1 prefix ::/64
 
 ### ハードウェア（Yusukeの担当）
 
--	[ ] **PC01でBIOSに入れない問題**。切り分けの順番は次のとおり。
-	1.	2〜3分待つ
-	2.	キーボード以外のUSBを外し、キーボードは背面のUSB 2.0に挿す
-	3.	**10GのNICを抜いて試す（本命）** → 入れたら、オプションROMをUEFIのみにする、PXEを無効にする、レガシーブートを無効にする、の順に設定してから挿し戻す。それでもだめなら、別のPCで `BootUtil -fd` を実行してNICの起動ROMを無効にする
-	4.	画面の出力ポートやモニターを変える
-	5.	ボタン電池を外してBIOSの設定を初期化する
--	[ ] PC02のメモリが1枚挿しかどうかを確認し、必要ならデュアルチャネルにする
--	[ ] 3台のNICの型番を確認する（X520 / X710）。SFP+モジュールかDACかも確認する（インテルNICの相性問題に注意。X520なら `ixgbe.allow_unsupported_sfp=1` で回避できる）
--	[ ] Aruba 1930の初期設定（§4）
--	[ ] 3台のBIOS設定（§5-1）とOSのインストール
+-	[x] 3台のOSのインストール（2026-10-24）。PC01のBIOSに入れない問題は解消した（原因の記録は未）
+-	[x] 3台のNICの型番の確認（§2。PC01・PC02はX710、PC03はBCM57840）
+-	[ ] RTX830のDHCPで、3台の管理系のMACに固定のアドレスを割り当てる（§3）
+-	[ ] PC01・PC02のメモリが1枚挿し。必要ならデュアルチャネルにする（64Bの試験の前に判断）
 -	[ ] 長時間の試験では、SFF筐体の中のNICの発熱を確認する
 
-### ソフトウェア（Claude Codeの担当。OSのインストールが終わってから）
+### ソフトウェア（Claude Codeの担当）
 
--	[ ] 管理系の疎通とSSH鍵の登録を確認する
--	[ ] NICの情報（型番、ドライバ、PCIeのリンク）を取って §2 を更新する
--	[ ] netplan、sysctl、監視、NTPを設定する（§5）
--	[ ] VyOSのフェーズ1を投入し、`baseline.cmds` を保存する
--	[ ] 疎通確認のチェックリスト（10Gで両方リンクしている、PCIeのリンク、v4/v6のping、`ping -M do -s 1472`、Prometheusの対象が全部UP、chrony）
+-	[x] 管理系の疎通とSSH鍵の登録（2026-10-25。3台とも `~/.ssh/home-router-lab_ed25519`）
+-	[x] NICの情報（型番、ドライバ、PCIeのリンク）を取って §2 を更新（`configs/<host>/inventory.txt`）
+-	[x] netplan、sysctl、監視、NTPの設定（§5。`configs/pc01/`・`configs/pc03/`）
+-	[x] PC02の管理系をVRF MGMTに分け（§6-6）、フェーズ1を投入して `baseline.cmds` を保存（`configs/pc02/`）
+-	[x] 疎通確認（2026-10-25）: 10Gは両区間とも10000Mb/s、PCIeは3台とも8GT/s x8、PC01→PC03のv4/v6 ping、`ping -M do -s 1472` は通り1473は止まる、Prometheusの対象3台ともup、NTPは3台ともPC03に同期、10G側からPC02の22・9100番に届かない
+-	[ ] Grafanaの導入
 -	[ ] T0〜T8を実施する
 -	[ ] MAP-Eのポートセット全数利用（§6-3）、VyOSとNixOSの比較（§7）
 
@@ -503,6 +594,8 @@ set service router-advert interface eth1 prefix ::/64
 
 -	10G VyOSルータ検証キット（ドキュメント。VyOSの設定、環境構築手順、実験手順書の3タブと構成図）: https://claude.ai/code/artifact/8ab86049-14f0-443e-abe8-d872b2fa9925
 -	VyOS v6プラス設定ノート（設定項目の一覧とポートセット計算機）: https://claude.ai/artifact/37T6WdL7EpdraBW4HGthm2
+-	10G VyOSルータ検証 構築・試験手順（構築の段階とT0〜T8をチェックリストで並べたもの）: https://claude.ai/artifact/DCGKyZLGHGLsLrFa6J3xqw
+-	VyOS rolling を使う理由（Streamの調査結果を含む、2026-10-21）: https://claude.ai/artifact/1ttpnf7h2TMQkv1cMZ2cR3
 
 ### 外部の資料
 
@@ -512,7 +605,7 @@ set service router-advert interface eth1 prefix ::/64
 	-	6.3節: 固定IP（IPIP）
 	-	8章: トラブルシューティング
 -	VyOS Performance Test Report: https://performance.vyos.dev/
--	VyOSのQoSで set-dscp を実装した変更: https://vyos.dev/T8996 / https://github.com/vyos/vyos-1x/pull/5305 （rollingのコミット a726455aa、2026-06-30）
+-	VyOSのQoSで set-dscp を実装した変更: https://vyos.dev/T8996 / https://github.com/vyos/vyos-1x/pull/5305 （コミット a726455aa は2026-07-28作成、rollingへのマージは2026-08-06）
 -	nekko-lab/vyos（旧WireGuardのDSCPパッチ）: https://github.com/nekko-lab/vyos
 -	UDP pkt/s performance issue（VyOSフォーラム）: https://forum.vyos.io/t/udp-pkt-s-performance-issue/10222
 -	Anyone using vyos for a 10G Router（VyOSフォーラム）: https://forum.vyos.io/t/anyone-using-vyos-for-a-10g-router/4113

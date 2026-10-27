@@ -50,3 +50,4 @@ jobs:
           vyos/tuning-4-performance.cmds
           vyos/phase2-mape.cmds
           vyos/qos-ngn-out.cmds
+          vyos/mgmt-home.cmds

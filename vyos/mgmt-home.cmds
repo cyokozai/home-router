@@ -1,0 +1,18 @@
+# CLAUDE.md §6-6 実機（PC02）の管理系: 自宅 LAN（RTX830 配下、DHCP）を VRF MGMT に分ける。
+# phase1.cmds は containerlab・CI 用の管理系（172.16.0.0/24）を含むので、実機では phase1.cmds の直後に
+# **同じ commit で**このファイルを入れ、管理系の行を置き換える（別々に commit すると、途中で SSH が
+# 172.16.0.12 だけを待ち受けて切れる）。
+# DHCP の既定経路は MGMT の経路表にだけ入り、試験用の既定経路（main、192.168.20.2 向け）と混ざらない。
+# SSH・NTP・node-exporter は MGMT の中だけで待ち受ける（10G 側では待ち受けない。§1 ルール 6）。
+delete interfaces ethernet eth0 address '172.16.0.12/24'
+delete service ssh listen-address '172.16.0.12'
+delete service ntp server '172.16.0.13'
+delete service monitoring prometheus node-exporter listen-address '172.16.0.12'
+set vrf name MGMT table '100'
+set interfaces ethernet eth0 address 'dhcp'
+set interfaces ethernet eth0 vrf 'MGMT'
+set service ssh vrf 'MGMT'
+set service ssh disable-password-authentication
+set service ntp server '192.168.2.13'
+set service ntp vrf 'MGMT'
+set service monitoring prometheus node-exporter vrf 'MGMT'
