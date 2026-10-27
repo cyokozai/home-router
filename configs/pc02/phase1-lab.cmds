@@ -1,0 +1,17 @@
+# PC02 に実際に投入したフェーズ1（2026-10-25）。vyos/phase1.cmds から管理系の行だけを今の構成に合わせた。
+#   - eth0 の 172.16.0.12 → 自宅 LAN の DHCP（mgmt-vrf.cmds で VRF MGMT に入れ済み）
+#   - SSH の listen-address → VRF MGMT で待ち受け（mgmt-vrf.cmds）
+#   - NTP は PC03（192.168.2.13）を MGMT 経由で参照
+#   - node-exporter は MGMT の中だけで待ち受け
+set system host-name 'pc02-vyos'
+set interfaces ethernet eth1 description 'LAN-10G-to-PC01'
+set interfaces ethernet eth1 address '192.168.10.1/24'
+set interfaces ethernet eth1 address '2001:db8:10::1/64'
+set interfaces ethernet eth2 description 'WAN-10G-to-PC03'
+set interfaces ethernet eth2 address '192.168.20.1/30'
+set interfaces ethernet eth2 address '2001:db8:20::1/64'
+set protocols static route 0.0.0.0/0 next-hop '192.168.20.2'
+set protocols static route6 ::/0 next-hop '2001:db8:20::2'
+set service ntp server '192.168.2.13'
+set service ntp vrf 'MGMT'
+set service monitoring prometheus node-exporter vrf 'MGMT'

@@ -27,12 +27,17 @@ TUNING_PARTS = {
     "③": "tuning-3-flowtable.cmds",
     "④": "tuning-4-performance.cmds",
 }
+# 実機の管理系（自宅LAN・VRF MGMT）。§6-1 の管理系の行（containerlab用）を置き換えるので eth0 を触る
+MGMT_HOME = "mgmt-home.cmds"
 SECTION_FILES = {
     "6-1": BASELINE,
     "6-3": "phase2-mape.cmds",
     "6-4": "qos-ngn-out.cmds",
+    "6-6": MGMT_HOME,
 }
-DELTAS = list(TUNING_PARTS.values()) + ["phase2-mape.cmds", "qos-ngn-out.cmds"]
+DELTAS = list(TUNING_PARTS.values()) + ["phase2-mape.cmds", "qos-ngn-out.cmds", MGMT_HOME]
+# §1 ルール1: 管理系（eth0）を触ってよいのは、基準と実機の管理系のファイルだけ
+TEST_DELTAS = [name for name in DELTAS if name != MGMT_HOME]
 
 # 資料の行が VyOS rolling では投入できないため、ファイル側で正しい構文に直したもの。
 # 資料（CLAUDE.md）が直ったら、ここから外す（下の検査がそれを促す）。
@@ -170,7 +175,7 @@ def test_no_unexpected_cmds_files():
     assert {p.name for p in VYOS.glob("*.cmds")} == {BASELINE, *DELTAS}
 
 
-@pytest.mark.parametrize("name", DELTAS)
+@pytest.mark.parametrize("name", TEST_DELTAS)
 def test_deltas_never_touch_mgmt_eth0(name):
     # §1 ルール1: 管理系は §6-1 の初期設定以外で触らない
     assert [line for line in file_commands(name) if re.search(r"\beth0\b", line)] == []

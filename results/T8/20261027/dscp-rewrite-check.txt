@@ -1,0 +1,14 @@
+tcpdump: listening on sfp0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+18:23:52.222686 IP6 (flowlabel 0x87a46, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51820 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.222686 IP6 (flowlabel 0x87a46, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51820 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.222728 IP6 (flowlabel 0x87a46, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51820 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.222728 IP6 (flowlabel 0x87a46, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51820 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.222728 IP6 (flowlabel 0x87a46, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51820 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.244197 IP6 (class 0x88, flowlabel 0x3c189, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51821 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.244237 IP6 (class 0x88, flowlabel 0x3c189, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51821 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.244237 IP6 (class 0x88, flowlabel 0x3c189, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51821 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.244237 IP6 (class 0x88, flowlabel 0x3c189, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51821 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+18:23:52.244260 IP6 (class 0x88, flowlabel 0x3c189, hlim 63, next-header UDP (17) payload length: 23) 2001:db8:10::10.51821 > 2001:db8:20::2.52528: [udp sum ok] UDP, length 15
+10 packets captured
+10 packets received by filter
+0 packets dropped by kernel

@@ -1,0 +1,66 @@
+# PC03 inventory 2026-10-24T18:15:05+00:00
+ Static hostname: pc03
+Operating System: Ubuntu 24.04.5 LTS
+          Kernel: Linux 6.8.0-147-generic
+ Hardware Vendor: Micro-Star International Co., Ltd.
+  Hardware Model: MS-7C91
+BOOT_IMAGE=/vmlinuz-6.8.0-147-generic root=/dev/mapper/ubuntu--vg-ubuntu--lv ro
+CPU(s):                                  16
+Model name:                              AMD Ryzen 7 5700G with Radeon Graphics
+Thread(s) per core:                      2
+               total        used        free      shared  buff/cache   available
+Mem:            58Gi       972Mi        57Gi       1.5Mi       377Mi        57Gi
+NAME      SIZE MODEL             TRAN
+nvme0n1 953.9G SPCC M.2 PCIe SSD nvme
+
+10:00.0 Ethernet controller [0200]: Broadcom Inc. and subsidiaries BCM57840 NetXtreme II 10 Gigabit Ethernet [14e4:16a1] (rev 11)
+10:00.1 Ethernet controller [0200]: Broadcom Inc. and subsidiaries BCM57840 NetXtreme II 10 Gigabit Ethernet [14e4:16a1] (rev 11)
+10:00.2 Ethernet controller [0200]: Broadcom Inc. and subsidiaries BCM57840 NetXtreme II 10 Gigabit Ethernet [14e4:16a1] (rev 11)
+10:00.3 Ethernet controller [0200]: Broadcom Inc. and subsidiaries BCM57840 NetXtreme II 10 Gigabit Ethernet [14e4:16a1] (rev 11)
+22:00.0 Ethernet controller [0200]: Realtek Semiconductor Co., Ltd. RTL8111/8168/8211/8411 PCI Express Gigabit Ethernet Controller [10ec:8168] (rev 15)
+2a:00.0 Ethernet controller [0200]: Realtek Semiconductor Co., Ltd. RTL8125 2.5GbE Controller [10ec:8125] (rev 05)
+
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP> 
+enp34s0          UP             04:7c:16:c1:36:a6 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+enp42s0          DOWN           04:7c:16:c1:36:a5 <BROADCAST,MULTICAST> 
+enp16s0f0        DOWN           0c:c4:7a:eb:56:28 <BROADCAST,MULTICAST> 
+enp16s0f1        DOWN           0c:c4:7a:eb:56:2a <BROADCAST,MULTICAST> 
+enp16s0f2        DOWN           0c:c4:7a:eb:56:2c <BROADCAST,MULTICAST> 
+enp16s0f3        DOWN           0c:c4:7a:eb:56:2e <BROADCAST,MULTICAST> 
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp34s0          UP             192.168.2.13/24 metric 100 240b:12:1601:dd00:67c:16ff:fec1:36a6/64 fe80::67c:16ff:fec1:36a6/64 
+enp42s0          DOWN           
+enp16s0f0        DOWN           
+enp16s0f1        DOWN           
+enp16s0f2        DOWN           
+enp16s0f3        DOWN           
+10:00.0 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+10:00.1 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+10:00.2 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+10:00.3 link cur=8.0 GT/s PCIe x8 max=8.0 GT/s PCIe x8
+22:00.0 link cur=2.5 GT/s PCIe x1 max=2.5 GT/s PCIe x1
+2a:00.0 link cur=5.0 GT/s PCIe x1 max=5.0 GT/s PCIe x1
+== enp16s0f0
+driver: bnx2x
+version: 6.8.0-147-generic
+firmware-version: bc 7.6.55
+== enp16s0f1
+driver: bnx2x
+version: 6.8.0-147-generic
+firmware-version: bc 7.6.55
+== enp16s0f2
+driver: bnx2x
+version: 6.8.0-147-generic
+firmware-version: bc 7.6.55
+== enp16s0f3
+driver: bnx2x
+version: 6.8.0-147-generic
+firmware-version: bc 7.6.55
+== enp34s0
+driver: r8169
+version: 6.8.0-147-generic
+firmware-version: rtl8168h-2_0.0.2 02/26/15
+== enp42s0
+driver: r8169
+version: 6.8.0-147-generic
+firmware-version: 
