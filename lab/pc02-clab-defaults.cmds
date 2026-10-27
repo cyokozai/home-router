@@ -1,0 +1,12 @@
+# containerlab の vyosnetworks_vyos が作る既定の config.boot のうち、実機の PC02 には無い設定を外す。
+# scripts/lab-e2e.sh がフェーズ1（vyos/phase1.cmds）と一緒に投入する。実機には投入しない。
+#
+# containerlab の既定（nodes/vyosnetworks_vyos/vyos.config.boot、v0.81.1 で確認）:
+#   - service ssh listen-address '0.0.0.0'
+#     フェーズ1 の「set service ssh listen-address '172.16.0.12'」は値を足すだけなので、これが残ると
+#     SSH が 10G 側（192.168.10.1 など）でも待ち受け、§1 ルール6 の前提が崩れる
+#   - service https（listen-address '0.0.0.0'、API 鍵 admin）
+#     実機では設定しない。残すと 10G 側で 443 が開く
+# eth0 のアドレスは containerlab が mgmt-ipv4（172.16.0.12/24）を静的に入れるので、フェーズ1 と同じ値になり食い違わない
+delete service ssh listen-address '0.0.0.0'
+delete service https

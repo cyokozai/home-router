@@ -373,3 +373,85 @@ def test_tcp_buffer_maximums_fit_in_core_limits(doc):
 @pytest.mark.parametrize("path", ["configs/pc01", "configs/pc02", "configs/pc03", "results"])
 def test_storage_directories_exist(path):
     assert (ROOT / path).is_dir()
+
+
+# ---- VyOS rolling で通る書き方（§6-4） ------------------------------------------
+
+
+def test_set_dscp_uses_a_value_vyos_accepts(doc):
+    # set-dscp は 0-63 か名前の一覧しか受け付けず、一覧に CS0 は無い。DSCP 0 は 'default'
+    lines = vyos_lines(sections(doc)["6-4"])
+    lines += [line.lstrip("# ") for b in code_blocks(sections(doc)["6-4"]) for line in b.splitlines()]
+    assert not [line for line in lines if "set-dscp 'CS0'" in line]
+    assert "set qos policy shaper NGN-OUT class 10 set-dscp 'default'" in lines
+
+
+def test_tc_filter_check_does_not_restrict_to_egress(doc):
+    # filter は root qdisc（HTB）に付くので、egress を指定すると何も表示されない
+    checks = [line for line in doc.splitlines() if "tc filter show dev" in line]
+    assert checks
+    assert [line for line in checks if re.search(r"tc filter show dev \S+ egress", line)] == []
+
+
+# ---- リポジトリ内のパスの参照（CLAUDE.md・README.md） ----------------------------
+
+
+README = ROOT / "README.md"
+REPO_PATH = re.compile(r"^(?:vyos|lab|scripts|tests|\.github)(?:/|$)")
+
+
+def referenced_repo_paths(text: str) -> list[str]:
+    """インラインコードのうち、リポジトリ内のパスを指すもの（先頭のトークン）。"""
+    found = []
+    for span in re.findall(r"`([^`\n]+)`", text):
+        token = span.split()[0]
+        if REPO_PATH.match(token):
+            found.append(token)
+    return found
+
+
+def repo_path_exists(path: str) -> bool:
+    if any(ch in path for ch in "*?["):
+        return any(ROOT.glob(path))
+    return (ROOT / path).exists()
+
+
+def all_referenced_paths() -> list[tuple[str, str]]:
+    pairs = []
+    for source in (DOC, README):
+        pairs += [(source.name, p) for p in referenced_repo_paths(source.read_text(encoding="utf-8"))]
+    return sorted(set(pairs))
+
+
+@pytest.mark.parametrize(("source", "path"), all_referenced_paths())
+def test_referenced_repo_path_exists(source, path):
+    assert repo_path_exists(path), f"{source} が参照する {path} が無い"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "vyos/*.cmds",
+        "vyos/VERSION",
+        "vyos/container-unsupported.txt",
+        "tests/test_vyos_cmds.py",
+        ".github/workflows/vyos-config.yaml",
+        "scripts/vyos-apply.sh",
+        "lab/home-router.clab.yml",
+        "tests/test_lab_topology.py",
+    ],
+)
+def test_handoff_doc_explains_the_repo_files(doc, path):
+    assert path in referenced_repo_paths(doc)
+
+
+@pytest.mark.parametrize("path", ["vyos/", "scripts/", "lab/", ".github/"])
+def test_readme_layout_table_lists_the_directory(path):
+    rows = [line for line in README.read_text(encoding="utf-8").splitlines() if line.startswith("|")]
+    assert any(f"`{path}" in row for row in rows), f"README の構成の表に {path} が無い"
+
+
+def test_vyos_cmds_are_applied_with_the_checking_script(doc):
+    # rolling の set / commit は失敗しても終了コード 0 を返す。スクリプトからは vyos-apply.sh で投入する
+    assert "終了コード 0" in doc
+    assert "scripts/vyos-apply.sh" in doc

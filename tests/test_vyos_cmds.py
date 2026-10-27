@@ -41,13 +41,8 @@ TEST_DELTAS = [name for name in DELTAS if name != MGMT_HOME]
 
 # 資料の行が VyOS rolling では投入できないため、ファイル側で正しい構文に直したもの。
 # 資料（CLAUDE.md）が直ったら、ここから外す（下の検査がそれを促す）。
-DOC_CORRECTIONS = {
-    # set-dscp の値の制約は 0-63 か名前の一覧で、一覧に CS0 は無い
-    # （vyos-1x interface-definitions/include/qos/set-dscp.xml.i）。0 と同じ意味の 'default' を使う
-    "set qos policy shaper NGN-OUT class 10 set-dscp 'CS0'": (
-        "set qos policy shaper NGN-OUT class 10 set-dscp 'default'"
-    ),
-}
+# 書式: {資料の行: ファイルに書く行}。今は無い（§6-4 の set-dscp 'CS0' は資料側を 'default' に直した）。
+DOC_CORRECTIONS: dict[str, str] = {}
 
 UNSUPPORTED = VYOS / "container-unsupported.txt"
 

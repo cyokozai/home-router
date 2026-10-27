@@ -1,6 +1,6 @@
 # CLAUDE.md §6-4 NGN向けのDSCP書き換え（QoS の set-dscp）。フェーズ1の状態に入れる差分
-# 資料の set-dscp 'CS0' は VyOS rolling の値の制約（0-63 か AF11.. / CS1..CS7 などの名前）に
-# 当てはまらず set の段階で拒否される。DSCP 0（000000）を表す 'default' で書く。
+# DSCP 0（000000）は 'default' と書く。VyOS rolling の set-dscp は 0-63 か AF11.. / CS1..CS7 などの
+# 名前しか受け付けず、一覧に CS0 は無いので set の段階で拒否される（vyos-1x interface-definitions/include/qos/set-dscp.xml.i）。
 set qos policy shaper NGN-OUT bandwidth '10gbit'
 set qos policy shaper NGN-OUT class 10 bandwidth '100%'
 set qos policy shaper NGN-OUT class 10 match WG-HS ipv6 protocol 'udp'
