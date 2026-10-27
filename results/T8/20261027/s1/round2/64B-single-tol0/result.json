@@ -1,0 +1,155 @@
+{
+ "test": "T3",
+ "started": "2026-10-27T04:48:12.029482+09:00",
+ "frame": 64,
+ "flows": "single",
+ "threads": 4,
+ "burst": 1,
+ "wire_rate_pps": 14880952.38095238,
+ "tolerance": 0.0,
+ "precision": 0.01,
+ "trial_seconds": 10,
+ "final_seconds": 60,
+ "result_pps": 875392.998046875,
+ "searched_upper_pps": 2694812.5,
+ "result_ratio_of_wire": 0.05882640946875,
+ "sender_limited": true,
+ "final_counters": {
+  "pc01_tx": 52446307,
+  "pc02_rx": 52446307,
+  "pc02_tx": 52446310,
+  "pc03_rx": 32078738
+ },
+ "trials": [
+  {
+   "rate_pps": 14880952.38095238,
+   "seconds": 10,
+   "sent_pps": 2694812.5,
+   "dut_lost": 14134974,
+   "dut_loss_ratio": 0.5245253241180973,
+   "receiver_lost": 7540440,
+   "sender_limited": true,
+   "passed": false
+  },
+  {
+   "rate_pps": 2694812.5,
+   "seconds": 10,
+   "sent_pps": 2656572.4,
+   "dut_lost": 13747327,
+   "dut_loss_ratio": 0.5174836191176269,
+   "receiver_lost": 7439542,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 1347406.25,
+   "seconds": 10,
+   "sent_pps": 1347046.6,
+   "dut_lost": 607535,
+   "dut_loss_ratio": 0.0451012607878599,
+   "receiver_lost": 7502121,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 673703.125,
+   "seconds": 10,
+   "sent_pps": 673544.2,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 1379648,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 1010554.6875,
+   "seconds": 10,
+   "sent_pps": 1001302.5,
+   "dut_lost": 11156,
+   "dut_loss_ratio": 0.0011141488211604386,
+   "receiver_lost": 4705420,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 842128.90625,
+   "seconds": 10,
+   "sent_pps": 841943.7,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 3116506,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 926341.796875,
+   "seconds": 10,
+   "sent_pps": 917916.2,
+   "dut_lost": 663,
+   "dut_loss_ratio": 7.222881565877147e-05,
+   "receiver_lost": 3857863,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 884235.3515625,
+   "seconds": 10,
+   "sent_pps": 875604.3,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 3431356,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 905288.57421875,
+   "seconds": 10,
+   "sent_pps": 896322.2,
+   "dut_lost": 117,
+   "dut_loss_ratio": 1.3053341755899832e-05,
+   "receiver_lost": 3667976,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 894761.962890625,
+   "seconds": 10,
+   "sent_pps": 888661.6,
+   "dut_lost": 161,
+   "dut_loss_ratio": 1.8117132550793237e-05,
+   "receiver_lost": 3579799,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 889498.6572265625,
+   "seconds": 10,
+   "sent_pps": 887003.4,
+   "dut_lost": 135,
+   "dut_loss_ratio": 1.52197838249549e-05,
+   "receiver_lost": 3524323,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 884235.3515625,
+   "seconds": 60,
+   "sent_pps": 883807.3333333334,
+   "dut_lost": 3725,
+   "dut_loss_ratio": 7.02453249614735e-05,
+   "receiver_lost": 20942587,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 875392.998046875,
+   "seconds": 60,
+   "sent_pps": 874105.1166666667,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 20367572,
+   "sender_limited": false,
+   "passed": true
+  }
+ ]
+}

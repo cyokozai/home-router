@@ -212,7 +212,39 @@ def plot_t4b(base: Path) -> None:
     save(fig, "T4b-configs-64B", "①リング 4096 ②RPS ④性能プロファイル。巡回ごとに 4 構成を回し、各 n=3。点は各回。二分探索（幅 1%）、最終 60 秒。2026-10-26")
 
 
+def plot_t8(base: Path) -> None:
+    import json
+
+    configs = [("s1", "①（基準）"), ("s1q", "①＋QoS（HTB）")]
+    conds = [("single", "0", "1 フロー\nNDR"), ("single", "0.001", "1 フロー\nPDR"),
+             ("many", "0", "多数フロー\nNDR"), ("many", "0.001", "多数フロー\nPDR")]
+    fig, ax = plt.subplots(figsize=(9, 4.3))
+    width = 0.38
+    for k, ((c, label), color) in enumerate(zip(configs, ["#2ca02c", "#d62728"])):
+        stats, pts = [], []
+        for f, t, _ in conds:
+            vals = [json.loads(p.read_text())["result_pps"] / 1e6 for p in sorted(base.glob(f"{c}/round*/64B-{f}-tol{t}/result.json"))]
+            stats.append(median_range(vals))
+            pts.append(vals)
+        xs = [i + (k - 0.5) * width for i in range(len(conds))]
+        ax.bar(xs, [s[0] for s in stats], width, color=color, label=label,
+               yerr=[[s[1] for s in stats], [s[2] for s in stats]], capsize=3)
+        for x, vals, s in zip(xs, pts, stats):
+            ax.scatter([x] * len(vals), vals, s=9, color="black", zorder=3)
+            ax.text(x, s[0] + s[2] + 0.03, f"{s[0]:.2f}", ha="center", va="bottom", fontsize=8)
+    ax.axhline(2.84, color=COLORS["PC01 送信"], ls=":", lw=1.5, label="PC01 の送信上限 約 2.84")
+    ax.set_xticks(range(len(conds)), [c[2] for c in conds])
+    ax.set_ylabel("64B のフレームレート [Mpps]")
+    ax.set_ylim(0, 3.2)
+    ax.legend(fontsize=8, loc="upper left")
+    ax.set_title("T8: QoS（shaper の set-dscp）を通したときの 64B 転送レート")
+    save(fig, "T8-qos-64B", "QoS は eth2 の送信に HTB（qos-ngn-out.cmds）。試験の流れは書き換えの対象外で default のクラスを通る。各 n=3、中央値と最小〜最大。TCP は両構成とも上限（9.415 / 9.285 Gbps）。2026-10-27")
+
+
 if __name__ == "__main__":
+    t8 = ROOT / "results" / "T8" / "20261027"
+    if t8.exists():
+        plot_t8(t8)
     t4b = ROOT / "results" / "T4b" / "20261026"
     if t4b.exists():
         plot_t4b(t4b)
