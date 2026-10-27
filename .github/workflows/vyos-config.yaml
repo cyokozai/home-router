@@ -55,3 +55,4 @@ jobs:
           vyos/dscp-firewall.cmds
           vyos/mape-portsets.cmds
           vyos/test-sink.cmds
+          vyos/test-sink-fw.cmds

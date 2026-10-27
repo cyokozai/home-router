@@ -40,8 +40,28 @@ SRC_IP, DST_IP = "192.168.10.10", "192.168.20.2"
 PC02_ETH1_MAC = "6c:fe:54:6e:27:a0"
 
 
+# IPv6（--family 6）の経路。IPv6＋UDP は 64B のフレームに収まらないので、RFC 5180 にならって 78B 以上で測る
+SRC_IP6, DST_IP6 = "2001:db8:10::10", "2001:db8:20::2"
+MIN_FRAME_IP6 = 78
+
+# IMIX（7:4:1、線上 64 / 570 / 1518 バイト）。CLAUDE.md §8 の目標表と同じ
+IMIX_FRAMES = ((64, 7), (570, 4), (1518, 1))
+
+
 def wire_rate_pps(frame: int) -> float:
     return LINE_RATE_BPS / ((frame + GAP_BYTES) * 8)
+
+
+def imix_wire_rate_pps(frames: tuple[tuple[int, int], ...] = IMIX_FRAMES) -> float:
+    """重み付きの平均フレーム長での理論値。"""
+    total = sum(w for _, w in frames)
+    mean = sum(f * w for f, w in frames) / total
+    return LINE_RATE_BPS / ((mean + GAP_BYTES) * 8)
+
+
+def imix_weights(frames: tuple[tuple[int, int], ...] = IMIX_FRAMES) -> str:
+    """pktgen の imix_weights の書式（pkt_size は FCS を含まない）。"""
+    return " ".join(f"{pktgen_size(f)},{w}" for f, w in frames)
 
 
 def pktgen_size(frame: int) -> int:
@@ -175,6 +195,23 @@ PC02_ETH2_MAC = "6c:fe:54:6e:27:a1"
 # PC03 → PC01 向けの流れの宛先。PC02 が静的 ARP（vyos/test-sink.cmds）で存在しない MAC に送り出すので、
 # PC02 の負荷は本物と同じまま、PC01 の CPU を受信に使わせない（双方向にしても PC01 が送り続けられるように）
 SINK_IP = "192.168.10.99"
+# IPv6 の捨て先。VyOS の静的 ARP（protocols static arp）は IPv4 しか受け付けないので、PC02 には何も足さず、
+# PC01 にこのアドレスを付けて NDP に答えさせ、宛てた UDP は X710 の ntuple のフィルタで NIC が捨てる（PC01 の CPU を使わない）
+SINK_IP6 = "2001:db8:10::99"
+
+
+@dataclass
+class Flow:
+    """1 回の試行で pktgen に渡す、経路と中身の指定。"""
+    src: str = SRC_IP
+    dst: str = DST_IP
+    sink: str = SINK_IP
+    reply_src: str = DST_IP  # 双方向のとき、PC03 が送るパケットの送信元
+    extra: dict[str, str] = field(default_factory=dict)  # DST_MAX・SPORT_MIN・SPORT_MAX・IMIX など
+
+    @classmethod
+    def ipv6(cls, extra: dict[str, str] | None = None) -> "Flow":
+        return cls(src=SRC_IP6, dst=DST_IP6, sink=SINK_IP6, reply_src=DST_IP6, extra=extra or {})
 
 
 def snapshot_bidir() -> dict[str, int]:
@@ -190,20 +227,22 @@ def snapshot_bidir() -> dict[str, int]:
     }
 
 
-def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: Path) -> Trial:
+def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: Path,
+                     flow: Flow | None = None) -> Trial:
     """PC01 → PC03 と PC03 → PC01 を同時に流す。要求レートは両向きの合計で、半分ずつに分ける。"""
     import concurrent.futures as cf
 
+    flow = flow or Flow()
     counter = {"n": 0}
 
     def trial(rate_pps: float, seconds: int) -> Counters:
         counter["n"] += 1
         before = snapshot_bidir()
         common = {"SIZE": pktgen_size(frame), "THREADS": threads, "DURATION": seconds,
-                  "RATE": int(rate_pps / 2), "BURST": burst, "FLOWS": flows}
+                  "RATE": int(rate_pps / 2), "BURST": burst, "FLOWS": flows} | flow.extra
         runs = {
-            "pc01": common | {"IFACE": PC01_IF, "DST": DST_IP, "SRC": SRC_IP, "DMAC": PC02_ETH1_MAC},
-            "pc03": common | {"IFACE": PC03_IF, "DST": SINK_IP, "SRC": DST_IP, "DMAC": PC02_ETH2_MAC},
+            "pc01": common | {"IFACE": PC01_IF, "DST": flow.dst, "SRC": flow.src, "DMAC": PC02_ETH1_MAC},
+            "pc03": common | {"IFACE": PC03_IF, "DST": flow.sink, "SRC": flow.reply_src, "DMAC": PC02_ETH2_MAC},
         }
         with cf.ThreadPoolExecutor(2) as ex:
             futs = {h: ex.submit(ssh, h, "sudo " + " ".join(f"{k}={shlex.quote(str(v))}" for k, v in a.items())
@@ -223,15 +262,16 @@ def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: P
     return trial
 
 
-def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path) -> Trial:
+def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, flow: Flow | None = None) -> Trial:
+    flow = flow or Flow()
     counter = {"n": 0}
 
     def trial(rate_pps: float, seconds: int) -> Counters:
         counter["n"] += 1
         before = snapshot()
-        args = {"IFACE": PC01_IF, "SIZE": pktgen_size(frame), "DST": DST_IP, "SRC": SRC_IP,
+        args = {"IFACE": PC01_IF, "SIZE": pktgen_size(frame), "DST": flow.dst, "SRC": flow.src,
                 "DMAC": PC02_ETH1_MAC, "THREADS": threads, "DURATION": seconds,
-                "RATE": int(rate_pps), "BURST": burst, "FLOWS": flows}
+                "RATE": int(rate_pps), "BURST": burst, "FLOWS": flows} | flow.extra
         env = " ".join(f"{k}={shlex.quote(str(v))}" for k, v in args.items())
         out = ssh("pc01", f"sudo {env} bash ~/pktgen-run.sh", timeout=seconds + 120)
         time.sleep(1)  # 送り終えたフレームが PC03 まで届くのを待つ
@@ -260,22 +300,62 @@ def main(argv: list[str]) -> int:
     p.add_argument("--sender-max", action="store_true", help="レートを制限せずに送り、送信能力の上限だけを測る")
     p.add_argument("--bidir", action="store_true",
                    help="PC01 → PC03 と PC03 → PC01 を同時に流す（レートは両向きの合計。上限は理論値の 2 倍）")
+    p.add_argument("--family", type=int, choices=[4, 6], default=4, help="6 なら IPv6 で送る（--frame は 78 以上）")
+    p.add_argument("--imix", action="store_true", help="IMIX（7:4:1）で送る。--frame は無視する")
+    p.add_argument("--dst", help="宛先を変える（IPv4。MAP-E の試験では 198.51.100.1）。片方向のみ")
+    p.add_argument("--dst-max", help="宛先を --dst〜この値の範囲で散らす（IPv4）")
+    p.add_argument("--sport-min", type=int, help="many のときの送信元ポートの下限")
+    p.add_argument("--sport-max", type=int, help="many のときの送信元ポートの上限")
+    p.add_argument("--fixed-pps", type=float, help="探索せず、このレートで --final-seconds 秒を --repeat 回流す（長時間の試験）")
+    p.add_argument("--repeat", type=int, default=1)
     p.add_argument("--out", type=Path)
     a = p.parse_args(argv)
+    if a.family == 6 and a.frame < MIN_FRAME_IP6:
+        p.error(f"IPv6 は --frame {MIN_FRAME_IP6} 以上にする")
+    if a.dst and a.bidir:
+        p.error("--dst は片方向でだけ使える（双方向の返りの捨て先は IPv4 / IPv6 の既定のものに固定）")
 
-    name = f"{a.frame}B-{a.flows}-t{a.threads}" + ("-bidir" if a.bidir else "") \
+    extra = {}
+    if a.dst_max:
+        extra["DST_MAX"] = a.dst_max
+    if a.sport_min is not None:
+        extra["SPORT_MIN"] = str(a.sport_min)
+    if a.sport_max is not None:
+        extra["SPORT_MAX"] = str(a.sport_max)
+    if a.imix:
+        extra["IMIX"] = imix_weights()
+    flow = Flow.ipv6(extra) if a.family == 6 else Flow(extra=extra)
+    if a.dst:
+        flow.dst = a.dst
+
+    size = "imix" if a.imix else f"{a.frame}B"
+    name = f"{size}-{a.flows}-t{a.threads}" + ("-v6" if a.family == 6 else "") + ("-bidir" if a.bidir else "") \
         + ("-sendermax" if a.sender_max else f"-tol{a.tolerance:g}")
     out = a.out or Path("results/T3") / datetime.now().strftime("%Y%m%d") / name
     out.mkdir(parents=True, exist_ok=True)
-    trial = (make_trial_bidir if a.bidir else make_trial)(a.frame, a.flows, a.threads, a.burst, out)
-    upper = wire_rate_pps(a.frame) * (2 if a.bidir else 1)
-    meta = {"test": "T3", "started": datetime.now().astimezone().isoformat(), "frame": a.frame, "flows": a.flows,
-            "threads": a.threads, "burst": a.burst, "bidir": a.bidir, "wire_rate_pps": upper}
+    trial = (make_trial_bidir if a.bidir else make_trial)(a.frame, a.flows, a.threads, a.burst, out, flow)
+    upper = (imix_wire_rate_pps() if a.imix else wire_rate_pps(a.frame)) * (2 if a.bidir else 1)
+    meta = {"test": "T3", "started": datetime.now().astimezone().isoformat(), "frame": "imix" if a.imix else a.frame,
+            "flows": a.flows, "threads": a.threads, "burst": a.burst, "bidir": a.bidir, "family": a.family,
+            "flow": asdict(flow), "wire_rate_pps": upper}
     print(f"T3 {name}: 理論値 {upper/1e6:.3f} Mpps", flush=True)
 
     if a.sender_max:
         c = trial(0, a.final_seconds)  # RATE=0 はレート制限なし
         meta |= {"sender_max_pps": c.pc01_tx / a.final_seconds, "counters": asdict(c)}
+    elif a.fixed_pps:
+        runs = []
+        for _ in range(a.repeat):
+            c = trial(a.fixed_pps, a.final_seconds)
+            runs.append({"at": datetime.now().astimezone().isoformat(), "counters": asdict(c),
+                         "sent_pps": c.pc01_tx / a.final_seconds, "dut_loss_ratio": c.dut_loss_ratio})
+            # 途中で止まっても、それまでの分が残るように毎回書く
+            (out / "result.json").write_text(json.dumps(meta | {"fixed_pps": a.fixed_pps, "runs": runs},
+                                                         ensure_ascii=False, indent=1))
+        lost = sum(max(0, r["counters"]["pc01_tx"] - r["counters"]["pc02_tx"]) for r in runs)
+        sent = sum(r["counters"]["pc01_tx"] for r in runs)
+        meta |= {"fixed_pps": a.fixed_pps, "runs": runs, "total_loss_ratio": lost / sent if sent else None}
+        print(f"結果: {a.fixed_pps/1e6:.3f} Mpps × {a.final_seconds}s × {a.repeat} 回、ロス率の合計 {lost / sent:.2e}", flush=True)
     else:
         r = search(trial, upper, a.tolerance, a.precision, a.trial_seconds, a.final_seconds)
         meta |= {"tolerance": a.tolerance, "precision": a.precision, "trial_seconds": a.trial_seconds,

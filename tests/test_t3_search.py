@@ -155,3 +155,28 @@ def test_every_trial_is_logged():
     result = t3.search(trial, upper_pps=14_880_952, loss_tolerance=0.0, precision=0.01, trial_seconds=10, final_seconds=60)
     assert len(result.trials) == len(calls)
     assert all({"rate_pps", "seconds", "dut_loss_ratio", "passed"} <= set(t) for t in result.trials)
+
+
+def test_imix_wire_rate_matches_the_target_table():
+    # CLAUDE.md §8: IMIX（7:4:1）は約 3,343,700 pps
+    assert t3.imix_wire_rate_pps() == pytest.approx(3_343_700, rel=1e-3)
+
+
+def test_imix_weights_are_pktgen_sizes_without_fcs():
+    assert t3.imix_weights() == "60,7 566,4 1514,1"
+
+
+def test_ipv6_flow_uses_the_ipv6_path_and_sink():
+    f = t3.Flow.ipv6({"SPORT_MIN": "1024"})
+    assert (f.src, f.dst, f.sink, f.reply_src) == ("2001:db8:10::10", "2001:db8:20::2", "2001:db8:10::99", "2001:db8:20::2")
+    assert f.extra == {"SPORT_MIN": "1024"}
+
+
+def test_ipv6_rejects_frames_smaller_than_78():
+    with pytest.raises(SystemExit):
+        t3.main(["--family", "6", "--frame", "64"])
+
+
+def test_dst_override_is_one_way_only():
+    with pytest.raises(SystemExit):
+        t3.main(["--dst", "198.51.100.1", "--bidir"])
