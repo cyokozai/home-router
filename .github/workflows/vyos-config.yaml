@@ -51,3 +51,5 @@ jobs:
           vyos/phase2-mape.cmds
           vyos/qos-ngn-out.cmds
           vyos/mgmt-home.cmds
+          vyos/fw-stateful.cmds
+          vyos/dscp-firewall.cmds

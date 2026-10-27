@@ -1,0 +1,12 @@
+# B1: NGN 向けの DSCP の書き換えを、QoS の shaper（HTB）を通さずに firewall の set dscp で行う（CLAUDE.md §6-4 の代わりの方法）。
+# フェーズ1 に入れる差分。WireGuard（UDP 51820）の IPv6 の DSCP を 0 にする。
+#   forward: LAN の端末が送る分。output: ルータ自身が送る分（拠点間の WireGuard のハンドシェイク）
+# action は accept（書き換えたうえで通す）。default-action は accept のままなので、ほかの通信は触らない。
+set firewall ipv6 forward filter rule 10 action 'accept'
+set firewall ipv6 forward filter rule 10 protocol 'udp'
+set firewall ipv6 forward filter rule 10 source port '51820'
+set firewall ipv6 forward filter rule 10 set dscp '0'
+set firewall ipv6 output filter rule 10 action 'accept'
+set firewall ipv6 output filter rule 10 protocol 'udp'
+set firewall ipv6 output filter rule 10 source port '51820'
+set firewall ipv6 output filter rule 10 set dscp '0'
