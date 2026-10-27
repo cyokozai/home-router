@@ -226,7 +226,7 @@ net.core.netdev_max_backlog = 250000
 
 ```
 sudo ip -6 addr add 2001:db8:20::b/64 dev sfp0
-sudo ip -6 tunnel add br0 mode ipip6 local 2001:db8:20::b remote 2001:db8:20::c
+sudo ip -6 tunnel add br0 mode ipip6 local 2001:db8:20::b remote 2001:db8:20::c encaplimit none
 sudo ip link set br0 up mtu 1460
 sudo ip addr add 192.0.2.1/32 dev br0
 sudo ip route add 192.0.2.18/32 dev br0
@@ -336,6 +336,7 @@ set interfaces tunnel tun0 source-address '2001:db8:20::c'
 set interfaces tunnel tun0 remote '2001:db8:20::b'
 set interfaces tunnel tun0 address '192.0.2.18/32'
 set interfaces tunnel tun0 mtu '1460'
+set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'
 set interfaces tunnel tun0 ip adjust-mss '1420'
 set protocols static route 0.0.0.0/0 interface 'tun0'
 set nat source rule 101 outbound-interface name 'tun0'
@@ -348,6 +349,7 @@ set nat source rule 199 source address '192.168.10.0/24'
 set nat source rule 199 translation address '192.0.2.18'
 ```
 
+-	`encaplimit 'none'` は必須。VyOSの既定は encaplimit 4 で、外側にDestination Optionsヘッダ（8バイト）が付く。外側のNext Headerが4ではなく60になり、トンネルの実効MTUも1452に下がる。実際のBRは素のIPIP（Next Header 4）を使う。
 -	ポートの範囲は『徹底解説v6プラス』の表4.1にある例（a=4, k=8, PSID=0xfe）。使えるのは16ポート×15セットで、計240ポート。
 -	**既知の課題**: VyOSのSNATは1ルールに1つのポート範囲しか書けない。単純にルールを並べると、最初の16ポートしか使われない。15セットすべてを使う方法として、(a) 送信元ごとにルールを分ける、(b) 生のnftablesでパケットにマークを付けてSNATを振り分ける（OpenWrtでの事例あり）、の2案を比べる。
 
