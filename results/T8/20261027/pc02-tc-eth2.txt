@@ -1,0 +1,21 @@
+qdisc htb 1: root refcnt 17 r2q 6250 default 0xb direct_packets_stat 0 direct_qlen 1000
+qdisc fq_codel 8003: parent 1:a limit 10240p flows 1024 quantum 1514 target 5ms interval 100ms memory_limit 32Mb drop_batch 64 
+qdisc fq_codel 8004: parent 1:b limit 10240p flows 1024 quantum 1514 target 5ms interval 100ms memory_limit 32Mb drop_batch 64 
+filter parent 1: protocol all pref 1 u32 chain 0 
+filter parent 1: protocol all pref 1 u32 chain 0 fh 800: ht divisor 1 
+filter parent 1: protocol all pref 1 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 flowid 1:a not_in_hw (rule hit 14 success 5)
+  match ca6c0000/ffff0000 at 40 (success 5 ) 
+  match 00001100/0000ff00 at 4 (success 5 ) 
+	action order 1:  pedit action pipe keys 1
+ 	 index 1 ref 1 bind 1 installed 50 sec used 30 sec firstused 30 sec
+	 key #0  at ipv6+0: val 00000000 mask f03fffff
+	Action statistics:
+	Sent 385 bytes 5 pkt (dropped 0, overlimits 0 requeues 0) 
+	backlog 0b 0p requeues 0
+
+	action order 2:  police 0x1 rate 10Gbit burst 15Kb mtu 2Kb action reclassify overhead 0b 
+	ref 1 bind 1  installed 50 sec used 30 sec firstused 30 sec
+	Action statistics:
+	Sent 385 bytes 5 pkt (dropped 0, overlimits 0 requeues 0) 
+	backlog 0b 0p requeues 0
+
