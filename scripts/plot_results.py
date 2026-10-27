@@ -241,7 +241,40 @@ def plot_t8(base: Path) -> None:
     save(fig, "T8-qos-64B", "QoS は eth2 の送信に HTB（qos-ngn-out.cmds）。試験の流れは書き換えの対象外で default のクラスを通る。各 n=3、中央値と最小〜最大。TCP は両構成とも上限（9.415 / 9.285 Gbps）。2026-10-27")
 
 
+def plot_t5b1(base: Path) -> None:
+    import json
+
+    configs = [("s1", "①（基準）", "#2ca02c"), ("s1fw", "＋ステートフル FW", "#ff7f0e"),
+               ("s1fwft", "＋FW＋flowtable", "#9467bd"), ("s1dfw", "＋firewall の set dscp", "#1f77b4")]
+    conds = [("single", "0", "1 フロー\nNDR"), ("single", "0.001", "1 フロー\nPDR"),
+             ("many", "0", "多数フロー\nNDR"), ("many", "0.001", "多数フロー\nPDR")]
+    fig, ax = plt.subplots(figsize=(11, 4.5))
+    width = 0.2
+    for k, (c, label, color) in enumerate(configs):
+        stats, pts = [], []
+        for f, t, _ in conds:
+            vals = [json.loads(p.read_text())["result_pps"] / 1e6 for p in sorted(base.glob(f"{c}/round*/64B-{f}-tol{t}/result.json"))]
+            stats.append(median_range(vals))
+            pts.append(vals)
+        xs = [i + (k - 1.5) * width for i in range(len(conds))]
+        ax.bar(xs, [s[0] for s in stats], width, color=color, label=label,
+               yerr=[[s[1] for s in stats], [s[2] for s in stats]], capsize=2)
+        for x, vals, s in zip(xs, pts, stats):
+            ax.scatter([x] * len(vals), vals, s=7, color="black", zorder=3)
+            ax.text(x, s[0] + s[2] + 0.03, f"{s[0]:.2f}", ha="center", va="bottom", fontsize=7)
+    ax.axhline(2.84, color=COLORS["PC01 送信"], ls=":", lw=1.5, label="PC01 の送信上限 約 2.84")
+    ax.set_xticks(range(len(conds)), [c[2] for c in conds])
+    ax.set_ylabel("64B のフレームレート [Mpps]")
+    ax.set_ylim(0, 3.2)
+    ax.legend(fontsize=8, loc="upper left", ncol=2)
+    ax.set_title("T5・B1: ステートフル FW と firewall の DSCP 書き換えのコスト（64B）")
+    save(fig, "T5-B1-64B", "すべて ① リング 4096 の上に足した構成。各 n=3、棒は中央値、ひげは最小〜最大、点は各回。2026-10-27")
+
+
 if __name__ == "__main__":
+    t5 = ROOT / "results" / "T5-B1" / "20261027"
+    if t5.exists():
+        plot_t5b1(t5)
     t8 = ROOT / "results" / "T8" / "20261027"
     if t8.exists():
         plot_t8(t8)
