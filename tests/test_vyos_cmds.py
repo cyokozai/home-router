@@ -183,24 +183,53 @@ def test_deltas_never_touch_mgmt_eth0(name):
     assert [line for line in file_commands(name) if re.search(r"\beth0\b", line)] == []
 
 
-def test_mape_portsets_cover_all_15_sets_and_every_source_port():
-    # v6プラスの例（a=4, k=8, PSID=0xfe）: A=1〜15 の組 A×4096 + 0xfe0 から 16 ポート。A=0 は使わない
-    lines = file_commands("mape-portsets.cmds")
+def mape_rules() -> tuple[dict[int, tuple[int, int]], dict[int, list[tuple[int, int]]]]:
     trans, src = {}, {}
-    for line in lines:
+    for line in file_commands("mape-portsets.cmds"):
         m = re.match(r"set nat source rule (\d+) translation port '(\d+)-(\d+)'", line)
         if m:
             trans[int(m.group(1))] = (int(m.group(2)), int(m.group(3)))
-        m = re.match(r"set nat source rule (\d+) source port '(\d+)-(\d+)'", line)
+        m = re.match(r"set nat source rule (\d+) source port '([\d,-]+)'", line)
         if m:
-            src[int(m.group(1))] = (int(m.group(2)), int(m.group(3)))
+            src[int(m.group(1))] = [tuple(map(int, r.split("-"))) for r in m.group(2).split(",")]
+    return trans, src
+
+
+def test_mape_portsets_cover_all_15_sets_and_every_source_port():
+    # v6プラスの例（a=4, k=8, PSID=0xfe）: A=1〜15 の組 A×4096 + 0xfe0 から 16 ポート。A=0 は使わない
+    lines = file_commands("mape-portsets.cmds")
+    trans, src = mape_rules()
     assert sorted(trans.values()) == [(a * 4096 + 0xFE0, a * 4096 + 0xFE0 + 15) for a in range(1, 16)]
     assert set(trans) == set(src)
-    ranges = sorted(src.values())
-    assert ranges[0][0] == 0 and ranges[-1][1] == 65535
+    ranges = sorted(r for rs in src.values() for r in rs)
+    # 下端 0 の範囲は VyOS が条件ごと落とす（2026-10-27 実機）ので 1 から
+    assert ranges[0][0] == 1 and ranges[-1][1] == 65535
     assert all(prev[1] + 1 == nxt[0] for prev, nxt in zip(ranges, ranges[1:]))  # 隙間も重なりも無い
     assert "set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'" in lines
     assert "set interfaces tunnel tun0 parameters ipv6 tclass '0x00'" in lines
+
+
+def test_mape_portsets_spread_consecutive_connections():
+    # 1 台から同じ宛先へ張る接続は 2 つおきの連番ポートを使う。17 本（1 組の 16 ポート＋1）が
+    # 1 本のルールに収まると枯渇するので、どこから始めても 2 本以上のルールにまたがること
+    _, src = mape_rules()
+    owner = {}
+    for rule, rs in src.items():
+        for lo, hi in rs:
+            owner.update(dict.fromkeys(range(lo, hi + 1), rule))
+    for start in range(1, 65535 - 32):
+        assert len({owner[start + 2 * i] for i in range(17)}) >= 2, start
+
+
+def test_mape_portsets_match_the_generator():
+    import subprocess
+    import sys
+
+    out = subprocess.run([sys.executable, "-I", str(ROOT / "scripts" / "gen_mape_portsets.py")],
+                         check=True, capture_output=True, text=True).stdout.splitlines()
+    rules = [line for line in file_commands("mape-portsets.cmds")
+             if re.match(r"set nat source rule 1(0[1-9]|1[0-5]) ", line)]
+    assert rules == out
 
 
 def test_ipv6_flowtable_mirrors_ipv4():
