@@ -35,7 +35,8 @@ SECTION_FILES = {
     "6-4": "qos-ngn-out.cmds",
     "6-6": MGMT_HOME,
 }
-DELTAS = list(TUNING_PARTS.values()) + ["phase2-mape.cmds", "qos-ngn-out.cmds", MGMT_HOME]
+DELTAS = list(TUNING_PARTS.values()) + ["phase2-mape.cmds", "qos-ngn-out.cmds", MGMT_HOME,
+                                        "fw-stateful.cmds", "dscp-firewall.cmds"]
 # §1 ルール1: 管理系（eth0）を触ってよいのは、基準と実機の管理系のファイルだけ
 TEST_DELTAS = [name for name in DELTAS if name != MGMT_HOME]
 
