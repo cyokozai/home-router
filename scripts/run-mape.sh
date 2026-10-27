@@ -23,10 +23,17 @@ to_base() {
 }
 br_up() {
   scp -q "${here}/../lab/pc03-br.sh" pc03:/tmp/pc03-br.sh
-  ssh pc03 'sudo sh /tmp/pc03-br.sh && ip -br addr show br0 && pgrep -f "iperf3 -s -B 198.51.100.1" >/dev/null || iperf3 -s -D -B 198.51.100.1'
+  ssh pc03 'sudo sh /tmp/pc03-br.sh && ip -br addr show br0'
+  # pgrep -f で有無を見ると ssh のコマンド行そのものに一致して起動されない（2026-10-27 実害）。名前で止めてから必ず起動する
+  srv_up
+}
+# iperf3 のサーバは、ポートが尽きて接続が途中で切れると落ちる（2026-10-27 実害: p2 の -P 32 のあと以降すべて Connection refused）。
+# 計測のたびに立て直す
+srv_up() {
+  ssh pc03 'pkill -x iperf3; iperf3 -s -D -B 198.51.100.1 && sleep 1 && ss -ltn "sport = :5201"'
 }
 br_down() {
-  ssh pc03 'pkill -f "iperf3 -s -D -B 198.51.100.1" 2>/dev/null; sudo ip link del br0 2>/dev/null; sudo ip addr del 198.51.100.1/32 dev lo 2>/dev/null; sudo ip -6 addr del 2001:db8:20::b/64 dev sfp0 2>/dev/null; true'
+  ssh pc03 'pkill -x iperf3 2>/dev/null; sudo ip link del br0 2>/dev/null; sudo ip addr del 198.51.100.1/32 dev lo 2>/dev/null; sudo ip -6 addr del 2001:db8:20::b/64 dev sfp0 2>/dev/null; true'
 }
 trap 'echo "== 基準に戻す"; to_base; br_down' EXIT
 
@@ -48,6 +55,7 @@ for r in $(seq 1 "${rounds}"); do
     if [[ ${r} == 1 ]]; then
       ssh pc03 'sudo timeout 25 tcpdump -ni sfp0 -c 400 -v "ip6 proto 4" > /tmp/t7-cap.txt 2>&1 &'
       sleep 2
+      srv_up >/dev/null
       ssh pc01 'iperf3 -c 198.51.100.1 -t 5 -P 4' > /dev/null 2>&1 || true
       ssh pc01 'ping -M do -s 1432 -c 3 -W1 198.51.100.1; ping -M do -s 1472 -c 2 -W1 198.51.100.1' > "${d}/t7-pmtud.txt" 2>&1 || true
       sleep 20
@@ -55,7 +63,10 @@ for r in $(seq 1 "${rounds}"); do
     fi
 
     for par in 4 32; do
-      ssh pc01 "iperf3 -c 198.51.100.1 -t 60 -O 5 -P ${par} -J" > "${d}/T6-P${par}.json" 2> "${d}/T6-P${par}.err" &
+      srv_up >/dev/null
+      # ポートが尽きると iperf3 3.16 のクライアントは segfault（終了 139）するか、--connect-timeout を無視して止まる（2026-10-27）。
+      # 終了コードを .err に残し、止まったときは 90 秒で切る（124）
+      ssh pc01 "timeout 90 iperf3 -c 198.51.100.1 --connect-timeout 5000 -t 60 -O 5 -P ${par} -J; echo \"rc=\$?\" >&2" > "${d}/T6-P${par}.json" 2> "${d}/T6-P${par}.err" &
       ipid=$!
       if [[ ${par} == 32 ]]; then
         sleep 20
@@ -63,8 +74,8 @@ for r in $(seq 1 "${rounds}"); do
         ssh pc02 'sudo conntrack -L -p tcp -d 198.51.100.1 2>/dev/null' > "${d}/B2-conntrack.txt" || true
       fi
       wait "${ipid}" || true
-      jq -r --arg c "${c}" --arg p "${par}" '"   \($c) -P \($p): 受信 \(.end.sum_received.bits_per_second/1e9*1000|round/1000) Gbps / 再送 \(.end.sum_sent.retransmits) / 流れ \(.start.test_start.num_streams)"' \
-        "${d}/T6-P${par}.json" 2>/dev/null || echo "   ${c} -P ${par}: iperf3 が結果を返さなかった（$(head -c 200 "${d}/T6-P${par}.err")）"
+      jq -er --arg c "${c}" --arg p "${par}" 'select(.end.sum_received) | "   \($c) -P \($p): 受信 \(.end.sum_received.bits_per_second/1e9*1000|round/1000) Gbps / 再送 \(.end.sum_sent.retransmits) / 流れ \(.start.test_start.num_streams)"' \
+        "${d}/T6-P${par}.json" 2>/dev/null || echo "   ${c} -P ${par}: iperf3 が結果を返さなかった（$(jq -r '.error // empty' "${d}/T6-P${par}.json" 2>/dev/null) $(head -c 200 "${d}/T6-P${par}.err")）"
       sleep 3
     done
   done
