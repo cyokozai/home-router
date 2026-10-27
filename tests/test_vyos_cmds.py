@@ -36,7 +36,8 @@ SECTION_FILES = {
     "6-6": MGMT_HOME,
 }
 DELTAS = list(TUNING_PARTS.values()) + ["phase2-mape.cmds", "qos-ngn-out.cmds", MGMT_HOME,
-                                        "fw-stateful.cmds", "dscp-firewall.cmds"]
+                                        "fw-stateful.cmds", "dscp-firewall.cmds", "mape-portsets.cmds",
+                                        "test-sink.cmds"]
 # §1 ルール1: 管理系（eth0）を触ってよいのは、基準と実機の管理系のファイルだけ
 TEST_DELTAS = [name for name in DELTAS if name != MGMT_HOME]
 
@@ -180,6 +181,26 @@ def test_no_unexpected_cmds_files():
 def test_deltas_never_touch_mgmt_eth0(name):
     # §1 ルール1: 管理系は §6-1 の初期設定以外で触らない
     assert [line for line in file_commands(name) if re.search(r"\beth0\b", line)] == []
+
+
+def test_mape_portsets_cover_all_15_sets_and_every_source_port():
+    # v6プラスの例（a=4, k=8, PSID=0xfe）: A=1〜15 の組 A×4096 + 0xfe0 から 16 ポート。A=0 は使わない
+    lines = file_commands("mape-portsets.cmds")
+    trans, src = {}, {}
+    for line in lines:
+        m = re.match(r"set nat source rule (\d+) translation port '(\d+)-(\d+)'", line)
+        if m:
+            trans[int(m.group(1))] = (int(m.group(2)), int(m.group(3)))
+        m = re.match(r"set nat source rule (\d+) source port '(\d+)-(\d+)'", line)
+        if m:
+            src[int(m.group(1))] = (int(m.group(2)), int(m.group(3)))
+    assert sorted(trans.values()) == [(a * 4096 + 0xFE0, a * 4096 + 0xFE0 + 15) for a in range(1, 16)]
+    assert set(trans) == set(src)
+    ranges = sorted(src.values())
+    assert ranges[0][0] == 0 and ranges[-1][1] == 65535
+    assert all(prev[1] + 1 == nxt[0] for prev, nxt in zip(ranges, ranges[1:]))  # 隙間も重なりも無い
+    assert "set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'" in lines
+    assert "set interfaces tunnel tun0 parameters ipv6 tclass '0x00'" in lines
 
 
 def test_ipv6_flowtable_mirrors_ipv4():

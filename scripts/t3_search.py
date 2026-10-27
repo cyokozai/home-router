@@ -71,6 +71,19 @@ class Counters:
         return self.dut_lost / self.pc01_tx
 
 
+def bidir_counters(d: dict[str, int]) -> Counters:
+    """双方向の差分（snapshot_bidir の後 − 前）を、1 つの装置としての Counters にまとめる。
+
+    PC01 → PC03 は PC02 の eth1 で受けて eth2 から、PC03 → PC01 は eth2 で受けて eth1 から出る。
+    """
+    return Counters(
+        pc01_tx=d["pc01_tx"] + d["pc03_tx"],
+        pc02_rx=d["pc02_eth1_rx"] + d["pc02_eth2_rx"],
+        pc02_tx=d["pc02_eth1_tx"] + d["pc02_eth2_tx"],
+        pc03_rx=d["pc01_rx"] + d["pc03_rx"],
+    )
+
+
 @dataclass
 class Result:
     rate_pps: float
@@ -158,6 +171,58 @@ def snapshot() -> dict[str, int]:
     }
 
 
+PC02_ETH2_MAC = "6c:fe:54:6e:27:a1"
+# PC03 → PC01 向けの流れの宛先。PC02 が静的 ARP（vyos/test-sink.cmds）で存在しない MAC に送り出すので、
+# PC02 の負荷は本物と同じまま、PC01 の CPU を受信に使わせない（双方向にしても PC01 が送り続けられるように）
+SINK_IP = "192.168.10.99"
+
+
+def snapshot_bidir() -> dict[str, int]:
+    return {
+        "pc01_tx": ethtool_counter("pc01", PC01_IF, "tx_packets"),
+        "pc01_rx": ethtool_counter("pc01", PC01_IF, "rx_packets"),
+        "pc02_eth1_rx": ethtool_counter("pc02", PC02_IN, "rx_packets"),
+        "pc02_eth1_tx": ethtool_counter("pc02", PC02_IN, "tx_packets"),
+        "pc02_eth2_rx": ethtool_counter("pc02", PC02_OUT, "rx_packets"),
+        "pc02_eth2_tx": ethtool_counter("pc02", PC02_OUT, "tx_packets"),
+        "pc03_tx": ethtool_counter("pc03", PC03_IF, "tx_ucast_packets"),
+        "pc03_rx": ethtool_counter("pc03", PC03_IF, "rx_ucast_packets"),
+    }
+
+
+def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: Path) -> Trial:
+    """PC01 → PC03 と PC03 → PC01 を同時に流す。要求レートは両向きの合計で、半分ずつに分ける。"""
+    import concurrent.futures as cf
+
+    counter = {"n": 0}
+
+    def trial(rate_pps: float, seconds: int) -> Counters:
+        counter["n"] += 1
+        before = snapshot_bidir()
+        common = {"SIZE": pktgen_size(frame), "THREADS": threads, "DURATION": seconds,
+                  "RATE": int(rate_pps / 2), "BURST": burst, "FLOWS": flows}
+        runs = {
+            "pc01": common | {"IFACE": PC01_IF, "DST": DST_IP, "SRC": SRC_IP, "DMAC": PC02_ETH1_MAC},
+            "pc03": common | {"IFACE": PC03_IF, "DST": SINK_IP, "SRC": DST_IP, "DMAC": PC02_ETH2_MAC},
+        }
+        with cf.ThreadPoolExecutor(2) as ex:
+            futs = {h: ex.submit(ssh, h, "sudo " + " ".join(f"{k}={shlex.quote(str(v))}" for k, v in a.items())
+                                 + " bash ~/pktgen-run.sh", seconds + 120) for h, a in runs.items()}
+            outs = {h: f.result() for h, f in futs.items()}
+        time.sleep(1)
+        after = snapshot_bidir()
+        diff = {k: after[k] - before[k] for k in before}
+        c = bidir_counters(diff)
+        (logdir / f"trial{counter['n']:03d}.json").write_text(json.dumps(
+            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "detail": diff, "pktgen": outs},
+            ensure_ascii=False, indent=1))
+        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps（両向きの合計）× {seconds:2d}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
+              f" PC02 のロス {c.dut_lost} ({c.dut_loss_ratio:.2e})", flush=True)
+        return c
+
+    return trial
+
+
 def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path) -> Trial:
     counter = {"n": 0}
 
@@ -193,16 +258,19 @@ def main(argv: list[str]) -> int:
     p.add_argument("--trial-seconds", type=int, default=10)
     p.add_argument("--final-seconds", type=int, default=60)
     p.add_argument("--sender-max", action="store_true", help="レートを制限せずに送り、送信能力の上限だけを測る")
+    p.add_argument("--bidir", action="store_true",
+                   help="PC01 → PC03 と PC03 → PC01 を同時に流す（レートは両向きの合計。上限は理論値の 2 倍）")
     p.add_argument("--out", type=Path)
     a = p.parse_args(argv)
 
-    name = f"{a.frame}B-{a.flows}-t{a.threads}" + ("-sendermax" if a.sender_max else f"-tol{a.tolerance:g}")
+    name = f"{a.frame}B-{a.flows}-t{a.threads}" + ("-bidir" if a.bidir else "") \
+        + ("-sendermax" if a.sender_max else f"-tol{a.tolerance:g}")
     out = a.out or Path("results/T3") / datetime.now().strftime("%Y%m%d") / name
     out.mkdir(parents=True, exist_ok=True)
-    trial = make_trial(a.frame, a.flows, a.threads, a.burst, out)
-    upper = wire_rate_pps(a.frame)
+    trial = (make_trial_bidir if a.bidir else make_trial)(a.frame, a.flows, a.threads, a.burst, out)
+    upper = wire_rate_pps(a.frame) * (2 if a.bidir else 1)
     meta = {"test": "T3", "started": datetime.now().astimezone().isoformat(), "frame": a.frame, "flows": a.flows,
-            "threads": a.threads, "burst": a.burst, "wire_rate_pps": upper}
+            "threads": a.threads, "burst": a.burst, "bidir": a.bidir, "wire_rate_pps": upper}
     print(f"T3 {name}: 理論値 {upper/1e6:.3f} Mpps", flush=True)
 
     if a.sender_max:

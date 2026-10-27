@@ -135,6 +135,21 @@ def test_upper_is_lowered_to_what_the_sender_can_send():
     assert result.upper_pps == pytest.approx(3_000_000, rel=0.01)
 
 
+def test_bidirectional_counters_sum_both_directions():
+    # 双方向: PC01 → PC03 は PC02 の eth2 から、PC03 → PC01 は eth1 から出ていく。両向きを足して 1 つの装置として見る
+    snap = {
+        "pc01_tx": 1000, "pc01_rx": 980,
+        "pc02_eth1_rx": 1000, "pc02_eth1_tx": 990, "pc02_eth2_rx": 1000, "pc02_eth2_tx": 995,
+        "pc03_tx": 1000, "pc03_rx": 995,
+    }
+    c = t3.bidir_counters(snap)
+    assert c.pc01_tx == 2000          # 送った合計（PC01 と PC03）
+    assert c.pc02_rx == 2000
+    assert c.pc02_tx == 1985          # PC02 が送り出した合計
+    assert c.pc03_rx == 980 + 995     # 端末が受け取った合計
+    assert c.dut_lost == 15
+
+
 def test_every_trial_is_logged():
     trial, calls = fake_device(capacity_pps=3_000_000)
     result = t3.search(trial, upper_pps=14_880_952, loss_tolerance=0.0, precision=0.01, trial_seconds=10, final_seconds=60)
