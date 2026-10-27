@@ -1,0 +1,10 @@
+T7（プロトコルの動作確認）。p2・p2b の round1/t7-capture.txt（PC03 の sfp0 で ip6 proto 4 を 400 個）と t7-pmtud.txt から数えた。2026-10-27
+
+項目                         p2（ポートセット 1 組）                 p2b（15 組に振り分け）                  判定
+外側の Next Header           IPIP (4) が 400/400                     IPIP (4) が 400/400                     合格
+内側の送信元ポート（SYN）    8162 8163 8165 8171 8172（A=1 の組）    36843 36845 36846 40942 45024（A=8・9・10 の組）  合格（すべて割当の範囲内）
+SYN の MSS                   1420 が 10/10                           1420 が 10/10                           合格
+PMTUD ping -M do -s 1432     3/3 通る                                3/3 通る                                合格
+PMTUD ping -M do -s 1472     Frag needed and DF set (mtu = 1460)     message too long, mtu=1460（先の試行で経路 MTU を覚えていた） 合格
+
+外側のトラフィッククラスは tcpdump -v が 0 のときは表示しない。表示が無い = 0（p2b は tclass 0x00 を明示）。

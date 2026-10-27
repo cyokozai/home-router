@@ -1,0 +1,804 @@
+tcpdump: listening on sfp0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:33:42.187670 IP6 (flowlabel 0x69de4, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 29122, offset 0, flags [DF], proto TCP (6), length 60)
+    192.0.2.18.36845 > 198.51.100.1.5201: Flags [S], cksum 0x6f33 (correct), seq 3427530305, win 65320, options [mss 1420,sackOK,TS val 2560028187 ecr 0,nop,wscale 13], length 0
+13:33:42.187699 IP6 (flowlabel 0x718f8, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    198.51.100.1.5201 > 192.0.2.18.36845: Flags [S.], cksum 0xae5d (correct), seq 1830961941, ack 3427530306, win 64768, options [mss 1420,sackOK,TS val 3905169904 ecr 2560028187,nop,wscale 13], length 0
+13:33:42.188039 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 29123, offset 0, flags [DF], proto TCP (6), length 52)
+    192.0.2.18.36845 > 198.51.100.1.5201: Flags [.], cksum 0xd9ff (correct), ack 1, win 8, options [nop,nop,TS val 2560028188 ecr 3905169904], length 0
+13:33:42.188068 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 89) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 29124, offset 0, flags [DF], proto TCP (6), length 89)
+    192.0.2.18.36845 > 198.51.100.1.5201: Flags [P.], cksum 0xc0fd (correct), seq 1:38, ack 1, win 8, options [nop,nop,TS val 2560028188 ecr 3905169904], length 37
+13:33:42.188075 IP6 (flowlabel 0x718f8, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 61144, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36845: Flags [.], cksum 0xd9da (correct), ack 38, win 8, options [nop,nop,TS val 3905169904 ecr 2560028188], length 0
+13:33:42.188094 IP6 (flowlabel 0x718f8, hlim 64, next-header IPIP (4) payload length: 53) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 61145, offset 0, flags [DF], proto TCP (6), length 53)
+    198.51.100.1.5201 > 192.0.2.18.36845: Flags [P.], cksum 0xd0d1 (correct), seq 1:2, ack 38, win 8, options [nop,nop,TS val 3905169904 ecr 2560028188], length 1
+13:33:42.188351 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 29125, offset 0, flags [DF], proto TCP (6), length 52)
+    192.0.2.18.36845 > 198.51.100.1.5201: Flags [.], cksum 0xd9d9 (correct), ack 2, win 8, options [nop,nop,TS val 2560028188 ecr 3905169904], length 0
+13:33:42.188422 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 56) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 29126, offset 0, flags [DF], proto TCP (6), length 56)
+    192.0.2.18.36845 > 198.51.100.1.5201: Flags [P.], cksum 0xd952 (correct), seq 38:42, ack 2, win 8, options [nop,nop,TS val 2560028188 ecr 3905169904], length 4
+13:33:42.188460 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 175) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 29127, offset 0, flags [DF], proto TCP (6), length 175)
+    192.0.2.18.36845 > 198.51.100.1.5201: Flags [P.], cksum 0x9066 (correct), seq 42:165, ack 2, win 8, options [nop,nop,TS val 2560028188 ecr 3905169904], length 123
+13:33:42.188471 IP6 (flowlabel 0x718f8, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 61146, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36845: Flags [.], cksum 0xd959 (correct), ack 165, win 8, options [nop,nop,TS val 3905169905 ecr 2560028188], length 0
+13:33:42.188498 IP6 (flowlabel 0x718f8, hlim 64, next-header IPIP (4) payload length: 53) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 61147, offset 0, flags [DF], proto TCP (6), length 53)
+    198.51.100.1.5201 > 192.0.2.18.36845: Flags [P.], cksum 0xcf50 (correct), seq 2:3, ack 165, win 8, options [nop,nop,TS val 3905169905 ecr 2560028188], length 1
+13:33:42.188920 IP6 (flowlabel 0xf175b, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41010, offset 0, flags [DF], proto TCP (6), length 60)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [S], cksum 0x1675 (correct), seq 4238417575, win 65320, options [mss 1420,sackOK,TS val 2560028189 ecr 0,nop,wscale 13], length 0
+13:33:42.188928 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [S.], cksum 0x02b1 (correct), seq 2529848410, ack 4238417576, win 64768, options [mss 1420,sackOK,TS val 3905169905 ecr 2560028189,nop,wscale 13], length 0
+13:33:42.189265 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41011, offset 0, flags [DF], proto TCP (6), length 52)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x2e54 (correct), ack 1, win 8, options [nop,nop,TS val 2560028189 ecr 3905169905], length 0
+13:33:42.189295 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 89) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41012, offset 0, flags [DF], proto TCP (6), length 89)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x1552 (correct), seq 1:38, ack 1, win 8, options [nop,nop,TS val 2560028189 ecr 3905169905], length 37
+13:33:42.189300 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24654, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x2e2f (correct), ack 38, win 8, options [nop,nop,TS val 3905169905 ecr 2560028189], length 0
+13:33:42.190145 IP6 (flowlabel 0x1e471, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5213, offset 0, flags [DF], proto TCP (6), length 60)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [S], cksum 0x7c1a (correct), seq 2727613201, win 65320, options [mss 1420,sackOK,TS val 2560028190 ecr 0,nop,wscale 13], length 0
+13:33:42.190151 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [S.], cksum 0x5463 (correct), seq 956685841, ack 2727613202, win 64768, options [mss 1420,sackOK,TS val 3905169906 ecr 2560028190,nop,wscale 13], length 0
+13:33:42.190564 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5214, offset 0, flags [DF], proto TCP (6), length 52)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x8006 (correct), ack 1, win 8, options [nop,nop,TS val 2560028190 ecr 3905169906], length 0
+13:33:42.190587 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 89) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5215, offset 0, flags [DF], proto TCP (6), length 89)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x6704 (correct), seq 1:38, ack 1, win 8, options [nop,nop,TS val 2560028190 ecr 3905169906], length 37
+13:33:42.190593 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63378, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x7fe0 (correct), ack 38, win 8, options [nop,nop,TS val 3905169907 ecr 2560028190], length 0
+13:33:42.191363 IP6 (flowlabel 0xebfee, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34064, offset 0, flags [DF], proto TCP (6), length 60)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [S], cksum 0x5361 (correct), seq 427865306, win 65320, options [mss 1420,sackOK,TS val 2560028191 ecr 0,nop,wscale 13], length 0
+13:33:42.191369 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [S.], cksum 0x3e51 (correct), seq 2634704740, ack 427865307, win 64768, options [mss 1420,sackOK,TS val 3905169907 ecr 2560028191,nop,wscale 13], length 0
+13:33:42.192108 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34065, offset 0, flags [DF], proto TCP (6), length 52)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x69f3 (correct), ack 1, win 8, options [nop,nop,TS val 2560028192 ecr 3905169907], length 0
+13:33:42.192162 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 89) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34066, offset 0, flags [DF], proto TCP (6), length 89)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x50f1 (correct), seq 1:38, ack 1, win 8, options [nop,nop,TS val 2560028192 ecr 3905169907], length 37
+13:33:42.192168 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30686, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x69cd (correct), ack 38, win 8, options [nop,nop,TS val 3905169908 ecr 2560028192], length 0
+13:33:42.192268 IP6 (flowlabel 0xfa86a, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31949, offset 0, flags [DF], proto TCP (6), length 60)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [S], cksum 0xe024 (correct), seq 3810610818, win 65320, options [mss 1420,sackOK,TS val 2560028192 ecr 0,nop,wscale 13], length 0
+13:33:42.192274 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 60) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [S.], cksum 0x866d (correct), seq 1286143084, ack 3810610819, win 64768, options [mss 1420,sackOK,TS val 3905169908 ecr 2560028192,nop,wscale 13], length 0
+13:33:42.192528 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31950, offset 0, flags [DF], proto TCP (6), length 52)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0xb210 (correct), ack 1, win 8, options [nop,nop,TS val 2560028192 ecr 3905169908], length 0
+13:33:42.192564 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 89) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31951, offset 0, flags [DF], proto TCP (6), length 89)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x990e (correct), seq 1:38, ack 1, win 8, options [nop,nop,TS val 2560028192 ecr 3905169908], length 37
+13:33:42.192568 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 721, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xb1ea (correct), ack 38, win 8, options [nop,nop,TS val 3905169909 ecr 2560028192], length 0
+13:33:42.193106 IP6 (flowlabel 0x718f8, hlim 64, next-header IPIP (4) payload length: 53) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 61148, offset 0, flags [DF], proto TCP (6), length 53)
+    198.51.100.1.5201 > 192.0.2.18.36845: Flags [P.], cksum 0xd84b (correct), seq 3:4, ack 165, win 8, options [nop,nop,TS val 3905169909 ecr 2560028188], length 1
+13:33:42.193118 IP6 (flowlabel 0x718f8, hlim 64, next-header IPIP (4) payload length: 53) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 61149, offset 0, flags [DF], proto TCP (6), length 53)
+    198.51.100.1.5201 > 192.0.2.18.36845: Flags [P.], cksum 0xd74a (correct), seq 4:5, ack 165, win 8, options [nop,nop,TS val 3905169909 ecr 2560028188], length 1
+13:33:42.193728 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 29128, offset 0, flags [DF], proto TCP (6), length 52)
+    192.0.2.18.36845 > 198.51.100.1.5201: Flags [.], cksum 0xd950 (correct), ack 5, win 8, options [nop,nop,TS val 2560028194 ecr 3905169905], length 0
+13:33:42.193851 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 7092) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41013, offset 0, flags [DF], proto TCP (6), length 7092)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x07ee (incorrect -> 0x1cd5), seq 38:7078, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169905], length 7040
+13:33:42.193860 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24655, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x12a3 (correct), ack 7078, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.193872 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31952, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x026e (incorrect -> 0xf3ad), seq 38:5670, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169909], length 5632
+13:33:42.193880 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 722, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x9be5 (correct), ack 5670, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.193902 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 7092) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34067, offset 0, flags [DF], proto TCP (6), length 7092)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x07ee (incorrect -> 0x842e), seq 38:7078, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169908], length 7040
+13:33:42.193902 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 7092) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5216, offset 0, flags [DF], proto TCP (6), length 7092)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x07ee (incorrect -> 0xfc01), seq 38:7078, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169907], length 7040
+13:33:42.193910 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30687, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x4e47 (correct), ack 7078, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.193915 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63379, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x6457 (correct), ack 7078, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.193969 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5221, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x6853 (correct), seq 7078:8486, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169907], length 1408
+13:33:42.193975 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63380, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x5ed6 (correct), ack 8486, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.193996 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5222, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0xb313), seq 8486:14118, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169907], length 5632
+13:33:42.193996 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41018, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0xec75 (correct), seq 7078:8486, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169905], length 1408
+13:33:42.194003 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63381, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x48d6 (correct), ack 14118, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194008 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24656, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x0d22 (correct), ack 8486, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194023 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31956, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x289c (correct), seq 5670:7078, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169909], length 1408
+13:33:42.194023 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41019, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0x68f3), seq 8486:14118, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169905], length 5632
+13:33:42.194023 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31957, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x026e (incorrect -> 0xe7f8), seq 7078:12710, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169909], length 5632
+13:33:42.194032 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 723, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x9665 (correct), ack 7078, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194037 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24657, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xf721 (correct), ack 14118, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194045 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 724, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8064 (correct), ack 12710, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194051 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31961, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x9d3d (correct), seq 12710:14118, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169909], length 1408
+13:33:42.194051 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34072, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x2494 (correct), seq 7078:8486, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169908], length 1408
+13:33:42.194059 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 725, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x7ae4 (correct), ack 14118, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194064 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30688, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x48c6 (correct), ack 8486, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194069 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34073, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0xfcc9), seq 8486:14118, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169908], length 5632
+13:33:42.194075 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30689, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x32c6 (correct), ack 14118, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194147 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34077, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0xb7c4 (correct), seq 14118:15526, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 1408
+13:33:42.194152 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30690, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x2d46 (correct), ack 15526, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194173 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5226, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x026e (incorrect -> 0x37ef), seq 14118:19750, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 5632
+13:33:42.194179 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63382, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x32d6 (correct), ack 19750, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194199 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41023, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x026e (incorrect -> 0x96e9), seq 14118:19750, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 5632
+13:33:42.194205 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24658, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xe121 (correct), ack 19750, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194228 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34078, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0xd039), seq 15526:23974, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 8448
+13:33:42.194228 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5230, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x2ad2), seq 19750:23974, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194232 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31962, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0xf76d (incorrect -> 0x9b9b), seq 14118:16934, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 2816
+13:33:42.194239 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30691, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x0c46 (correct), ack 23974, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194244 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63383, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x2256 (correct), ack 23974, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194249 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 726, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x6fe4 (correct), ack 16934, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194275 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 14132) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5233, offset 0, flags [DF], proto TCP (6), length 14132)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x236e (incorrect -> 0x5b7a), seq 23974:38054, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 14080
+13:33:42.194284 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41027, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x4ec9), seq 19750:23974, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194284 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 7092) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31964, offset 0, flags [DF], proto TCP (6), length 7092)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x07ee (incorrect -> 0x77e6), seq 16934:23974, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 7040
+13:33:42.194293 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63384, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xeb56 (correct), ack 38054, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194298 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24659, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xd0a1 (correct), ack 23974, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194304 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 727, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x5464 (correct), ack 23974, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194320 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 14132) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41030, offset 0, flags [DF], proto TCP (6), length 14132)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x236e (incorrect -> 0x03d7), seq 23974:38054, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 14080
+13:33:42.194331 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 14132) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34084, offset 0, flags [DF], proto TCP (6), length 14132)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x236e (incorrect -> 0xb478), seq 23974:38054, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 14080
+13:33:42.194333 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31969, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0xfced (incorrect -> 0x9475), seq 23974:28198, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194342 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24660, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x99a2 (correct), ack 38054, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194349 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30692, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xd546 (correct), ack 38054, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194354 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 728, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x43e4 (correct), ack 28198, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194361 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31972, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0xa8a7), seq 28198:36646, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 8448
+13:33:42.194368 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 729, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x22e5 (correct), ack 36646, win 10, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194389 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5243, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0xd19f), seq 38054:42278, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194395 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63385, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xdad5 (correct), ack 42278, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194419 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31978, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0x3e3e), seq 36646:42278, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 5632
+13:33:42.194419 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41040, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0xfa4e), seq 38054:42278, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194426 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 730, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x0ce4 (correct), ack 42278, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194431 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24661, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x8921 (correct), ack 42278, win 11, options [nop,nop,TS val 3905169910 ecr 2560028194], length 0
+13:33:42.194457 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34094, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0xf572), seq 38054:42278, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194463 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30693, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xc4c4 (correct), ack 42278, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194489 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34097, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x5ea0), seq 42278:45094, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 2816
+13:33:42.194490 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5246, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x82be), seq 42278:46502, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194490 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34099, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xc9f0 (correct), seq 45094:46502, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 1408
+13:33:42.194490 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 7092) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5249, offset 0, flags [DF], proto TCP (6), length 7092)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x07ee (incorrect -> 0x6ee3), seq 46502:53542, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 7040
+13:33:42.194502 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5254, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0x3428), seq 53542:61990, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 8448
+13:33:42.194502 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 9908) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34100, offset 0, flags [DF], proto TCP (6), length 9908)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x12ee (incorrect -> 0xed22), seq 46502:56358, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 9856
+13:33:42.194513 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30694, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xb9c4 (correct), ack 45094, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194517 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63386, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xca54 (correct), ack 46502, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194522 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30695, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xb444 (correct), ack 46502, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194526 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63387, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xaed4 (correct), ack 53542, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194531 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63388, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x8dd5 (correct), ack 61990, win 10, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194535 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30696, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x8dc5 (correct), ack 56358, win 10, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194548 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31982, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x9ce6), seq 42278:46502, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 4224
+13:33:42.194554 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 731, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xfc62 (correct), ack 46502, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194559 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 15540) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31985, offset 0, flags [DF], proto TCP (6), length 15540)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x28ee (incorrect -> 0x12e6), seq 46502:61990, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 15488
+13:33:42.194565 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 732, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xbfe3 (correct), ack 61990, win 10, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194589 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34107, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0x47e2), seq 56358:61990, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 5632
+13:33:42.194589 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 31996, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x186e (incorrect -> 0xe1c7), seq 61990:73254, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 11264
+13:33:42.194597 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30697, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x77c4 (correct), ack 61990, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194602 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 733, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x93e3 (correct), ack 73254, win 10, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194627 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32004, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0xe84e), seq 73254:78886, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 5632
+13:33:42.194627 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 16948) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34111, offset 0, flags [DF], proto TCP (6), length 16948)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x2e6e (incorrect -> 0x68e4), seq 61990:78886, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 16896
+13:33:42.194634 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 16948) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5260, offset 0, flags [DF], proto TCP (6), length 16948)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x2e6e (incorrect -> 0xa841), seq 61990:78886, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 16896
+13:33:42.194637 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41043, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0xb92a (correct), seq 42278:43686, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169910], length 1408
+13:33:42.194643 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 734, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x7de2 (correct), ack 78886, win 11, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194648 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30698, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x35c5 (correct), ack 78886, win 10, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194653 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63389, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x4bd5 (correct), ack 78886, win 10, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194658 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24662, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x839f (correct), ack 43686, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194680 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34123, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x186e (incorrect -> 0x9855), seq 78886:90150, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 11264
+13:33:42.194684 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 19764) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5272, offset 0, flags [DF], proto TCP (6), length 19764)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x396e (incorrect -> 0x9b02), seq 78886:98598, ack 1, win 8, options [nop,nop,TS val 2560028194 ecr 3905169910], length 19712
+13:33:42.194699 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 19764) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32008, offset 0, flags [DF], proto TCP (6), length 19764)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x396e (incorrect -> 0x68ae), seq 78886:98598, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169910], length 19712
+13:33:42.194709 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41044, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x24c8), seq 43686:46502, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169910], length 2816
+13:33:42.194709 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34131, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0xf0b3), seq 90150:98598, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 8448
+13:33:42.194718 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30699, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x09c5 (correct), ack 90150, win 10, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194724 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63390, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xfed5 (correct), ack 98598, win 9, options [nop,nop,TS val 3905169911 ecr 2560028194], length 0
+13:33:42.194728 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 735, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x30e3 (correct), ack 98598, win 9, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194734 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24663, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x789f (correct), ack 46502, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194740 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30700, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xe8c2 (correct), ack 98598, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194761 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5286, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x0d6e (incorrect -> 0xb73b), seq 98598:107046, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 8448
+13:33:42.194767 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63391, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xddd2 (correct), ack 107046, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194783 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5292, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x47f2), seq 107046:111270, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 4224
+13:33:42.194789 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63392, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xcd52 (correct), ack 111270, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194809 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 7092) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41046, offset 0, flags [DF], proto TCP (6), length 7092)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x07ee (incorrect -> 0x8dcb), seq 46502:53542, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169910], length 7040
+13:33:42.194815 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24664, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x5d1f (correct), ack 53542, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194837 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 14132) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5295, offset 0, flags [DF], proto TCP (6), length 14132)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x236e (incorrect -> 0x5f2f), seq 111270:125350, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 14080
+13:33:42.194844 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63393, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x9653 (correct), ack 125350, win 10, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194862 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 12724) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5305, offset 0, flags [DF], proto TCP (6), length 12724)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x1dee (incorrect -> 0xf998), seq 125350:138022, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 12672
+13:33:42.194870 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 12724) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32022, offset 0, flags [DF], proto TCP (6), length 12724)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x1dee (incorrect -> 0xc8f6), seq 98598:111270, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 12672
+13:33:42.194880 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34137, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x186e (incorrect -> 0x6d2e), seq 98598:109862, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 11264
+13:33:42.194887 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63394, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x64d3 (correct), ack 138022, win 10, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194891 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 736, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xff61 (correct), ack 111270, win 10, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194895 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30701, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xbcc3 (correct), ack 109862, win 10, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194916 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41051, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0xcc2d), seq 53542:61990, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169910], length 8448
+13:33:42.194916 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 18356) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5314, offset 0, flags [DF], proto TCP (6), length 18356)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x33ee (incorrect -> 0x68c4), seq 138022:156326, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 18304
+13:33:42.194931 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24665, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x3c1f (correct), ack 61990, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194938 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63395, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x1d54 (correct), ack 156326, win 9, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194949 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 26804) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32031, offset 0, flags [DF], proto TCP (6), length 26804)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x54ee (incorrect -> 0xd308), seq 111270:138022, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 26752
+13:33:42.194968 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34145, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x3693 (correct), seq 109862:111270, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 1408
+13:33:42.194968 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 14132) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32050, offset 0, flags [DF], proto TCP (6), length 14132)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x236e (incorrect -> 0xbd10), seq 138022:152102, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 14080
+13:33:42.194972 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 9908) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5327, offset 0, flags [DF], proto TCP (6), length 9908)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x12ee (incorrect -> 0x116c), seq 156326:166182, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 9856
+13:33:42.194980 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 737, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x96d9 (correct), ack 138022, win 18, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194985 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30702, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xb742 (correct), ack 111270, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194989 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 738, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x5fd6 (correct), ack 152102, win 21, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.194993 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63396, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xf6d2 (correct), ack 166182, win 10, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195003 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 6196) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5334, offset 0, flags [DF], proto TCP (6), length 6196)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x046e (incorrect -> 0x3d8e), seq 166182:172326, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 6144
+13:33:42.195003 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32060, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x4eea), seq 152102:156326, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 4224
+13:33:42.195022 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 26804) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34146, offset 0, flags [DF], proto TCP (6), length 26804)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x54ee (incorrect -> 0x5c3e), seq 111270:138022, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 26752
+13:33:42.195030 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63397, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xdecf (correct), ack 172326, win 13, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195035 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 739, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x4f55 (correct), ack 156326, win 22, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195039 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30703, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x4ec5 (correct), ack 138022, win 8, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195075 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34165, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x0d6e (incorrect -> 0x5170), seq 138022:146470, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 8448
+13:33:42.195081 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30704, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x2dc2 (correct), ack 146470, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195101 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 9908) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34171, offset 0, flags [DF], proto TCP (6), length 9908)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x12ee (incorrect -> 0x74d7), seq 146470:156326, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 9856
+13:33:42.195108 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30705, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x0743 (correct), ack 156326, win 10, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195128 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5339, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x0d6e (incorrect -> 0xf33f), seq 172326:180774, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 8448
+13:33:42.195133 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63398, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xbdcd (correct), ack 180774, win 15, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195167 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 16948) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41057, offset 0, flags [DF], proto TCP (6), length 16948)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x2e6e (incorrect -> 0xa7db), seq 61990:78886, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169910], length 16896
+13:33:42.195181 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 18356) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5345, offset 0, flags [DF], proto TCP (6), length 18356)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x33ee (incorrect -> 0x07f9), seq 180774:199078, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 18304
+13:33:42.195184 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 19764) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32063, offset 0, flags [DF], proto TCP (6), length 19764)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x396e (incorrect -> 0x2694), seq 156326:176038, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 19712
+13:33:42.195193 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24666, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xfa1f (correct), ack 78886, win 10, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195201 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63399, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x7649 (correct), ack 199078, win 19, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195207 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 740, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x0250 (correct), ack 176038, win 27, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195232 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 19764) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41069, offset 0, flags [DF], proto TCP (6), length 19764)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x396e (incorrect -> 0xadd6), seq 78886:98598, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169910], length 19712
+13:33:42.195247 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 32436) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34178, offset 0, flags [DF], proto TCP (6), length 32436)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x6aee (incorrect -> 0xd78f), seq 156326:188710, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 32384
+13:33:42.195256 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 17204) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32077, offset 0, flags [DF], proto TCP (6), length 17204)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x2f6e (incorrect -> 0x0d8b), seq 176038:193190, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 17152
+13:33:42.195263 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5358, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xca09 (correct), seq 199078:200486, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 1408
+13:33:42.195263 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 948) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5359, offset 0, flags [DF], proto TCP (6), length 948)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x330d (correct), seq 200486:201382, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 896
+13:33:42.195263 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8244) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32090, offset 0, flags [DF], proto TCP (6), length 8244)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x0c6e (incorrect -> 0xb324), seq 193190:201382, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 8192
+13:33:42.195274 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24667, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xad19 (correct), ack 98598, win 16, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195284 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 741, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xbf4b (correct), ack 193190, win 31, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195289 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63400, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x70c9 (correct), ack 200486, win 19, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195293 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30706, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x88c1 (correct), ack 188710, win 11, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195295 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 742, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x9f49 (correct), ack 201382, win 33, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195299 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63401, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x6d48 (correct), ack 201382, win 20, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195311 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 12724) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41083, offset 0, flags [DF], proto TCP (6), length 12724)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x1dee (incorrect -> 0x2bed), seq 98598:111270, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 12672
+13:33:42.195314 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5360, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x0d6e (incorrect -> 0x998a), seq 201382:209830, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 8448
+13:33:42.195321 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24668, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x7b96 (correct), ack 111270, win 19, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195328 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63402, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x4c46 (correct), ack 209830, win 22, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195366 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32096, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0xc7ca), seq 201382:246438, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 45056
+13:33:42.195386 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 19764) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5366, offset 0, flags [DF], proto TCP (6), length 19764)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x396e (incorrect -> 0x5dd9), seq 209830:229542, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 19712
+13:33:42.195405 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 743, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xef3d (correct), ack 246438, win 44, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195410 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63403, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xff40 (correct), ack 229542, win 27, options [nop,nop,TS val 3905169911 ecr 2560028195], length 0
+13:33:42.195420 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 16948) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5380, offset 0, flags [DF], proto TCP (6), length 16948)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x2e6e (incorrect -> 0xe1f8), seq 229542:246438, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 16896
+13:33:42.195451 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32128, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x9f28), seq 246438:291494, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 45056
+13:33:42.195456 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 21172) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41092, offset 0, flags [DF], proto TCP (6), length 21172)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x3eee (incorrect -> 0x3aa0), seq 111270:132390, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 21120
+13:33:42.195467 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63404, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xbd3b (correct), ack 246438, win 31, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195472 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 744, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x3f31 (correct), ack 291494, win 55, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195477 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24669, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x2910 (correct), ack 132390, win 24, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195483 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41107, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0x00ee), seq 132390:138022, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 5632
+13:33:42.195493 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24670, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x130e (correct), ack 138022, win 26, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195530 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34201, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x186e (incorrect -> 0x2a7b), seq 188710:199974, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 11264
+13:33:42.195532 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 21172) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5392, offset 0, flags [DF], proto TCP (6), length 21172)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x3eee (incorrect -> 0x9884), seq 246438:267558, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 21120
+13:33:42.195535 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41111, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0xfced (incorrect -> 0xed3b), seq 138022:142246, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 4224
+13:33:42.195543 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30707, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x5cbd (correct), ack 199974, win 14, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195548 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63405, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x6ab6 (correct), ack 267558, win 36, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195553 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24671, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x028d (correct), ack 142246, win 27, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195580 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 23988) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5407, offset 0, flags [DF], proto TCP (6), length 23988)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x49ee (incorrect -> 0x0846), seq 267558:291494, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 23936
+13:33:42.195603 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 33844) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32160, offset 0, flags [DF], proto TCP (6), length 33844)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x706e (incorrect -> 0xeccf), seq 291494:325286, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 33792
+13:33:42.195612 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34209, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xc511 (correct), seq 199974:201382, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 1408
+13:33:42.195612 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32184, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x186e (incorrect -> 0x55e2), seq 325286:336550, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 11264
+13:33:42.195626 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63406, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x0d30 (correct), ack 291494, win 42, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195630 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 745, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xbb28 (correct), ack 325286, win 63, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195634 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30708, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x573d (correct), ack 201382, win 14, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195643 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 746, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8f25 (correct), ack 336550, win 66, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195656 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 14132) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41114, offset 0, flags [DF], proto TCP (6), length 14132)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x236e (incorrect -> 0x8c81), seq 142246:156326, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 14080
+13:33:42.195663 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32192, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0xbf01), seq 336550:381606, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 45056
+13:33:42.195685 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24672, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xcb89 (correct), ack 156326, win 30, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195691 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 747, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xdf19 (correct), ack 381606, win 77, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195711 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5424, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x9c48), seq 291494:336550, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 45056
+13:33:42.195737 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 16948) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32224, offset 0, flags [DF], proto TCP (6), length 16948)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x2e6e (incorrect -> 0x7c47), seq 381606:398502, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 16896
+13:33:42.195740 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 21172) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34210, offset 0, flags [DF], proto TCP (6), length 21172)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x3eee (incorrect -> 0x6781), seq 201382:222502, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 21120
+13:33:42.195750 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63407, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x5d24 (correct), ack 336550, win 53, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195755 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 748, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x9d14 (correct), ack 398502, win 81, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195759 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30709, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x04b6 (correct), ack 222502, win 20, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195800 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 5684) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5456, offset 0, flags [DF], proto TCP (6), length 5684)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x026e (incorrect -> 0xedeb), seq 336550:342182, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 5632
+13:33:42.195800 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5460, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0x033f), seq 342182:350630, ack 1, win 8, options [nop,nop,TS val 2560028195 ecr 3905169911], length 8448
+13:33:42.195814 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34225, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x186e (incorrect -> 0xccc6), seq 222502:233766, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 11264
+13:33:42.195816 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 43700) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41124, offset 0, flags [DF], proto TCP (6), length 43700)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x96ee (incorrect -> 0x10a2), seq 156326:199974, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 43648
+13:33:42.195819 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 18356) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32236, offset 0, flags [DF], proto TCP (6), length 18356)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x33ee (incorrect -> 0x7146), seq 398502:416806, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 18304
+13:33:42.195831 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63408, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x4723 (correct), ack 342182, win 54, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195836 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24673, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x20fd (correct), ack 199974, win 41, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195838 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63409, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x2621 (correct), ack 350630, win 56, options [nop,nop,TS val 3905169912 ecr 2560028195], length 0
+13:33:42.195845 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30710, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xd8b3 (correct), ack 233766, win 22, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195852 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 749, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x558f (correct), ack 416806, win 86, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195863 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 9908) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32249, offset 0, flags [DF], proto TCP (6), length 9908)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x12ee (incorrect -> 0x2b40), seq 416806:426662, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 9856
+13:33:42.195863 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34233, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x1a5b), seq 233766:236582, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 2816
+13:33:42.195873 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41155, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0xbfb9 (correct), seq 199974:201382, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 1408
+13:33:42.195873 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 9908) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34235, offset 0, flags [DF], proto TCP (6), length 9908)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x12ee (incorrect -> 0x5a92), seq 236582:246438, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 9856
+13:33:42.195916 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 750, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x2f0d (correct), ack 426662, win 88, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195921 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30711, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xcdb2 (correct), ack 236582, win 23, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195926 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24674, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x1b7d (correct), ack 201382, win 41, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195932 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30712, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xa730 (correct), ack 246438, win 25, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195939 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32256, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0xf83d), seq 426662:471718, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 45056
+13:33:42.195944 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 28212) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5466, offset 0, flags [DF], proto TCP (6), length 28212)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x5a6e (incorrect -> 0xcc4f), seq 350630:378790, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 28160
+13:33:42.195952 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 751, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x7f01 (correct), ack 471718, win 99, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195958 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63410, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xb818 (correct), ack 378790, win 63, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195976 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5486, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x8c9e), seq 378790:381606, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 2816
+13:33:42.195976 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 23988) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32288, offset 0, flags [DF], proto TCP (6), length 23988)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x49ee (incorrect -> 0xb4d0), seq 471718:495654, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 23936
+13:33:42.195986 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63411, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xad17 (correct), ack 381606, win 64, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.195991 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 752, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x217b (correct), ack 495654, win 105, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196004 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 21172) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32305, offset 0, flags [DF], proto TCP (6), length 21172)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x3eee (incorrect -> 0xfd65), seq 495654:516774, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 21120
+13:33:42.196026 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 32436) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34242, offset 0, flags [DF], proto TCP (6), length 32436)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x6aee (incorrect -> 0xfef1), seq 246438:278822, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169911], length 32384
+13:33:42.196034 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 753, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xcef5 (correct), ack 516774, win 110, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196039 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30713, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x28a8 (correct), ack 278822, win 33, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196086 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5488, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x2835), seq 381606:426662, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 45056
+13:33:42.196108 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63412, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xfd0b (correct), ack 426662, win 75, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196113 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 12724) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34265, offset 0, flags [DF], proto TCP (6), length 12724)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x1dee (incorrect -> 0x0631), seq 278822:291494, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 12672
+13:33:42.196122 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32320, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x44af), seq 516774:561830, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 45056
+13:33:42.196142 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 25396) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32352, offset 0, flags [DF], proto TCP (6), length 25396)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x4f6e (incorrect -> 0x450f), seq 561830:587174, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 25344
+13:33:42.196152 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30714, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xf724 (correct), ack 291494, win 36, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196157 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 754, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x1eea (correct), ack 561830, win 121, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196160 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 755, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xbbe3 (correct), ack 587174, win 127, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196173 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 19764) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32370, offset 0, flags [DF], proto TCP (6), length 19764)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x396e (incorrect -> 0xf079), seq 587174:606886, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 19712
+13:33:42.196181 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 756, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x6ede (correct), ack 606886, win 132, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196256 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 43700) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34274, offset 0, flags [DF], proto TCP (6), length 43700)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x96ee (incorrect -> 0xbdea), seq 291494:335142, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 43648
+13:33:42.196260 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 21172) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32384, offset 0, flags [DF], proto TCP (6), length 21172)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x3eee (incorrect -> 0xaaa3), seq 606886:628006, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 21120
+13:33:42.196268 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30715, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x4c99 (correct), ack 335142, win 47, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196273 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 757, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x1c59 (correct), ack 628006, win 137, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196308 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34305, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xfe45 (correct), seq 335142:336550, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 1408
+13:33:42.196314 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30716, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x4719 (correct), ack 336550, win 47, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196317 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 43700) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32399, offset 0, flags [DF], proto TCP (6), length 43700)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x96ee (incorrect -> 0xc5bb), seq 628006:671654, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 43648
+13:33:42.196338 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5520, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x204e), seq 426662:471718, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 45056
+13:33:42.196358 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 758, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x71cd (correct), ack 671654, win 148, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196362 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63413, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x4d00 (correct), ack 471718, win 86, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196389 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 42292) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41156, offset 0, flags [DF], proto TCP (6), length 42292)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x916e (incorrect -> 0x2610), seq 201382:243622, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 42240
+13:33:42.196393 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 19764) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32430, offset 0, flags [DF], proto TCP (6), length 19764)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x396e (incorrect -> 0x55a8), seq 671654:691366, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 19712
+13:33:42.196403 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24675, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x7671 (correct), ack 243622, win 52, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196409 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 759, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x24c8 (correct), ack 691366, win 153, options [nop,nop,TS val 3905169912 ecr 2560028196], length 0
+13:33:42.196447 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41186, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x7511), seq 243622:246438, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 2816
+13:33:42.196447 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 32436) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34306, offset 0, flags [DF], proto TCP (6), length 32436)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x6aee (incorrect -> 0x8dc8), seq 336550:368934, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 32384
+13:33:42.196453 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 21172) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32444, offset 0, flags [DF], proto TCP (6), length 21172)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x3eee (incorrect -> 0x6275), seq 691366:712486, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 21120
+13:33:42.196464 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24676, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x6b70 (correct), ack 246438, win 52, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196471 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30717, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xc88f (correct), ack 368934, win 55, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196477 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 760, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xd241 (correct), ack 712486, win 158, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196501 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 23988) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32459, offset 0, flags [DF], proto TCP (6), length 23988)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x49ee (incorrect -> 0xc276), seq 712486:736422, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 23936
+13:33:42.196521 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5552, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x8ec7), seq 471718:516774, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 45056
+13:33:42.196533 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 12724) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34329, offset 0, flags [DF], proto TCP (6), length 12724)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x1dee (incorrect -> 0x0043), seq 368934:381606, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 12672
+13:33:42.196544 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 761, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x74bb (correct), ack 736422, win 164, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196549 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63414, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x9cf3 (correct), ack 516774, win 97, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196554 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30718, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x970c (correct), ack 381606, win 58, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196587 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 64820) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32476, offset 0, flags [DF], proto TCP (6), length 64820)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xe96e (incorrect -> 0x4760), seq 736422:801190, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 64768
+13:33:42.196600 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 762, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x77aa (correct), ack 801190, win 180, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196611 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5584, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x0d6e (incorrect -> 0x60e3), seq 516774:525222, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 8448
+13:33:42.196618 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63415, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x7bf1 (correct), ack 525222, win 99, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196668 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 33844) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5590, offset 0, flags [DF], proto TCP (6), length 33844)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x706e (incorrect -> 0x77b4), seq 525222:559014, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 33792
+13:33:42.196671 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 18356) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34338, offset 0, flags [DF], proto TCP (6), length 18356)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x33ee (incorrect -> 0xacba), seq 381606:399910, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 18304
+13:33:42.196674 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 12724) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32522, offset 0, flags [DF], proto TCP (6), length 12724)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0x1dee (incorrect -> 0x57fa), seq 801190:813862, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 12672
+13:33:42.196681 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63416, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xf7e8 (correct), ack 559014, win 107, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196686 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30719, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x4f87 (correct), ack 399910, win 63, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196691 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 763, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x4627 (correct), ack 813862, win 183, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196720 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 26804) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34351, offset 0, flags [DF], proto TCP (6), length 26804)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x54ee (incorrect -> 0x90f8), seq 399910:426662, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 26752
+13:33:42.196741 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 52148) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32531, offset 0, flags [DF], proto TCP (6), length 52148)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xb7ee (incorrect -> 0x38ef), seq 813862:865958, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 52096
+13:33:42.196751 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5614, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0xf3b3), seq 559014:561830, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 2816
+13:33:42.196758 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30720, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xe700 (correct), ack 426662, win 69, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196763 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 764, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x7a9a (correct), ack 865958, win 195, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196767 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63417, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xece7 (correct), ack 561830, win 108, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196808 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41188, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x3d14), seq 246438:291494, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169912], length 45056
+13:33:42.196833 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24677, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xbb63 (correct), ack 291494, win 63, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.196869 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 32436) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34370, offset 0, flags [DF], proto TCP (6), length 32436)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x6aee (incorrect -> 0x3668), seq 426662:459046, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 32384
+13:33:42.196872 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 62004) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32568, offset 0, flags [DF], proto TCP (6), length 62004)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0xde6e (incorrect -> 0xe5ab), seq 865958:927910, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169912], length 61952
+13:33:42.196876 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5616, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x0d6e (incorrect -> 0x5427), seq 561830:570278, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 8448
+13:33:42.196885 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30721, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x6878 (correct), ack 459046, win 77, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196890 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 765, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8888 (correct), ack 927910, win 211, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.196894 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63418, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xcbe5 (correct), ack 570278, win 110, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196922 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34393, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0x5009), seq 459046:467494, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 8448
+13:33:42.196922 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 36660) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5622, offset 0, flags [DF], proto TCP (6), length 36660)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x7b6e (incorrect -> 0xa09e), seq 570278:606886, ack 1, win 8, options [nop,nop,TS val 2560028196 ecr 3905169912], length 36608
+13:33:42.196949 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32612, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x8d23), seq 927910:930726, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169912], length 2816
+13:33:42.196957 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30722, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x4776 (correct), ack 467494, win 79, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196962 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63419, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x3cdc (correct), ack 606886, win 119, options [nop,nop,TS val 3905169913 ecr 2560028196], length 0
+13:33:42.196966 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 766, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x7d88 (correct), ack 930726, win 211, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197001 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 43700) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41220, offset 0, flags [DF], proto TCP (6), length 43700)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x96ee (incorrect -> 0x95b2), seq 291494:335142, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169912], length 43648
+13:33:42.197005 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 60596) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32614, offset 0, flags [DF], proto TCP (6), length 60596)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0xd8ee (incorrect -> 0xd5ae), seq 930726:991270, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 60544
+13:33:42.197017 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24678, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x10d8 (correct), ack 335142, win 74, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197025 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 767, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x90f8 (correct), ack 991270, win 226, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197055 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32657, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x2c8d), seq 991270:995494, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 4224
+13:33:42.197055 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5648, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0xde59), seq 606886:651942, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 45056
+13:33:42.197081 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41251, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x8540 (correct), seq 335142:336550, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169912], length 1408
+13:33:42.197082 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 4276) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34399, offset 0, flags [DF], proto TCP (6), length 4276)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xfced (incorrect -> 0x5200), seq 467494:471718, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 4224
+13:33:42.197090 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 768, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8077 (correct), ack 995494, win 227, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197095 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63420, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x8ccf (correct), ack 651942, win 130, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197100 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24679, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x0b58 (correct), ack 336550, win 74, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197106 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30723, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x36f4 (correct), ack 471718, win 80, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197160 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 56372) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32660, offset 0, flags [DF], proto TCP (6), length 56372)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0xc86e (incorrect -> 0xa21b), seq 995494:1051814, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 56320
+13:33:42.197165 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 33844) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5680, offset 0, flags [DF], proto TCP (6), length 33844)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x706e (incorrect -> 0x8ff0), seq 651942:685734, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 33792
+13:33:42.197169 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 36660) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41252, offset 0, flags [DF], proto TCP (6), length 36660)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x7b6e (incorrect -> 0x89e0), seq 336550:373158, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169912], length 36608
+13:33:42.197178 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 769, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xa468 (correct), ack 1051814, win 241, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197183 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63421, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x08c7 (correct), ack 685734, win 138, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197188 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24680, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x7c4e (correct), ack 373158, win 83, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197210 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41278, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0x4c86), seq 373158:381606, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169912], length 8448
+13:33:42.197210 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32700, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0xcf7f), seq 1051814:1060262, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 8448
+13:33:42.197226 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 21172) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41284, offset 0, flags [DF], proto TCP (6), length 21172)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x3eee (incorrect -> 0xd0b0), seq 381606:402726, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 21120
+13:33:42.197260 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24681, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x5b4c (correct), ack 381606, win 85, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197267 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 770, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8366 (correct), ack 1060262, win 243, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197273 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24682, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x08c7 (correct), ack 402726, win 90, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197290 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5704, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x186e (incorrect -> 0xc7ee), seq 685734:696998, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 11264
+13:33:42.197295 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 64820) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32706, offset 0, flags [DF], proto TCP (6), length 64820)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xe96e (incorrect -> 0x887d), seq 1060262:1125030, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 64768
+13:33:42.197340 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63422, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xdcc3 (correct), ack 696998, win 141, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197345 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 771, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8655 (correct), ack 1125030, win 259, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197382 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 64820) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32752, offset 0, flags [DF], proto TCP (6), length 64820)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xe96e (incorrect -> 0x4f62), seq 1125030:1189798, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 64768
+13:33:42.197388 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5712, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0xbb4e), seq 696998:742054, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 45056
+13:33:42.197392 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 23988) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41299, offset 0, flags [DF], proto TCP (6), length 23988)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x49ee (incorrect -> 0x782a), seq 402726:426662, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 23936
+13:33:42.197414 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 772, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8945 (correct), ack 1189798, win 274, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197418 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63423, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x2cb8 (correct), ack 742054, win 152, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197423 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24683, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xab40 (correct), ack 426662, win 96, options [nop,nop,TS val 3905169913 ecr 2560028197], length 0
+13:33:42.197460 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5744, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0xd3b1), seq 742054:787110, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 45056
+13:33:42.197484 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 64820) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32798, offset 0, flags [DF], proto TCP (6), length 64820)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xe96e (incorrect -> 0x1813), seq 1189798:1254566, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 64768
+13:33:42.197497 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63424, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x7cab (correct), ack 787110, win 163, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197503 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 773, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8c33 (correct), ack 1254566, win 290, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197511 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 11316) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41316, offset 0, flags [DF], proto TCP (6), length 11316)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0x186e (incorrect -> 0x598a), seq 426662:437926, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 11264
+13:33:42.197585 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24684, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0x7f3c (correct), ack 437926, win 99, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197619 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 33844) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41324, offset 0, flags [DF], proto TCP (6), length 33844)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [P.], cksum 0x706e (incorrect -> 0x79e5), seq 437926:471718, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 33792
+13:33:42.197637 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34402, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x28ca), seq 471718:516774, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 45056
+13:33:42.197660 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24685, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xfb33 (correct), ack 471718, win 107, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197667 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30724, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x86e7 (correct), ack 516774, win 91, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197727 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 42292) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5776, offset 0, flags [DF], proto TCP (6), length 42292)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x916e (incorrect -> 0x1189), seq 787110:829350, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 42240
+13:33:42.197732 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 56372) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32844, offset 0, flags [DF], proto TCP (6), length 56372)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [.], cksum 0xc86e (incorrect -> 0x2bae), seq 1254566:1310886, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 56320
+13:33:42.197737 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 18356) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34434, offset 0, flags [DF], proto TCP (6), length 18356)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x33ee (incorrect -> 0x137c), seq 516774:535078, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 18304
+13:33:42.197746 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63425, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xd7a0 (correct), ack 829350, win 173, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197750 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 774, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0xb024 (correct), ack 1310886, win 304, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197754 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30725, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x3f62 (correct), ack 535078, win 96, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197773 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 26804) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34447, offset 0, flags [DF], proto TCP (6), length 26804)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x54ee (incorrect -> 0x1b9a), seq 535078:561830, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 26752
+13:33:42.197782 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5806, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0xba7c), seq 829350:832166, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 2816
+13:33:42.197782 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32884, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0x4fa2), seq 1310886:1319334, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 8448
+13:33:42.197790 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30726, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0xd6db (correct), ack 561830, win 102, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197796 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63426, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0xcc9f (correct), ack 832166, win 174, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197800 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 775, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x8f22 (correct), ack 1319334, win 306, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197820 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 32436) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5808, offset 0, flags [DF], proto TCP (6), length 32436)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x6aee (incorrect -> 0xea3e), seq 832166:864550, ack 1, win 8, options [nop,nop,TS val 2560028198 ecr 3905169913], length 32384
+13:33:42.197827 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63427, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x4e16 (correct), ack 864550, win 182, options [nop,nop,TS val 3905169914 ecr 2560028198], length 0
+13:33:42.197887 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 64820) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32890, offset 0, flags [DF], proto TCP (6), length 64820)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xe96e (incorrect -> 0xd75d), seq 1319334:1384102, ack 1, win 8, options [nop,nop,TS val 2560028198 ecr 3905169913], length 64768
+13:33:42.197904 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 776, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x9210 (correct), ack 1384102, win 322, options [nop,nop,TS val 3905169914 ecr 2560028198], length 0
+13:33:42.197919 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 9908) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5831, offset 0, flags [DF], proto TCP (6), length 9908)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [.], cksum 0x12ee (incorrect -> 0xc7ba), seq 864550:874406, ack 1, win 8, options [nop,nop,TS val 2560028198 ecr 3905169913], length 9856
+13:33:42.197919 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 1460) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 41348, offset 0, flags [DF], proto TCP (6), length 1460)
+    192.0.2.18.36846 > 198.51.100.1.5201: Flags [.], cksum 0xd9c2 (correct), seq 471718:473126, ack 1, win 8, options [nop,nop,TS val 2560028198 ecr 3905169913], length 1408
+13:33:42.197921 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 36660) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34466, offset 0, flags [DF], proto TCP (6), length 36660)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [.], cksum 0x7b6e (incorrect -> 0x27b1), seq 561830:598438, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 36608
+13:33:42.197931 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30727, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x47d2 (correct), ack 598438, win 111, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.197935 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63428, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x2794 (correct), ack 874406, win 184, options [nop,nop,TS val 3905169914 ecr 2560028198], length 0
+13:33:42.197942 IP6 (flowlabel 0x59c8a, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 24686, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36846: Flags [.], cksum 0xf5b1 (correct), ack 473126, win 108, options [nop,nop,TS val 3905169914 ecr 2560028198], length 0
+13:33:42.197976 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5838, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x3f37), seq 874406:877222, ack 1, win 8, options [nop,nop,TS val 2560028198 ecr 3905169913], length 2816
+13:33:42.197976 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 8500) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34492, offset 0, flags [DF], proto TCP (6), length 8500)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0x0d6e (incorrect -> 0x742c), seq 598438:606886, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 8448
+13:33:42.197995 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 64820) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 32936, offset 0, flags [DF], proto TCP (6), length 64820)
+    192.0.2.18.45024 > 198.51.100.1.5201: Flags [P.], cksum 0xe96e (incorrect -> 0x1ab6), seq 1384102:1448870, ack 1, win 8, options [nop,nop,TS val 2560028198 ecr 3905169913], length 64768
+13:33:42.198006 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 2868) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 34498, offset 0, flags [DF], proto TCP (6), length 2868)
+    192.0.2.18.40942 > 198.51.100.1.5201: Flags [P.], cksum 0xf76d (incorrect -> 0x90ea), seq 606886:609702, ack 1, win 8, options [nop,nop,TS val 2560028197 ecr 3905169913], length 2816
+13:33:42.198014 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63429, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x1c93 (correct), ack 877222, win 185, options [nop,nop,TS val 3905169914 ecr 2560028198], length 0
+13:33:42.198018 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30728, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x26d0 (correct), ack 606886, win 113, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.198022 IP6 (flowlabel 0x682c1, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 777, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.45024: Flags [.], cksum 0x94ff (correct), ack 1448870, win 338, options [nop,nop,TS val 3905169914 ecr 2560028198], length 0
+13:33:42.198027 IP6 (flowlabel 0x8289d, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 30729, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.40942: Flags [.], cksum 0x1bcf (correct), ack 609702, win 114, options [nop,nop,TS val 3905169914 ecr 2560028197], length 0
+13:33:42.198070 IP6 (flowlabel 0xea886, hlim 64, next-header IPIP (4) payload length: 45108) 2001:db8:20::c > 2001:db8:20::b: IP (tos 0x0, ttl 63, id 5840, offset 0, flags [DF], proto TCP (6), length 45108)
+    192.0.2.18.36843 > 198.51.100.1.5201: Flags [P.], cksum 0x9c6e (incorrect -> 0x4ccb), seq 877222:922278, ack 1, win 8, options [nop,nop,TS val 2560028198 ecr 3905169914], length 45056
+13:33:42.198085 IP6 (flowlabel 0x76f9c, hlim 64, next-header IPIP (4) payload length: 52) 2001:db8:20::b > 2001:db8:20::c: IP (tos 0x0, ttl 64, id 63430, offset 0, flags [DF], proto TCP (6), length 52)
+    198.51.100.1.5201 > 192.0.2.18.36843: Flags [.], cksum 0x6c87 (correct), ack 922278, win 196, options [nop,nop,TS val 3905169914 ecr 2560028198], length 0
+400 packets captured
+415 packets received by filter
+0 packets dropped by kernel
