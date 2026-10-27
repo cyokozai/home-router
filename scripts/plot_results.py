@@ -365,7 +365,42 @@ def plot_mape(base: Path) -> None:
     save(fig, "T6-B2-mape", "PC02 は ①＋MAP-E。BR 役は PC03。-P 32 は データ 32 本＋制御 1 本 = 33 接続。2026-10-27")
 
 
+def plot_tcp_ft(base: Path) -> None:
+    import json
+
+    configs = [("s1", "①（FW なし）", "#2ca02c"), ("s1fw", "＋ステートフル FW", "#ff7f0e"),
+               ("s1fwft", "＋FW＋flowtable", "#9467bd")]
+    conds = [("default", "MSS 1448（通常）"), ("88", "MSS 88（小さいフレーム）")]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
+    width = 0.26
+    for k, (c, label, color) in enumerate(configs):
+        for i, (mss, _) in enumerate(conds):
+            gbps, cpu = [], []
+            for d in sorted(base.glob(f"{c}/round*")):
+                gbps.append(json.loads((d / f"mss-{mss}.json").read_text())["end"]["sum_received"]["bits_per_second"] / 1e9)
+                cpu.append(json.loads((d / f"mss-{mss}-cpu.json").read_text())["cpu_sum"])
+            x = i + (k - 1) * width
+            for ax, vals, fmt in ((ax1, gbps, "{:.2f}"), (ax2, cpu, "{:.2f}")):  # noqa: B007
+                m, lo, hi = median_range(vals)
+                ax.bar(x, m, width, color=color, label=label if i == 0 else None, yerr=[[lo], [hi]], capsize=2)
+                ax.scatter([x] * len(vals), vals, s=7, color="black", zorder=3)
+                ax.text(x, m + hi + (0.15 if ax is ax1 else 0.03), fmt.format(m), ha="center", va="bottom", fontsize=8)
+    for ax in (ax1, ax2):
+        ax.set_xticks(range(len(conds)), [c[1] for c in conds])
+    ax1.set_ylabel("TCP の受信 [Gbps]")
+    ax1.set_ylim(0, 11.5)
+    ax1.legend(fontsize=8, loc="upper right")
+    ax1.set_title("TCP の速さ（-P 16、30 秒）")
+    ax2.set_ylabel("PC02 の CPU（全コアの合計）[コア]")
+    ax2.set_ylim(0, 1.9)
+    ax2.set_title("そのときの PC02 の CPU")
+    save(fig, "T5-tcp-flowtable", "PC01 → PC03。CPU は PC03 の Prometheus から各回 23 秒の平均。各 n=3、棒は中央値、ひげは最小〜最大。2026-10-28")
+
+
 if __name__ == "__main__":
+    tcpft = ROOT / "results" / "T5-tcp" / "20261028"
+    if tcpft.exists():
+        plot_tcp_ft(tcpft)
     mape = ROOT / "results" / "T6-T7" / "20261027"
     if mape.exists():
         plot_mape(mape)
