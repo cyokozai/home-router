@@ -1,0 +1,48 @@
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+		type filter hook forward priority mangle; policy accept;
+		elements = { 0 counter packets 0 bytes 0 : drop }
+		counter packets 38289572729 bytes 5971198691372 jump vyos_global_rpfilter
+		elements = { 0 counter packets 0 bytes 0 : drop }
+		counter packets 293311756 bytes 3217331336983 jump vyos_global_rpfilter
+		type filter hook forward priority filter; policy accept;
+		counter packets 813183368 bytes 37406455032 accept comment "FWD-filter default-action accept"
+		counter packets 9264 bytes 1288738 accept comment "INP-filter default-action accept"
+		counter packets 13368 bytes 45293740 accept comment "OUT-raw default-action accept"
+		counter packets 13368 bytes 45293740 accept comment "OUT-filter default-action accept"
+		counter packets 813201398 bytes 37408991096 accept comment "PRE-raw default-action accept"
+		type filter hook forward priority filter; policy accept;
+		counter packets 0 bytes 0 accept comment "FWD-filter default-action accept"
+		counter packets 814 bytes 59572 accept comment "INP-filter default-action accept"
+		counter packets 9 bytes 1404 accept comment "OUT-raw default-action accept"
+		counter packets 9 bytes 1404 accept comment "OUT-filter default-action accept"
+		counter packets 1630 bytes 118824 accept comment "PRE-raw default-action accept"
+		type filter hook forward priority filter; policy accept;
+		counter packets 0 bytes 0 accept comment "FWD-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "INP-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "OUT-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "PRE-filter default-action accept"
+		counter packets 813201396 bytes 37408991016 jump VYOS_CT_IGNORE
+		counter packets 813201396 bytes 37408991016 jump FW_CONNTRACK
+		counter packets 813201396 bytes 37408991016 jump NAT_CONNTRACK
+		counter packets 813201396 bytes 37408991016 jump WLB_CONNTRACK
+		counter packets 13368 bytes 45293740 jump VYOS_CT_IGNORE
+		counter packets 13368 bytes 45293740 jump FW_CONNTRACK
+		counter packets 13368 bytes 45293740 jump NAT_CONNTRACK
+		counter packets 1630 bytes 118824 jump VYOS_CT_IGNORE
+		counter packets 1630 bytes 118824 jump FW_CONNTRACK
+		counter packets 1630 bytes 118824 jump NAT_CONNTRACK
+		counter packets 9 bytes 1404 jump VYOS_CT_IGNORE
+		counter packets 9 bytes 1404 jump FW_CONNTRACK
+		counter packets 9 bytes 1404 jump NAT_CONNTRACK
+6

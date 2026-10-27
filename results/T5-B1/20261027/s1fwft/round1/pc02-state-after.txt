@@ -1,0 +1,53 @@
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+		type filter hook forward priority mangle; policy accept;
+		elements = { 0 counter packets 0 bytes 0 : drop }
+		counter packets 36642930870 bytes 5895449681258 jump vyos_global_rpfilter
+		elements = { 0 counter packets 0 bytes 0 : drop }
+		counter packets 293308391 bytes 3217331091631 jump vyos_global_rpfilter
+		counter packets 2474035208 bytes 113808865804 ct original zone set iifname map @ct_iface_map
+		counter packets 25498 bytes 93251324 ct original zone set oifname map @ct_iface_map
+	flowtable VYOS_FLOWTABLE_FT10G {
+		type filter hook forward priority filter; policy accept;
+		ct state { established, related } counter packets 1769 bytes 130906 flow add @VYOS_FLOWTABLE_FT10G comment "ipv4-FWD-filter-10"
+		ct state { established, related } counter packets 1769 bytes 130906 accept comment "ipv4-FWD-filter-100"
+		ct state invalid counter packets 0 bytes 0 drop comment "ipv4-FWD-filter-110"
+		iifname "eth1" counter packets 2473995427 bytes 113803789642 accept comment "ipv4-FWD-filter-120"
+		counter packets 0 bytes 0 drop comment "FWD-filter default-action drop"
+		counter packets 17524 bytes 2369254 accept comment "INP-filter default-action accept"
+		counter packets 25497 bytes 93251168 accept comment "OUT-raw default-action accept"
+		counter packets 25497 bytes 93251168 accept comment "OUT-filter default-action accept"
+		counter packets 2474031439 bytes 113808592370 accept comment "PRE-raw default-action accept"
+	flowtable VYOS_FLOWTABLE_FT10G {
+		type filter hook forward priority filter; policy accept;
+		ct state { established, related } counter packets 0 bytes 0 flow add @VYOS_FLOWTABLE_FT10G comment "ipv6-FWD-filter-10"
+		ct state { established, related } counter packets 0 bytes 0 accept comment "ipv6-FWD-filter-100"
+		ct state invalid counter packets 0 bytes 0 drop comment "ipv6-FWD-filter-110"
+		iifname "eth1" counter packets 0 bytes 0 accept comment "ipv6-FWD-filter-120"
+		meta l4proto ipv6-icmp counter packets 0 bytes 0 accept comment "ipv6-FWD-filter-130"
+		counter packets 0 bytes 0 drop comment "FWD-filter default-action drop"
+		counter packets 1873 bytes 135612 accept comment "INP-filter default-action accept"
+		counter packets 1 bytes 156 accept comment "OUT-raw default-action accept"
+		counter packets 1 bytes 156 accept comment "OUT-filter default-action accept"
+		counter packets 3771 bytes 273578 accept comment "PRE-raw default-action accept"
+		type filter hook forward priority filter; policy accept;
+		counter packets 0 bytes 0 accept comment "FWD-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "INP-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "OUT-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "PRE-filter default-action accept"
+		counter packets 2474031439 bytes 113808592370 jump VYOS_CT_IGNORE
+		counter packets 2474031439 bytes 113808592370 jump FW_CONNTRACK
+		counter packets 0 bytes 0 jump NAT_CONNTRACK
+		counter packets 0 bytes 0 jump WLB_CONNTRACK
+		counter packets 2474031439 bytes 113808592370 jump VYOS_CT_HELPER
+49000
