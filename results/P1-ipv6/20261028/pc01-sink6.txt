@@ -1,0 +1,13 @@
+Added rule with ID 8191
+4 RX rings available
+Total 1 rules
+
+Filter: 8191
+	Rule Type: UDP over IPv6
+	Src IP addr: :: mask: ffff:ffff::ffff:ffff:ffff:ffff
+	Dest IP addr: 2001:db8:10::99 mask: ::
+	Traffic Class: 0x0 mask: 0xff
+	Src port: 0 mask: 0xffff
+	Dest port: 0 mask: 0xffff
+	Action: Drop
+

@@ -365,6 +365,79 @@ def plot_mape(base: Path) -> None:
     save(fig, "T6-B2-mape", "PC02 は ①＋MAP-E。BR 役は PC03。-P 32 は データ 32 本＋制御 1 本 = 33 接続。2026-10-27")
 
 
+def _pps(pattern: str) -> list[float]:
+    import json
+
+    return [json.loads(p.read_text())["result_pps"] for p in sorted(ROOT.glob(pattern))]
+
+
+def plot_frame_sizes() -> None:
+    """RFC 2544 の報告の形: フレーム長ごとに、ロス 0.1% 未満で通せた量を理論値に対する割合で示す（PC02 は ①）。"""
+    rows = [  # (ラベル, PDR の値の並び [pps], 理論値 [pps], 注記)
+        ("64B\nIPv4", _pps("results/T3-bidir-configs/20261028/s1/round*/64B-many-bidir-tol0.001/result.json"), 2 * wire_pps(64), "送信側の上限に近い"),
+        ("78B\nIPv4", _pps("results/P1-ipv6/20261028/round*/78B-many-v4-bidir-tol0.001/result.json"), 2 * wire_pps(78), "送信側の上限に近い"),
+        ("78B\nIPv6", _pps("results/P1-ipv6/20261028/round*/78B-many-v6-bidir-tol0.001/result.json"), 2 * wire_pps(78), "送信側の上限に近い"),
+        ("512B\nIPv4", _pps("results/P3-sizes/20261028/round*/512-many-bidir-tol0.001/result.json"), 2 * wire_pps(512), ""),
+    ]
+    imix = _pps("results/P3-sizes/20261028/round*/imix-many-bidir-tol0.001/result.json")
+    if imix:
+        mean = (7 * 64 + 4 * 570 + 1518) / 12
+        rows.append(("IMIX\n7:4:1", imix, 2 * LINE_RATE / ((mean + 20) * 8), ""))
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    for i, (label, vals, wire, note) in enumerate(rows):
+        pct = [v / wire * 100 for v in vals]
+        m, lo, hi = median_range(pct)
+        ax.bar(i, m, 0.6, color="#1f77b4", yerr=[[lo], [hi]], capsize=3)
+        ax.scatter([i] * len(pct), pct, s=8, color="black", zorder=3)
+        ax.text(i, m + hi + 2, f"{m:.1f}%\n{st.median(vals) / 1e6:.2f} Mpps", ha="center", va="bottom", fontsize=8)
+        if note:
+            ax.text(i, 3, note, ha="center", va="bottom", fontsize=7, color="white")
+    # 1518B は T2（iperf3 の UDP、片方向）。送信が理論値の 97.8% で頭打ち、PC02 のロスは 0〜5 個
+    i = len(rows)
+    ax.bar(i, 97.8, 0.6, color="#9ecae1", hatch="//", edgecolor="#1f77b4")
+    ax.text(i, 99.8, "97.8% 以上\n（送信側の頭打ち）", ha="center", va="bottom", fontsize=8)
+    ax.set_xticks(range(i + 1), [r[0] for r in rows] + ["1518B\nIPv4（T2）"])
+    ax.set_ylabel("PDR / 理論値 [%]")
+    ax.set_ylim(0, 118)
+    ax.axhline(100, color="#555555", ls="--", lw=1)
+    ax.set_title("フレーム長ごとの転送能力（PDR、ロス 0.1% 未満。PC02 は ①）")
+    save(fig, "summary-frame-size", "64B〜512B・IMIX は pktgen の双方向（理論値は両向きの合計）、各 n=3、棒は中央値、ひげは最小〜最大。1518B は T2（片方向）。2026-10-29")
+
+
+def plot_p1_p2() -> None:
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.4))
+    width = 0.38
+    for k, (fam, color) in enumerate(((4, "#1f77b4"), (6, "#ff7f0e"))):
+        for i, tol in enumerate(("0", "0.001")):
+            vals = [v / 1e6 for v in _pps(f"results/P1-ipv6/20261028/round*/78B-many-v{fam}-bidir-tol{tol}/result.json")]
+            m, lo, hi = median_range(vals)
+            x = i + (k - 0.5) * width
+            ax1.bar(x, m, width, color=color, label=f"IPv{fam}" if i == 0 else None, yerr=[[lo], [hi]], capsize=2)
+            ax1.scatter([x] * len(vals), vals, s=7, color="black", zorder=3)
+            ax1.text(x, m + hi + 0.06, f"{m:.2f}", ha="center", va="bottom", fontsize=8)
+    ax1.set_xticks([0, 1], ["NDR（ロス 0%）", "PDR（ロス 0.1% 未満）"])
+    ax1.set_ylabel("78B のフレームレート [Mpps]（両向きの合計）")
+    ax1.set_ylim(0, 6.8)
+    ax1.legend(fontsize=8, loc="upper left")
+    ax1.set_title("P1: IPv4 と IPv6（78B、多数フロー、双方向）")
+
+    conds = [("s1", "many", "素のルーティング\n多数フロー", "#2ca02c"), ("p2b", "many", "MAP-E\n多数フロー", "#9467bd"),
+             ("p2b", "single", "MAP-E\n1 フロー", "#c5b0d5")]
+    for i, (c, f, label, color) in enumerate(conds):
+        vals = [v / 1e6 for v in _pps(f"results/P2-mape-pps/20261028/{c}/round*/64B-{f}-tol0.001/result.json")]
+        m, lo, hi = median_range(vals)
+        ax2.bar(i, m, 0.6, color=color, yerr=[[lo], [hi]], capsize=2)
+        ax2.scatter([i] * len(vals), vals, s=7, color="black", zorder=3)
+        ax2.text(i, m + hi + 0.05, f"{m:.2f}", ha="center", va="bottom", fontsize=8)
+    ax2.axhline(2.70, color=COLORS["PC01 送信"], ls=":", lw=1.5, label="PC01 の送信上限（片方向）約 2.70")
+    ax2.set_xticks(range(len(conds)), [c[2] for c in conds])
+    ax2.set_ylabel("64B の PDR [Mpps]（片方向）")
+    ax2.set_ylim(0, 3.2)
+    ax2.legend(fontsize=8, loc="upper right")
+    ax2.set_title("P2: MAP-E（ipip6＋NAT 15 組）の転送能力")
+    save(fig, "P1-P2", "P1 は PC02 ①、捨て先あり。P2 は宛先 256 × 送信元ポート 240 の流れ。各 n=3、棒は中央値、ひげは最小〜最大。2026-10-29")
+
+
 def plot_bidir_configs(base: Path) -> None:
     import json
 

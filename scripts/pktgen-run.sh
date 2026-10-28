@@ -29,7 +29,8 @@ for ((i = 0; i < THREADS; i++)); do
   pg "kpktgend_${i}" "rem_device_all"
   pg "kpktgend_${i}" "add_device ${dev}"
   pg "${dev}" "count 0"
-  pg "${dev}" "clone_skb 1000"
+  # IMIX は clone_skb（同じ skb の使い回し）と一緒に使えない（2026-10-29 実害: imix_weights の書き込みで失敗した）
+  if [[ -n ${imix} ]]; then pg "${dev}" "clone_skb 0"; else pg "${dev}" "clone_skb 1000"; fi
   pg "${dev}" "pkt_size ${SIZE}"
   if [[ -n ${imix} ]]; then
     pg "${dev}" "imix_weights ${imix}"

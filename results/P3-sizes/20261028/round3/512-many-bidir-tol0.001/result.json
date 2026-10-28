@@ -1,0 +1,124 @@
+{
+ "test": "T3",
+ "started": "2026-10-29T02:10:32.568819+09:00",
+ "frame": 512,
+ "flows": "many",
+ "threads": 4,
+ "burst": 1,
+ "bidir": true,
+ "family": 4,
+ "flow": {
+  "src": "192.168.10.10",
+  "dst": "192.168.20.2",
+  "sink": "192.168.10.99",
+  "reply_src": "192.168.20.2",
+  "extra": {}
+ },
+ "wire_rate_pps": 4699248.120300752,
+ "tolerance": 0.001,
+ "precision": 0.01,
+ "trial_seconds": 10,
+ "final_seconds": 60,
+ "result_pps": 4662535.244360903,
+ "searched_upper_pps": 4699248.120300752,
+ "result_ratio_of_wire": 0.9921875000000002,
+ "sender_limited": false,
+ "final_counters": {
+  "pc01_tx": 279655171,
+  "pc02_rx": 279555527,
+  "pc02_tx": 279555528,
+  "pc03_rx": 30958336
+ },
+ "trials": [
+  {
+   "rate_pps": 4699248.120300752,
+   "seconds": 10,
+   "sent_pps": 4674451.1,
+   "dut_lost": 47684,
+   "dut_loss_ratio": 0.001020098381176776,
+   "receiver_lost": 41523177,
+   "sender_limited": false,
+   "passed": false
+  },
+  {
+   "rate_pps": 2349624.060150376,
+   "seconds": 10,
+   "sent_pps": 2336794.3,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 18149505,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 3524436.0902255643,
+   "seconds": 10,
+   "sent_pps": 3491408.0,
+   "dut_lost": 7,
+   "dut_loss_ratio": 2.0049217965932368e-07,
+   "receiver_lost": 29770762,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 4111842.105263158,
+   "seconds": 10,
+   "sent_pps": 4107525.9,
+   "dut_lost": 1,
+   "dut_loss_ratio": 2.4345555556935137e-08,
+   "receiver_lost": 35907343,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 4405545.112781955,
+   "seconds": 10,
+   "sent_pps": 4387885.1,
+   "dut_lost": 2295,
+   "dut_loss_ratio": 5.230310155569023e-05,
+   "receiver_lost": 38724222,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 4552396.616541354,
+   "seconds": 10,
+   "sent_pps": 4550992.5,
+   "dut_lost": 3221,
+   "dut_loss_ratio": 7.077577034020601e-05,
+   "receiver_lost": 40304835,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 4625822.3684210535,
+   "seconds": 10,
+   "sent_pps": 4599815.1,
+   "dut_lost": 14217,
+   "dut_loss_ratio": 0.0003090776409686555,
+   "receiver_lost": 40825525,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 4662535.244360903,
+   "seconds": 10,
+   "sent_pps": 4618509.9,
+   "dut_lost": 15962,
+   "dut_loss_ratio": 0.00034560930572001157,
+   "receiver_lost": 41064484,
+   "sender_limited": false,
+   "passed": true
+  },
+  {
+   "rate_pps": 4662535.244360903,
+   "seconds": 60,
+   "sent_pps": 4660919.516666667,
+   "dut_lost": 99643,
+   "dut_loss_ratio": 0.00035630666024766625,
+   "receiver_lost": 248597192,
+   "sender_limited": false,
+   "passed": true
+  }
+ ]
+}
