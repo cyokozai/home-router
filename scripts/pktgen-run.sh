@@ -30,8 +30,10 @@ for ((i = 0; i < THREADS; i++)); do
   pg "kpktgend_${i}" "rem_device_all"
   pg "kpktgend_${i}" "add_device ${dev}"
   pg "${dev}" "count 0"
-  # IMIX は clone_skb（同じ skb の使い回し）と一緒に使えない（2026-10-29 実害: imix_weights の書き込みで失敗した）
-  if [[ -n ${imix} ]]; then pg "${dev}" "clone_skb 0"; else pg "${dev}" "clone_skb 1000"; fi
+  # clone_skb 1000 は同じ skb を 1000 回送るので、送信元・ポートのランダム化も 1000 パケットに 1 回しか変わらない。
+  # 新規接続の試験（SRC_MAX）では毎回新しい流れにするため 0 にする（2026-10-29 実害: 20 万本/秒のつもりが conntrack は 6303 件）。
+  # IMIX も clone_skb と一緒に使えない（imix_weights の書き込みで失敗した）
+  if [[ -n ${imix} || -n ${src_max} ]]; then pg "${dev}" "clone_skb 0"; else pg "${dev}" "clone_skb 1000"; fi
   pg "${dev}" "pkt_size ${SIZE}"
   if [[ -n ${imix} ]]; then
     pg "${dev}" "imix_weights ${imix}"
