@@ -275,12 +275,16 @@ def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: P
     return trial
 
 
-def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, flow: Flow | None = None) -> Trial:
+def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, flow: Flow | None = None,
+               pc02_before: str | None = None) -> Trial:
+    """pc02_before: 試行ごとに、送る前に PC02 で流すコマンド（新規接続の試験で conntrack を空にする）。"""
     flow = flow or Flow()
     counter = {"n": 0}
 
     def trial(rate_pps: float, seconds: int) -> Counters:
         counter["n"] += 1
+        if pc02_before:
+            ssh("pc02", pc02_before)
         before = snapshot()
         args = {"IFACE": PC01_IF, "SIZE": pktgen_size(frame), "DST": flow.dst, "SRC": flow.src,
                 "DMAC": PC02_ETH1_MAC, "THREADS": threads, "DURATION": seconds,
@@ -319,6 +323,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--dst-max", help="宛先を --dst〜この値の範囲で散らす（IPv4）")
     p.add_argument("--sport-min", type=int, help="many のときの送信元ポートの下限")
     p.add_argument("--sport-max", type=int, help="many のときの送信元ポートの上限")
+    p.add_argument("--src-max", help="送信元を既定の送信元〜この値の範囲でランダムに散らす（IPv4、片方向）")
+    p.add_argument("--pc02-before", help="試行ごとに送る前に PC02 で流すコマンド（片方向のみ。例: sudo conntrack -F）")
     p.add_argument("--fixed-pps", type=float, help="探索せず、このレートで --final-seconds 秒を --repeat 回流す（長時間の試験）")
     p.add_argument("--repeat", type=int, default=1)
     p.add_argument("--out", type=Path)
@@ -327,10 +333,14 @@ def main(argv: list[str]) -> int:
         p.error(f"IPv6 は --frame {MIN_FRAME_IP6} 以上にする")
     if a.dst and a.bidir:
         p.error("--dst は片方向でだけ使える（双方向の返りの捨て先は IPv4 / IPv6 の既定のものに固定）")
+    if (a.src_max or a.pc02_before) and a.bidir:
+        p.error("--src-max と --pc02-before は片方向でだけ使える")
 
     extra = {}
     if a.dst_max:
         extra["DST_MAX"] = a.dst_max
+    if a.src_max:
+        extra["SRC_MAX"] = a.src_max
     if a.sport_min is not None:
         extra["SPORT_MIN"] = str(a.sport_min)
     if a.sport_max is not None:
@@ -346,11 +356,14 @@ def main(argv: list[str]) -> int:
         + ("-sendermax" if a.sender_max else f"-tol{a.tolerance:g}")
     out = a.out or Path("results/T3") / datetime.now().strftime("%Y%m%d") / name
     out.mkdir(parents=True, exist_ok=True)
-    trial = (make_trial_bidir if a.bidir else make_trial)(a.frame, a.flows, a.threads, a.burst, out, flow)
+    if a.bidir:
+        trial = make_trial_bidir(a.frame, a.flows, a.threads, a.burst, out, flow)
+    else:
+        trial = make_trial(a.frame, a.flows, a.threads, a.burst, out, flow, pc02_before=a.pc02_before)
     upper = (imix_wire_rate_pps() if a.imix else wire_rate_pps(a.frame)) * (2 if a.bidir else 1)
     meta = {"test": "T3", "started": datetime.now().astimezone().isoformat(), "frame": "imix" if a.imix else a.frame,
             "flows": a.flows, "threads": a.threads, "burst": a.burst, "bidir": a.bidir, "family": a.family,
-            "flow": asdict(flow), "wire_rate_pps": upper}
+            "flow": asdict(flow), "pc02_before": a.pc02_before, "wire_rate_pps": upper}
     print(f"T3 {name}: 理論値 {upper/1e6:.3f} Mpps", flush=True)
 
     if a.sender_max:
