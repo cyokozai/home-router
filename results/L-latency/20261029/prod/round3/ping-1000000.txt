@@ -1,0 +1,5 @@
+PING 192.168.10.10 (192.168.10.10) 56(84) bytes of data.
+
+--- 192.168.10.10 ping statistics ---
+10000 packets transmitted, 0 received, 100% packet loss, time 100584ms
+
