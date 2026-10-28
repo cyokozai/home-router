@@ -1,0 +1,74 @@
+set firewall flowtable FT10G interface 'eth1'
+set firewall flowtable FT10G interface 'eth2'
+set firewall flowtable FT10G offload 'software'
+set firewall ipv4 forward filter rule 10 action 'offload'
+set firewall ipv4 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv4 forward filter rule 10 state 'established'
+set firewall ipv4 forward filter rule 10 state 'related'
+set firewall ipv6 forward filter rule 10 action 'offload'
+set firewall ipv6 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv6 forward filter rule 10 state 'established'
+set firewall ipv6 forward filter rule 10 state 'related'
+set interfaces ethernet eth0 address 'dhcp'
+set interfaces ethernet eth0 description 'MGMT-1G'
+set interfaces ethernet eth0 hw-id 'b0:22:7a:1e:20:6b'
+set interfaces ethernet eth0 offload gro
+set interfaces ethernet eth0 offload gso
+set interfaces ethernet eth0 offload rx
+set interfaces ethernet eth0 offload sg
+set interfaces ethernet eth0 offload tso
+set interfaces ethernet eth0 vrf 'MGMT'
+set interfaces ethernet eth1 address '192.168.10.1/24'
+set interfaces ethernet eth1 address '2001:db8:10::1/64'
+set interfaces ethernet eth1 description 'LAN-10G-to-PC01'
+set interfaces ethernet eth1 hw-id '6c:fe:54:6e:27:a0'
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 offload gso
+set interfaces ethernet eth1 offload rx
+set interfaces ethernet eth1 offload sg
+set interfaces ethernet eth1 offload tso
+set interfaces ethernet eth1 ring-buffer rx '4096'
+set interfaces ethernet eth1 ring-buffer tx '4096'
+set interfaces ethernet eth2 address '192.168.20.1/30'
+set interfaces ethernet eth2 address '2001:db8:20::1/64'
+set interfaces ethernet eth2 description 'WAN-10G-to-PC03'
+set interfaces ethernet eth2 hw-id '6c:fe:54:6e:27:a1'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth2 offload gso
+set interfaces ethernet eth2 offload rx
+set interfaces ethernet eth2 offload sg
+set interfaces ethernet eth2 offload tso
+set interfaces ethernet eth2 ring-buffer rx '4096'
+set interfaces ethernet eth2 ring-buffer tx '4096'
+set interfaces loopback lo
+set protocols static arp interface eth1 address 192.168.10.99 mac '02:00:00:00:00:99'
+set protocols static route 0.0.0.0/0 next-hop 192.168.20.2
+set protocols static route6 ::/0 next-hop 2001:db8:20::2
+set service monitoring prometheus node-exporter vrf 'MGMT'
+set service ntp allow-client address '10.0.0.0/8'
+set service ntp allow-client address '127.0.0.0/8'
+set service ntp allow-client address '169.254.0.0/16'
+set service ntp allow-client address '172.16.0.0/12'
+set service ntp allow-client address '192.168.0.0/16'
+set service ntp allow-client address '::1/128'
+set service ntp allow-client address 'fc00::/7'
+set service ntp allow-client address 'fe80::/10'
+set service ntp server 192.168.2.13
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp server time3.vyos.net
+set service ntp vrf 'MGMT'
+set service ssh disable-password-authentication
+set service ssh vrf 'MGMT'
+set system config-management commit-revisions '100'
+set system console device ttyS0 speed '115200'
+set system host-name 'pc02-vyos'
+set system login operator-group default command-policy allow '*'
+set system login user vyos authentication encrypted-password '<伏せ字>'
+set system login user vyos authentication plaintext-password ''
+set system login user vyos authentication public-keys claude-lab key '<伏せ字>'
+set system login user vyos authentication public-keys claude-lab type 'ssh-ed25519'
+set system option reboot-on-upgrade-failure '5'
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'
+set vrf name MGMT table '100'
