@@ -1,0 +1,6 @@
+== sfp0@0
+Result: OK: 4954139(c4953747+d391) usec, 5430944 (60byte,0frags)
+  1096243pps 526Mb/sec (526196640bps) errors: 0
+== sfp0@1
+Result: OK: 4954171(c4954079+d91) usec, 5414592 (60byte,0frags)
+  1092936pps 524Mb/sec (524609280bps) errors: 0

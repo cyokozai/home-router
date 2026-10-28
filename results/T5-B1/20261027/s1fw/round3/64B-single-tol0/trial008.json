@@ -1,0 +1,11 @@
+{
+ "rate_pps": 717332.1328125,
+ "seconds": 10,
+ "counters": {
+  "pc01_tx": 7164943,
+  "pc02_rx": 7164943,
+  "pc02_tx": 7164942,
+  "pc03_rx": 5346563
+ },
+ "pktgen": "== sfp0@0\nResult: OK: 9988036(c2165500+d7822536) usec, 1791201 (60byte,0frags)\n  179334pps 86Mb/sec (86080320bps) errors: 0\n== sfp0@1\nResult: OK: 9987983(c2189573+d7798409) usec, 1791247 (60byte,0frags)\n  179340pps 86Mb/sec (86083200bps) errors: 0\n== sfp0@2\nResult: OK: 9987983(c2172816+d7815167) usec, 1791247 (60byte,0frags)\n  179340pps 86Mb/sec (86083200bps) errors: 0\n== sfp0@3\nResult: OK: 9987983(c2120809+d7867173) usec, 1791247 (60byte,0frags)\n  179340pps 86Mb/sec (86083200bps) errors: 0\n"
+}

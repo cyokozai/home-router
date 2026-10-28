@@ -1,0 +1,15 @@
+PING 198.51.100.1 (198.51.100.1) 1432(1460) bytes of data.
+1440 bytes from 198.51.100.1: icmp_seq=1 ttl=63 time=0.607 ms
+1440 bytes from 198.51.100.1: icmp_seq=2 ttl=63 time=0.693 ms
+1440 bytes from 198.51.100.1: icmp_seq=3 ttl=63 time=0.710 ms
+
+--- 198.51.100.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2071ms
+rtt min/avg/max/mdev = 0.607/0.670/0.710/0.045 ms
+PING 198.51.100.1 (198.51.100.1) 1472(1500) bytes of data.
+ping: local error: message too long, mtu=1460
+ping: local error: message too long, mtu=1460
+
+--- 198.51.100.1 ping statistics ---
+2 packets transmitted, 0 received, +2 errors, 100% packet loss, time 1022ms
+

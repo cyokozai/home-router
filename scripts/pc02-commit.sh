@@ -21,6 +21,13 @@ else
   [[ $# -gt 0 ]] || { echo "cmds ファイルを指定する" >&2; exit 1; }
   lines=$(cat "$@" | grep -E '^(set|delete) ')
 fi
+# 前の commit-confirm が confirm 前に中断されて残っていると、新しい commit-confirm は始まらず、5 分後に PC02 が再起動する
+# （2026-10-27 実害寸前: 試験を途中で止めたとき、後始末の復元が commit-confirm の途中で切れた）。止めて人に見せる
+# [c] は、pgrep -f が ssh の受け側のシェルのコマンド行に一致しないようにするため
+if ssh pc02 'pgrep -f "[c]ommit-confirm-notify"' >/dev/null; then
+  echo "pc02-commit: confirm 待ちの commit-confirm が残っている（放置すると PC02 が再起動する）。中身を確かめて confirm するか待つ" >&2
+  exit 4
+fi
 
 script=$(printf 'source /opt/vyatta/etc/functions/script-template\nconfigure\n%s\ncompare\ncommit-confirm 5\ny\nexit\n' "${lines}")
 out=$(printf '%s\n' "${script}" | ssh pc02 'timeout 120 vbash -s' 2>&1) || true
