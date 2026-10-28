@@ -32,6 +32,7 @@ sink6_down() {
 trap 'echo "== 基準に戻す"; to_base; sink6_down; cfg "${out}/pc02-config-end.cmds"' EXIT
 
 to_base
+sink6_down   # 前回が途中で止まって残っていても、フィルタが重ならないように
 sink6_up | tee "${out}/pc01-sink6.txt"
 bash "${here}/pc02-commit.sh" "${v}/tuning-1-offload.cmds" "${v}/test-sink.cmds" >/dev/null
 cfg "${out}/pc02-config.cmds"
@@ -44,6 +45,7 @@ for r in $(seq 1 "${rounds}"); do
   for fam in 4 6; do
     for tol in 0 0.001; do
       d="${out}/round${r}/78B-many-v${fam}-bidir-tol${tol}"
+      [[ -f ${d}/result.json ]] && { echo "   round${r} IPv${fam} tol=${tol}: 済み（飛ばす）"; continue; }
       python3 -I "${here}/t3_search.py" --frame 78 --family "${fam}" --flows many --bidir --tolerance "${tol}" \
         --out "${d}" | grep -E "^結果" | sed "s/^/   round${r} IPv${fam} tol=${tol}: /" || true
     done

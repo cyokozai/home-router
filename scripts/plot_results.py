@@ -365,6 +365,30 @@ def plot_mape(base: Path) -> None:
     save(fig, "T6-B2-mape", "PC02 は ①＋MAP-E。BR 役は PC03。-P 32 は データ 32 本＋制御 1 本 = 33 接続。2026-10-27")
 
 
+def plot_bidir_configs(base: Path) -> None:
+    import json
+
+    configs = [("s1", "①（基準）"), ("s1perf", "＋④ 性能"), ("s1dfw", "＋set dscp（FW）"), ("s1fw", "＋ステートフル FW"),
+               ("s1ft", "＋③ flowtable"), ("s1fwft", "＋FW＋flowtable"), ("s1rps", "＋② RPS"), ("s1qos", "＋QoS shaper")]
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+    width = 0.38
+    for k, (tol, label, color) in enumerate((("0", "NDR（ロス 0%）", "#1f77b4"), ("0.001", "PDR（ロス 0.1% 未満）", "#ff7f0e"))):
+        for i, (c, _) in enumerate(configs):
+            vals = [json.loads(p.read_text())["result_pps"] / 1e6 for p in sorted(base.glob(f"{c}/round*/64B-many-bidir-tol{tol}/result.json"))]
+            m, lo, hi = median_range(vals)
+            x = i + (k - 0.5) * width
+            ax.bar(x, m, width, color=color, label=label if i == 0 else None, yerr=[[lo], [hi]], capsize=2)
+            ax.scatter([x] * len(vals), vals, s=7, color="black", zorder=3)
+            ax.text(x, m + hi + 0.05, f"{m:.2f}", ha="center", va="bottom", fontsize=7.5)
+    ax.axhline(5.82, color=COLORS["PC01 送信"], ls=":", lw=1.5, label="送信側の上限（両向き）約 5.82")
+    ax.set_xticks(range(len(configs)), [c[1] for c in configs], fontsize=9)
+    ax.set_ylabel("64B のフレームレート [Mpps]（両向きの合計）")
+    ax.set_ylim(0, 6.6)
+    ax.legend(fontsize=8, loc="upper right")
+    ax.set_title("構成ごとの 64B 多数フロー（双方向の送信、すべて ① の上に足した構成）")
+    save(fig, "T3-bidir-configs-64B", "PC01 → PC03 と PC03 → 捨て先を同時に送った合計。各 n=3、棒は中央値、ひげは最小〜最大、点は各回。2026-10-28")
+
+
 def plot_tcp_ft(base: Path) -> None:
     import json
 
