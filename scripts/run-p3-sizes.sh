@@ -29,6 +29,7 @@ for r in $(seq 1 "${rounds}"); do
   for size in 512 imix; do
     for tol in 0 0.001; do
       if [[ ${size} == imix ]]; then opt=(--imix); else opt=(--frame "${size}"); fi
+      [[ -f ${out}/round${r}/${size}-many-bidir-tol${tol}/result.json ]] && { echo "   round${r} ${size} tol=${tol}: 済み（飛ばす）"; continue; }
       python3 -I "${here}/t3_search.py" "${opt[@]}" --flows many --bidir --tolerance "${tol}" \
         --out "${out}/round${r}/${size}-many-bidir-tol${tol}" | grep -E "^結果" | sed "s/^/   round${r} ${size} tol=${tol}: /" || true
     done

@@ -56,6 +56,7 @@ for r in $(seq 1 "${rounds}"); do
     [[ ${c} == p2b ]] && conds+=("single 0" "single 0.001")
     for cond in "${conds[@]}"; do
       read -r flows tol <<<"${cond}"
+      [[ -f ${d}/64B-${flows}-tol${tol}/result.json ]] && { echo "   ${c} ${flows} tol=${tol}: 済み（飛ばす）"; continue; }
       python3 -I "${here}/t3_search.py" --frame 64 --flows "${flows}" --tolerance "${tol}" "${flow[@]}" \
         --out "${d}/64B-${flows}-tol${tol}" | grep -E "^結果" | sed "s/^/   ${c} ${flows} tol=${tol}: /" || true
     done

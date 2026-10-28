@@ -168,9 +168,22 @@ def search(trial: Trial, upper_pps: float, loss_tolerance: float, precision: flo
 # ---- 実機での 1 回の試行 --------------------------------------------------------
 
 
-def ssh(host: str, command: str, timeout: int = 300) -> str:
-    return subprocess.run(["ssh", "-o", "BatchMode=yes", host, command], check=True, capture_output=True,
-                          text=True, timeout=timeout).stdout
+def ssh(host: str, command: str, timeout: int = 300, retries: int = 5, wait: float = 10.0) -> str:
+    """終了コード 255（ssh そのものの接続の失敗）だけ、待って繰り返す。コマンドの失敗はそのまま上げる。
+
+    2026-10-28 実害: 作業用 Mac から 3 台への ssh が一斉に切れ（255、Interrupted system call）、探索が途中で落ち、
+    続く P2〜P4 も始まらなかった。
+    """
+    for attempt in range(retries + 1):
+        r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", host, command],
+                           capture_output=True, text=True, timeout=timeout)
+        if r.returncode != 255 or attempt == retries:
+            break
+        print(f"  ssh {host} が接続に失敗（255）。{wait:.0f} 秒待って繰り返す（{attempt + 1}/{retries}）", flush=True)
+        time.sleep(wait)
+    if r.returncode != 0:
+        raise subprocess.CalledProcessError(r.returncode, r.args, output=r.stdout, stderr=r.stderr)
+    return r.stdout
 
 
 def ethtool_counter(host: str, iface: str, key: str) -> int:

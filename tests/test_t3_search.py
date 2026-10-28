@@ -177,6 +177,37 @@ def test_ipv6_rejects_frames_smaller_than_78():
         t3.main(["--family", "6", "--frame", "64"])
 
 
+def test_ssh_retries_only_connection_failures(monkeypatch):
+    import subprocess
+
+    codes = iter([255, 255, 0])
+    calls = []
+
+    def fake_run(args, **kw):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, next(codes), stdout="ok", stderr="")
+
+    monkeypatch.setattr(t3.subprocess, "run", fake_run)
+    monkeypatch.setattr(t3.time, "sleep", lambda s: None)
+    assert t3.ssh("pc02", "true") == "ok"
+    assert len(calls) == 3
+
+
+def test_ssh_does_not_retry_command_failures(monkeypatch):
+    import subprocess
+
+    calls = []
+
+    def fake_run(args, **kw):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="no")
+
+    monkeypatch.setattr(t3.subprocess, "run", fake_run)
+    with pytest.raises(subprocess.CalledProcessError):
+        t3.ssh("pc02", "false")
+    assert len(calls) == 1
+
+
 def test_dst_override_is_one_way_only():
     with pytest.raises(SystemExit):
         t3.main(["--dst", "198.51.100.1", "--bidir"])

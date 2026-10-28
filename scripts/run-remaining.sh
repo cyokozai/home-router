@@ -19,7 +19,9 @@ fi
 step() {
   local name=$1; shift
   echo "== $(date '+%H:%M') ${name} 開始"
-  if "$@"; then echo "== $(date '+%H:%M') ${name} 終了"; else echo "== $(date '+%H:%M') ${name} 失敗（終了コード $?）。次へ進む"; fi
+  "$@"
+  local rc=$?
+  if ((rc == 0)); then echo "== $(date '+%H:%M') ${name} 終了"; else echo "== $(date '+%H:%M') ${name} 失敗（終了コード ${rc}）。次へ進む"; fi
 }
 
 step P1 bash scripts/run-p1-ipv6.sh "results/P1-ipv6/${day}" 3
