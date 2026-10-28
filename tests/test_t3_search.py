@@ -135,8 +135,79 @@ def test_upper_is_lowered_to_what_the_sender_can_send():
     assert result.upper_pps == pytest.approx(3_000_000, rel=0.01)
 
 
+def test_bidirectional_counters_sum_both_directions():
+    # 双方向: PC01 → PC03 は PC02 の eth2 から、PC03 → PC01 は eth1 から出ていく。両向きを足して 1 つの装置として見る
+    snap = {
+        "pc01_tx": 1000, "pc01_rx": 980,
+        "pc02_eth1_rx": 1000, "pc02_eth1_tx": 990, "pc02_eth2_rx": 1000, "pc02_eth2_tx": 995,
+        "pc03_tx": 1000, "pc03_rx": 995,
+    }
+    c = t3.bidir_counters(snap)
+    assert c.pc01_tx == 2000          # 送った合計（PC01 と PC03）
+    assert c.pc02_rx == 2000
+    assert c.pc02_tx == 1985          # PC02 が送り出した合計
+    assert c.pc03_rx == 980 + 995     # 端末が受け取った合計
+    assert c.dut_lost == 15
+
+
 def test_every_trial_is_logged():
     trial, calls = fake_device(capacity_pps=3_000_000)
     result = t3.search(trial, upper_pps=14_880_952, loss_tolerance=0.0, precision=0.01, trial_seconds=10, final_seconds=60)
     assert len(result.trials) == len(calls)
     assert all({"rate_pps", "seconds", "dut_loss_ratio", "passed"} <= set(t) for t in result.trials)
+
+
+def test_imix_wire_rate_matches_the_target_table():
+    # CLAUDE.md §8: IMIX（7:4:1）は約 3,343,700 pps
+    assert t3.imix_wire_rate_pps() == pytest.approx(3_343_700, rel=1e-3)
+
+
+def test_imix_weights_are_pktgen_sizes_without_fcs():
+    assert t3.imix_weights() == "60,7 566,4 1514,1"
+
+
+def test_ipv6_flow_uses_the_ipv6_path_and_sink():
+    f = t3.Flow.ipv6({"SPORT_MIN": "1024"})
+    assert (f.src, f.dst, f.sink, f.reply_src) == ("2001:db8:10::10", "2001:db8:20::2", "2001:db8:10::99", "2001:db8:20::2")
+    assert f.extra == {"SPORT_MIN": "1024"}
+
+
+def test_ipv6_rejects_frames_smaller_than_78():
+    with pytest.raises(SystemExit):
+        t3.main(["--family", "6", "--frame", "64"])
+
+
+def test_ssh_retries_only_connection_failures(monkeypatch):
+    import subprocess
+
+    codes = iter([255, 255, 0])
+    calls = []
+
+    def fake_run(args, **kw):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, next(codes), stdout="ok", stderr="")
+
+    monkeypatch.setattr(t3.subprocess, "run", fake_run)
+    monkeypatch.setattr(t3.time, "sleep", lambda s: None)
+    assert t3.ssh("pc02", "true") == "ok"
+    assert len(calls) == 3
+
+
+def test_ssh_does_not_retry_command_failures(monkeypatch):
+    import subprocess
+
+    calls = []
+
+    def fake_run(args, **kw):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="no")
+
+    monkeypatch.setattr(t3.subprocess, "run", fake_run)
+    with pytest.raises(subprocess.CalledProcessError):
+        t3.ssh("pc02", "false")
+    assert len(calls) == 1
+
+
+def test_dst_override_is_one_way_only():
+    with pytest.raises(SystemExit):
+        t3.main(["--dst", "198.51.100.1", "--bidir"])

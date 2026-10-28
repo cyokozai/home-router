@@ -1,0 +1,17 @@
+{
+ "test": "T3",
+ "started": "2026-10-27T18:56:21.338112+09:00",
+ "frame": 64,
+ "flows": "many",
+ "threads": 4,
+ "burst": 1,
+ "bidir": true,
+ "wire_rate_pps": 29761904.76190476,
+ "sender_max_pps": 5817583.983333333,
+ "counters": {
+  "pc01_tx": 349055039,
+  "pc02_rx": 342034062,
+  "pc02_tx": 197899032,
+  "pc03_rx": 4312922
+ }
+}

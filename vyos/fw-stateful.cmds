@@ -1,0 +1,22 @@
+# 試験 T5（ステートフル FW のコスト）。フェーズ1 に入れる差分。
+# 家庭用ルータの典型: 戻りの通信（established / related）は通し、壊れた通信（invalid）は捨て、
+# LAN 側（eth1）から始まる新しい通信は通し、WAN 側（eth2）から始まる新しい通信は捨てる。
+# 試験の流れ（PC01 → PC03）は LAN 側から始まるので通る。conntrack の表を引く分がコストになる。
+set firewall ipv4 forward filter default-action 'drop'
+set firewall ipv4 forward filter rule 100 action 'accept'
+set firewall ipv4 forward filter rule 100 state 'established'
+set firewall ipv4 forward filter rule 100 state 'related'
+set firewall ipv4 forward filter rule 110 action 'drop'
+set firewall ipv4 forward filter rule 110 state 'invalid'
+set firewall ipv4 forward filter rule 120 action 'accept'
+set firewall ipv4 forward filter rule 120 inbound-interface name 'eth1'
+set firewall ipv6 forward filter default-action 'drop'
+set firewall ipv6 forward filter rule 100 action 'accept'
+set firewall ipv6 forward filter rule 100 state 'established'
+set firewall ipv6 forward filter rule 100 state 'related'
+set firewall ipv6 forward filter rule 110 action 'drop'
+set firewall ipv6 forward filter rule 110 state 'invalid'
+set firewall ipv6 forward filter rule 120 action 'accept'
+set firewall ipv6 forward filter rule 120 inbound-interface name 'eth1'
+set firewall ipv6 forward filter rule 130 action 'accept'
+set firewall ipv6 forward filter rule 130 protocol 'ipv6-icmp'

@@ -1,0 +1,24 @@
+{
+ "rate_pps": 29761904.76190476,
+ "seconds": 10,
+ "counters": {
+  "pc01_tx": 56783457,
+  "pc02_rx": 51313649,
+  "pc02_tx": 51313649,
+  "pc03_rx": 5180298
+ },
+ "detail": {
+  "pc01_tx": 27028493,
+  "pc01_rx": 15,
+  "pc02_eth1_rx": 24827277,
+  "pc02_eth1_tx": 26486368,
+  "pc02_eth2_rx": 26486372,
+  "pc02_eth2_tx": 24827281,
+  "pc03_tx": 29754964,
+  "pc03_rx": 5180283
+ },
+ "pktgen": {
+  "pc01": "== sfp0@0\nResult: OK: 9971110(c9853955+d117154) usec, 6854766 (60byte,0frags)\n  687462pps 329Mb/sec (329981760bps) errors: 0\n== sfp0@1\nResult: OK: 9971110(c9449492+d521618) usec, 6571635 (60byte,0frags)\n  659067pps 316Mb/sec (316352160bps) errors: 0\n== sfp0@2\nResult: OK: 9971197(c9756942+d214254) usec, 6725989 (60byte,0frags)\n  674541pps 323Mb/sec (323779680bps) errors: 0\n== sfp0@3\nResult: OK: 9971111(c9817894+d153216) usec, 6876103 (60byte,0frags)\n  689602pps 331Mb/sec (331008960bps) errors: 0\n",
+  "pc03": "== sfp0@0\nResult: OK: 9937921(c9937756+d165) usec, 9862712 (60byte,0frags)\n  992432pps 476Mb/sec (476367360bps) errors: 0\n== sfp0@1\nResult: OK: 9937922(c9937900+d22) usec, 9860642 (60byte,0frags)\n  992223pps 476Mb/sec (476267040bps) errors: 0\n== sfp0@2\nResult: OK: 9937920(c9937770+d149) usec, 5015038 (60byte,0frags)\n  504636pps 242Mb/sec (242225280bps) errors: 0\n== sfp0@3\nResult: OK: 9937922(c9937890+d32) usec, 5016554 (60byte,0frags)\n  504788pps 242Mb/sec (242298240bps) errors: 0\n"
+ }
+}

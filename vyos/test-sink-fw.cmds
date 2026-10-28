@@ -1,0 +1,7 @@
+# 試験用（双方向の T3 を、ステートフル FW を入れた構成で測るとき）。fw-stateful.cmds は WAN（eth2）から入る
+# 新しい通信を捨てるので、PC03 → 捨て先（test-sink.cmds の 192.168.10.99）の流れが FW で落ち、ロスに数えられてしまう。
+# 捨て先だけを通す規則を足す（外から LAN の 1 台へポートを開けるのと同じ形）。規則 120 の後ろ、既定の drop の前で効く。
+# 本番には入れない。
+set firewall ipv4 forward filter rule 125 action 'accept'
+set firewall ipv4 forward filter rule 125 inbound-interface name 'eth2'
+set firewall ipv4 forward filter rule 125 destination address '192.168.10.99'

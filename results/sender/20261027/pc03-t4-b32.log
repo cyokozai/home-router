@@ -1,0 +1,12 @@
+== sfp0@0
+Result: OK: 4978018(c4977920+d98) usec, 4518740 (60byte,0frags)
+  907738pps 435Mb/sec (435714240bps) errors: 0
+== sfp0@1
+Result: OK: 4978018(c4978010+d7) usec, 4469489 (60byte,0frags)
+  897845pps 430Mb/sec (430965600bps) errors: 0
+== sfp0@2
+Result: OK: 4978018(c4977950+d67) usec, 2915921 (60byte,0frags)
+  585759pps 281Mb/sec (281164320bps) errors: 0
+== sfp0@3
+Result: OK: 4978018(c4977990+d28) usec, 2927370 (60byte,0frags)
+  588059pps 282Mb/sec (282268320bps) errors: 0

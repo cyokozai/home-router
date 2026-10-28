@@ -1,0 +1,50 @@
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+Current hardware settings:
+RX:			4096
+RX Mini:		n/a
+RX Jumbo:		n/a
+TX:			4096
+RX Buf Len:		n/a
+		type filter hook forward priority mangle; policy accept;
+		elements = { 0 counter packets 0 bytes 0 : drop }
+		counter packets 37476371174 bytes 5933789678354 jump vyos_global_rpfilter
+		elements = { 0 counter packets 0 bytes 0 : drop }
+		counter packets 293310112 bytes 3217331217151 jump vyos_global_rpfilter
+		type filter hook forward priority filter; policy accept;
+		counter packets 833422175 bytes 38337440126 accept comment "FWD-filter default-action accept"
+		counter packets 9024 bytes 1256372 accept comment "INP-filter default-action accept"
+		counter packets 12983 bytes 44859982 accept comment "OUT-raw default-action accept"
+		counter packets 12983 bytes 44859982 accept comment "OUT-filter default-action accept"
+		counter packets 833439740 bytes 38339912704 accept comment "PRE-raw default-action accept"
+		type filter hook forward priority filter; policy accept;
+		udp sport 51820 counter packets 0 bytes 0 ip6 dscp set cs0 accept comment "ipv6-FWD-filter-10"
+		counter packets 0 bytes 0 accept comment "FWD-filter default-action accept"
+		counter packets 829 bytes 59976 accept comment "INP-filter default-action accept"
+		udp sport 51820 counter packets 0 bytes 0 ip6 dscp set cs0 accept comment "ipv6-OUT-filter-10"
+		counter packets 0 bytes 0 accept comment "OUT-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "OUT-raw default-action accept"
+		counter packets 1670 bytes 121092 accept comment "PRE-raw default-action accept"
+		type filter hook forward priority filter; policy accept;
+		counter packets 0 bytes 0 accept comment "FWD-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "INP-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "OUT-filter default-action accept"
+		counter packets 0 bytes 0 accept comment "PRE-filter default-action accept"
+		counter packets 833439740 bytes 38339912704 jump VYOS_CT_IGNORE
+		counter packets 833439740 bytes 38339912704 jump FW_CONNTRACK
+		counter packets 833439740 bytes 38339912704 jump NAT_CONNTRACK
+		counter packets 833439740 bytes 38339912704 jump WLB_CONNTRACK
+		counter packets 12983 bytes 44859982 jump VYOS_CT_IGNORE
+		counter packets 12983 bytes 44859982 jump FW_CONNTRACK
+		counter packets 12983 bytes 44859982 jump NAT_CONNTRACK
+		counter packets 1670 bytes 121092 jump VYOS_CT_IGNORE
+		counter packets 1670 bytes 121092 jump FW_CONNTRACK
+		counter packets 1670 bytes 121092 jump NAT_CONNTRACK
+		counter packets 0 bytes 0 jump VYOS_CT_IGNORE
+		counter packets 0 bytes 0 jump FW_CONNTRACK
+		counter packets 0 bytes 0 jump NAT_CONNTRACK
+6
