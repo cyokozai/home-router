@@ -240,6 +240,19 @@ def snapshot_bidir() -> dict[str, int]:
     }
 
 
+def pc02_cpu_per_core(seconds: float) -> list[float] | None:
+    """直近 seconds 秒の PC02 のコアごとの使用率（0〜1）。取れなければ None（試験は止めない）。"""
+    w = max(2, int(seconds) - 2)
+    q = f'1 - rate(node_cpu_seconds_total{{host="pc02",mode="idle"}}[{w}s])'
+    try:
+        out = ssh("pc03", f"curl -s --get localhost:9090/api/v1/query --data-urlencode {shlex.quote('query=' + q)}",
+                  retries=1)
+        res = json.loads(out)["data"]["result"]
+        return [round(float(r["value"][1]), 3) for r in sorted(res, key=lambda r: int(r["metric"]["cpu"]))]
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: Path,
                      flow: Flow | None = None) -> Trial:
     """PC01 → PC03 と PC03 → PC01 を同時に流す。要求レートは両向きの合計で、半分ずつに分ける。"""
@@ -265,10 +278,11 @@ def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: P
         after = snapshot_bidir()
         diff = {k: after[k] - before[k] for k in before}
         c = bidir_counters(diff)
+        cpu = pc02_cpu_per_core(seconds) if seconds >= 30 else None  # コアごとの偏りを見るため（長い試行だけ）
         (logdir / f"trial{counter['n']:03d}.json").write_text(json.dumps(
-            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "detail": diff, "pktgen": outs},
+            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "detail": diff, "pc02_cpu": cpu, "pktgen": outs},
             ensure_ascii=False, indent=1))
-        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps（両向きの合計）× {seconds:2d}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
+        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps（両向きの合計）× {seconds:g}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
               f" PC02 のロス {c.dut_lost} ({c.dut_loss_ratio:.2e})", flush=True)
         return c
 
@@ -294,9 +308,11 @@ def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, f
         time.sleep(1)  # 送り終えたフレームが PC03 まで届くのを待つ
         after = snapshot()
         c = Counters(**{k: after[k] - before[k] for k in before})
+        cpu = pc02_cpu_per_core(seconds) if seconds >= 30 else None
         (logdir / f"trial{counter['n']:03d}.json").write_text(json.dumps(
-            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "pktgen": out}, ensure_ascii=False, indent=1))
-        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps × {seconds:2d}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
+            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "pc02_cpu": cpu, "pktgen": out},
+            ensure_ascii=False, indent=1))
+        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps × {seconds:g}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
               f" PC02 のロス {c.dut_lost} ({c.dut_loss_ratio:.2e}), PC03 の取りこぼし {c.receiver_lost}", flush=True)
         return c
 
@@ -312,8 +328,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--burst", type=int, default=1, help="pktgen の burst（レート指定時は 1 を推奨）")
     p.add_argument("--tolerance", type=float, default=0.0, help="許すロス率（NDR は 0、PDR は 0.001）")
     p.add_argument("--precision", type=float, default=0.01, help="探索を打ち切る幅（探索範囲の上端に対する割合）")
-    p.add_argument("--trial-seconds", type=int, default=10)
-    p.add_argument("--final-seconds", type=int, default=60)
+    p.add_argument("--trial-seconds", type=float, default=10)
+    p.add_argument("--final-seconds", type=float, default=60)
     p.add_argument("--sender-max", action="store_true", help="レートを制限せずに送り、送信能力の上限だけを測る")
     p.add_argument("--bidir", action="store_true",
                    help="PC01 → PC03 と PC03 → PC01 を同時に流す（レートは両向きの合計。上限は理論値の 2 倍）")
