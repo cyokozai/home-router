@@ -87,6 +87,8 @@ case "${last}" in
     printf '%s\\n' "${body}" > "${FAKE_LOG}/stdin"
     printf '%s\\n' "${body}"
     echo "Initialized commit-confirm, 5 minutes"
+    # community の行を最後に出す（pc02-commit.sh が tail -5 で見せる範囲に入れ、伏せ字が効いていることを確かめる）
+    grep 'snmp community' <<<"${body}" | tail -2
     ;;
   true) exit "${FAKE_TRUE_RC:-0}" ;;
 esac
@@ -123,3 +125,14 @@ def test_confirm_is_not_sent_when_key_ssh_never_succeeds(tmp_path):
     assert out.returncode != 0
     assert not (tmp_path / "confirm").exists()
     assert "confirm" in out.stderr
+
+
+def test_key_ssh_check_opens_a_fresh_connection(tmp_path):
+    # ~/.ssh/config の接続共有（ControlMaster）で既存の接続を使い回すと、鍵の認証をし直さずに通ってしまう
+    out = run_confirm(tmp_path, "Ab9-x_y!z*")
+    assert out.returncode == 0, out.stdout + out.stderr
+    checks = [c for c in (tmp_path / "calls").read_text().splitlines() if c.endswith(" pc02 true")]
+    assert checks
+    for c in checks:
+        for opt in ("BatchMode=yes", "ConnectTimeout=5", "ControlMaster=no", "ControlPath=none"):
+            assert f"-o {opt}" in c, c
