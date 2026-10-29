@@ -477,6 +477,29 @@ set service router-advert interface eth1 prefix ::/64
 -	ひかり電話ありでは、DHCPv6-PDで/56が来る。ひかり電話なしのネクストはRAで/64のみで、NDプロキシが必要になる。光クロスはPDで/56と言われているが、実機で要確認。
 -	プレフィックスは半固定なので変わりうる。MAP-EのCE値やIPIPトンネルを作り直す仕組みは自作が必要。
 
+**MAP-Eの値は計算して固定値で書く**: VyOSにはMAP-Eを自動で組む機能が無い。v6プラスの値（IPv4アドレス・PSID・ポートセット15組・CEのIPv6アドレス・BR）は、委任プレフィックスから `scripts/mape_calc.py` で計算し、`vyos/mape-portsets.cmds` と同じ構成のset行として入れる（§1 ルール10）。
+
+-	v6プラスのMAPルールは 240b:10::/31、240b:12::/31、240b:250::/31、240b:252::/31 の4件（EA 25ビット、PSIDの長さ8、オフセット4、BR 2404:9200:225:100::64）。どれにも入らないプレフィックス（BIGLOBE・OCNなど）はエラーになる。
+-	CEのインターフェースIDは、v6プラスが採用する draft-ietf-softwire-map-03 の形が既定（`--iid-format rfc7597` でRFC 7597の形）。
+-	ひかり電話なしの/64で、第4 hextetの下位8ビットが0でないと、CEアドレスが自分の/64の外になる。このときは警告が出る。
+-	家の監視（thin-k8s）は、PC02のSNMP（`vyos/snmp-mgmt.cmds`。読み取り専用のv2c、VRF MGMTの中、問い合わせは 192.168.2.50 だけ）でプレフィックスを見張り、変わったらDiscordに通知する。communityの値は秘密なので、ファイルには `@SNMP_COMMUNITY@` だけを書き、`scripts/pc02-commit.sh` が環境変数 `SNMP_COMMUNITY` で置き換える（未設定なら止まる）。
+
+**プレフィックスが変わったとき（Discordに通知が来たとき）の手順**: プレフィックスが変わると、IPv6は通るままIPv4だけが止まる。
+
+1.	**通知を受ける。** 通知にある新しいプレフィックスと、前のプレフィックスを控える。
+2.	**新しいプレフィックスを確かめる。** PC02で `show interfaces ethernet <WAN>` と `show ipv6 route` を見て、委任されたプレフィックス（/56、ひかり電話なしは/64）が通知と一致することを確かめる。
+3.	**set の行を作る。** まず値だけを表示して確かめ（警告が出ていないか、ルールに一致したか）、続けてset行を出す。`--old-prefix` を付けると、前のCEアドレスとIPv4アドレスを消すdeleteが先頭に付く。
+
+```
+python3 -I scripts/mape_calc.py <新しいプレフィックス>
+python3 -I scripts/mape_calc.py --cmds --wan-if <WAN> --lan <LANの網> \
+  --old-prefix <前のプレフィックス> <新しいプレフィックス> > /tmp/mape-new.cmds
+```
+
+4.	**`scripts/pc02-commit.sh` で入れる。** `scripts/pc02-commit.sh /tmp/mape-new.cmds`（`commit-confirm 5` → 鍵のSSHを確かめて `confirm`。saveはしない）。
+5.	**IPv4の疎通を確かめる。** LAN側の端末から `ping -4` と `curl -4 https://ifconfig.io` で、外から見えるIPv4が計算したアドレスと一致することを確かめる。PC02では `show interfaces tunnel tun0` と `show nat source translations` を見る。通らなければ `scripts/pc02-commit.sh --restore-saved` で戻す。
+6.	**save する。** 通ったら、PC02で `configure` → `save` し、`show configuration commands` を `configs/pc02/` に保存してcommitする（§1 ルール3）。
+
 ### 6-6. 実機の管理系: 自宅LANとVRF MGMT
 
 実機のPC02では、§6-1 の管理系の行（containerlab用の 172.16.0.0/24）を、§6-1 と**同じcommitで**次に置き換える（`vyos/mgmt-home.cmds`）。別々にcommitすると、途中でSSHが 172.16.0.12 だけを待ち受けて切れる。
