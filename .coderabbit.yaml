@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit（AI のレビュー）の設定。GitHub App の導入はユーザーが行う。
+# 観点の出どころは CLAUDE.md の §1（Claude Codeが守るルール）と §6。
+language: ja-JP
+tone_instructions: "日本語で、簡潔に、根拠（CLAUDE.md の節番号やファイルの行）を添えて指摘する。"
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: false
+  review_status: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  # 余計なものは切る
+  poem: false
+  in_progress_fortune: false
+  sequence_diagrams: false
+  suggested_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    # 既定ブランチの名前が king's なので明示する（正規表現として扱われる）
+    base_branches:
+      - "^king's$"
+
+  path_filters:
+    - "!results/**"
+    - "!results/figures/**"
+    - "!**/*.png"
+    - "!**/*.svg"
+    - "!**/*.jsonl"
+
+  path_instructions:
+    - path: "vyos/**/*.cmds"
+      instructions: |
+        VyOS へ投入する設定の差分。次を確かめる。
+        - 本番で使う機能は VyOS の `set` だけで書けているか（CLAUDE.md §1 ルール 10）。シェル・生の nftables・起動スクリプト（vyos-postconfig-bootup.script など）で補っていないか。
+        - 管理系（`eth0`、VRF `MGMT`、`service ssh` / `service ntp` / node-exporter の listen-address や vrf）に触れていないか（§1 ルール 1）。触ってよいのは `vyos/phase1.cmds` と `vyos/mgmt-home.cmds` だけ。
+        - 値に `#` が入っていないか。`scripts/vyos-apply.sh` は `#` 以降をコメントとして切るので、値が途中で切れる。
+        - 秘密の値（SNMP の community・鍵・パスワード・WireGuard の private-key など）を直接書いていないか。置き換え用の印にする。
+        - `CLAUDE.md` §6 のコードブロックと食い違っていないか（`tests/test_vyos_cmds.py` が検査している。片方だけ直していないか）。
+        - コンテナで確かめられない行を足したなら、`vyos/container-unsupported.txt` に理由つきで載せているか。
+    - path: "scripts/**/*.sh"
+      instructions: |
+        シェルスクリプト。次を確かめる。
+        - VyOS への投入は `scripts/vyos-apply.sh`、実機の PC02 へは `scripts/pc02-commit.sh` を使っているか（§1 ルール 7）。VyOS rolling の `set` / `commit` は失敗しても終了コード 0 を返すので、直接流して終了コードで成否を判定していないか。
+        - `commit-confirm` を使うなら、次の行に `y` があり、全体を `timeout` で包んでいるか（§1 ルール 2）。答えが無いと質問を出し続けて止まらない。
+        - 10G の経路（192.168.10.0/24、192.168.20.0/30、2001:db8:10::/64、2001:db8:20::/64、PC02 の eth1/eth2、PC01/PC03 の sfp0）で ssh や監視をしていないか（§1 ルール 6）。管理系（192.168.2.0/24）を使う。
+        - ディスク装置を直接読み書きする操作（dd・mkfs・diskutil erase・fdisk/parted/sgdisk などのパーティション操作・losetup・Ventoy2Disk）が無いか（§1 ルール 9）。
+        - `pgrep -f` / `pkill -f` のパターンが、そのコマンド自身や呼び出し元（ssh や sh -c）のコマンド行にも一致して、自分を拾う・殺す誤りが無いか。
+        - 変数の引用漏れ、`set -euo pipefail` の有無など、shellcheck の指摘も合わせて見る。
+    - path: "scripts/**/*.py"
+      instructions: |
+        Python のスクリプト。次を確かめる。
+        - 標準ライブラリだけで動くか（作業用の Mac に何も入れない方針。外部パッケージを import していないか）。
+        - 試験の結果を、手で丸めた数字だけで残していないか（§1 ルール 4）。`results/<試験ID>/` に JSON とログの生の値を残しているか。
+    - path: "tests/**"
+      instructions: |
+        テスト。次を確かめる。
+        - 標準ライブラリ（と requirements-dev.txt にある pytest）だけで動くか。作業用の Mac に何も入れない方針。
+        - 試験の結果を手で丸めた数字だけで期待値にしていないか（§1 ルール 4）。
+        - 検査の対象（CLAUDE.md の節、`vyos/*.cmds`、`lab/`）と実物が食い違ったときに、ちゃんと落ちる書き方になっているか。
+    - path: "CLAUDE.md"
+      instructions: |
+        引き継ぎ資料。`**/*.md` の観点に加えて、次を確かめる。
+        - §6 のコードブロックを変えたなら、対応する `vyos/*.cmds` も同じ内容に直しているか（`tests/test_vyos_cmds.py` が落ちる）。
+        - §3・§5-3 の構成やアドレスを変えたなら、`lab/` と `tests/test_lab_topology.py` と食い違っていないか。
+    - path: "**/*.md"
+      instructions: |
+        日本語の文章。次を確かめる。
+        - オーナーが使用を禁じた語を地の文で使っていないか。禁止語はそれぞれ「谷」「停滞」「計算量（実行時間・評価回数）」「更新則」「スクリプト」に言い換える決まりで、言い換え前の語（地形の窪地を指す語、障害物の比喩としての語、費用の割当を指す語、演算子を表すカタカナ語、演劇の脚本を指す語）が出てきたら指摘する。ファイル名・スクリプト名・識別子は対象外。
+        - 書かれている手順・コマンド・ファイル名が、実際のスクリプト（`scripts/`、`vyos/`、`lab/`）と食い違っていないか。
+        - OS インストールの手順なら、インストーラの質問をすべて答えと一緒に書き、起動用以外の USB・外付けディスクを先に抜かせているか（§1 ルール 8）。
+    - path: ".github/workflows/**"
+      instructions: |
+        GitHub Actions。次を確かめる。
+        - action とコンテナイメージの版を固定しているか（タグかコミット SHA。`@main` や `latest` にしていない）。VyOS の版は `vyos/VERSION` から読んでいるか。
+        - 外から自宅ルータ（PC02）の版を自動で上げる仕組み（版を上げる自動 PR、定期実行での VERSION の書き換えなど）を足していないか。ユーザーの方針で禁止（PR #6 は close 済み）。
+        - 実機（管理系 192.168.2.0/24、PC01〜PC03）へ CI から接続していないか。CI は containerlab の 172.16.0.0/24 だけを使う。
+
+  tools:
+    shellcheck:
+      enabled: true
+    ruff:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    github-checks:
+      enabled: true
+    languagetool:
+      enabled: false
+
+chat:
+  auto_reply: true
+  art: false
