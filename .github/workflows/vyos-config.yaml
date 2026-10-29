@@ -9,6 +9,7 @@
 #   - veth では検証できない行は vyos/container-unsupported.txt に理由つきで載せ、その行だけ除いて検査する。
 #     載せた行が実は通る、または載っていない行が落ちる、のどちらでも失敗にする
 #   - QoS は commit 後に eth2 の tc filter に pedit（set-dscp）が入ったことまで確かめる
+#   - SNMP は commit 後の snmpd.conf で、community が 192.168.2.50/32 だけに許され、0.0.0.0/0 が無いことを確かめる
 #   - あわせてシェルスクリプトを shellcheck にかける
 # 何を検査しないか: 性能（10G の転送性能は実機の試験 T0〜T8 で測る）、§6-5（本番向け）。
 name: VyOS config
@@ -45,6 +46,7 @@ jobs:
           bash scripts/vyos-config-check.sh
           vyos/phase1.cmds
           vyos/tuning-1-offload.cmds
+          vyos/conntrack-large.cmds
           vyos/tuning-2-rps.cmds
           vyos/tuning-3-flowtable.cmds
           vyos/tuning-4-performance.cmds
@@ -56,4 +58,4 @@ jobs:
           vyos/mape-portsets.cmds
           vyos/test-sink.cmds
           vyos/test-sink-fw.cmds
-          vyos/conntrack-large.cmds
+          vyos/snmp-mgmt.cmds
