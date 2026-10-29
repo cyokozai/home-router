@@ -6,7 +6,7 @@ out="${1:-results/T3/$(date +%Y%m%d)}" frame="${2:-64}"
 mkdir -p "${out}"
 scp -q "$(dirname "$0")/pktgen-run.sh" pc01:~/pktgen-run.sh
 ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-  | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" > "${out}/pc02-config.cmds"
+  | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" > "${out}/pc02-config.cmds"
 
 for flows in single many; do
   python3 -I "$(dirname "$0")/t3_search.py" --frame "${frame}" --flows "${flows}" --sender-max \

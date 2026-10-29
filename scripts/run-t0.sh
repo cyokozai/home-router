@@ -25,7 +25,7 @@ mkdir -p "${out}"
   echo "}"
 } > "${out}/conditions.json"
 ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-  | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" > "${out}/pc02-config.cmds"
+  | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" > "${out}/pc02-config.cmds"
 
 # client ホスト名、client の 10G IF、PC02 の受け口のアドレス、PC02 の IF
 pairs=("pc01 sfp0 192.168.10.1 eth1" "pc03 sfp0 192.168.20.1 eth2")

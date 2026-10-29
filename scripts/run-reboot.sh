@@ -89,7 +89,7 @@ scp -q scripts/pktgen-run.sh scripts/pktgen-keepalive.sh pc01:~/
 # 鍵・パスワードと SNMP の community（vyos/snmp-mgmt.cmds、秘密）を伏せてから残す
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-    | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
+    | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" | sort > "$1"
 }
 wait_ssh_up() {
   local limit=$(($(date +%s) + $1))
