@@ -85,7 +85,7 @@ check_saved || exit 4
 
 # ---- ここから PC02 を触る ----
 mkdir -p "${out}"
-scp -q scripts/pktgen-run.sh pc01:~/pktgen-run.sh
+scp -q scripts/pktgen-run.sh scripts/pktgen-keepalive.sh pc01:~/
 # 鍵・パスワードと SNMP の community（vyos/snmp-mgmt.cmds、秘密）を伏せてから残す
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
@@ -118,8 +118,9 @@ to_base() {
   restore_base || return 1
   ssh pc02 "sudo cmp -s ${backup} /config/config.boot && sudo rm -f ${backup}; true"
 }
+# 見張り役（pktgen-keepalive.sh）を先に止める（後に残すと、リンクが戻ったときに送信を流し直す）
 stop_traffic() {
-  ssh pc01 'sudo sh -c "echo stop > /proc/net/pktgen/pgctrl" 2>/dev/null; sudo pkill -f "[p]ktgen-run.sh"; true' 2>/dev/null
+  ssh pc01 'sudo pkill -f "[p]ktgen-keepalive.sh"; sudo sh -c "echo stop > /proc/net/pktgen/pgctrl" 2>/dev/null; sudo pkill -f "[p]ktgen-run.sh"; true' 2>/dev/null
   ssh pc03 'test -e /tmp/reboot-sampler.pid && kill "$(cat /tmp/reboot-sampler.pid)" 2>/dev/null; rm -f /tmp/reboot-sampler.pid; true' 2>/dev/null
 }
 cleanup() {
@@ -162,8 +163,9 @@ for ((r = 1; r <= rounds; r++)); do
   ssh pc03 "${sampler}"
   sleep 2
   ev traffic_start "$(now)"
+  # pktgen はリンクが落ちると止まるので、リンクが戻ったら流し直す見張り役（pktgen-keepalive.sh）を通す
   ssh pc01 "sudo IFACE=sfp0 SIZE=60 DST=192.168.20.2 SRC=192.168.10.10 DMAC=${pc02_eth1_mac} THREADS=4 \
-    DURATION=${duration} RATE=${rate} FLOWS=many bash ~/pktgen-run.sh" < /dev/null > "${d}/pktgen.log" 2>&1 &
+    KEEP_SECONDS=${duration} RATE=${rate} FLOWS=many bash ~/pktgen-keepalive.sh" < /dev/null > "${d}/pktgen.log" 2>&1 &
   pg=$!
   sleep "${pre}"
   # 再起動の直前にもう一度確かめる

@@ -199,6 +199,57 @@ def test_saved_config_hides_snmp_community(script):
         assert "network '192.168.2.50/32'" in out and "authorization 'ro'" in out
 
 
+# ---- pktgen-keepalive.sh: リンクが戻ったら送信を流し直す ------------------------------
+
+KEEPALIVE = ROOT / "scripts" / "pktgen-keepalive.sh"
+
+
+def test_runner_copies_and_launches_keepalive():
+    # pktgen はリンクが落ちると止まる（2026-10-30 の R1 で 34 秒目に止まった）。見張り役を通して送る
+    text = RUNNER.read_text()
+    assert "scp -q scripts/pktgen-run.sh scripts/pktgen-keepalive.sh pc01:~/" in text
+    assert "KEEP_SECONDS=${duration}" in text and "bash ~/pktgen-keepalive.sh" in text
+    assert "bash ~/pktgen-run.sh" not in text
+    assert '[p]ktgen-keepalive.sh' in text   # 後始末で見張り役も止める
+
+
+def test_keepalive_syntax():
+    subprocess.run(["bash", "-n", str(KEEPALIVE)], check=True)
+
+
+@pytest.mark.skipif(shutil.which("shellcheck") is None, reason="shellcheck が無い")
+def test_keepalive_shellcheck():
+    subprocess.run(["shellcheck", str(KEEPALIVE)], check=True)
+
+
+def test_keepalive_restarts_once_with_remaining_seconds(tmp_path):
+    # carrier が 1 → 0 → 1 と変わったら、残りの秒数で pktgen-run.sh を 1 回だけ流し直す
+    import time
+
+    carrier = tmp_path / "carrier"
+    carrier.write_text("1\n")
+    proc = tmp_path / "proc"
+    proc.mkdir()
+    log = tmp_path / "starts"
+    stub = tmp_path / "pktgen-run.sh"
+    stub.write_text(f'echo "DURATION=$DURATION" >> {log}\nexec sleep 100\n')
+    env = os.environ | {"KEEP_SECONDS": "5", "IFACE": "sfp0", "CARRIER_FILE": str(carrier),
+                        "PKTGEN_PROC": str(proc), "PKTGEN_RUN": str(stub)}
+    p = subprocess.Popen(["bash", str(KEEPALIVE)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    time.sleep(1.0)
+    carrier.write_text("0\n")
+    time.sleep(1.0)
+    carrier.write_text("1\n")
+    out, err = p.communicate(timeout=20)
+    assert p.returncode == 0, err
+    starts = [int(x.split("=")[1]) for x in log.read_text().split()]
+    assert len(starts) == 2, out
+    assert starts[0] == 5
+    assert 1 <= starts[1] < 5
+    assert "リンクが落ちた" in out and "リンクが戻った" in out
+    assert (proc / "pgctrl").read_text().strip() == "stop"   # 終わりに止める
+
+
 def test_runner_syntax():
     subprocess.run(["bash", "-n", str(RUNNER)], check=True)
 
