@@ -244,6 +244,11 @@ def test_snmp_is_read_only_v2c_in_vrf_mgmt_for_the_monitor_only():
     # network の既定は 0.0.0.0/0 ::/0（vyos-1x service_snmp.xml.in）。client だけだと既定の network も
     # snmpd.conf に出て誰からでも読める。network を /32 で明示して既定を上書きする
     assert f"{base} network '192.168.2.50/32'" in lines
+    # 許すのは 192.168.2.50/32 だけ。ほかの network（192.168.2.0/24 など）や client を足したら落とす
+    networks = [m.group(1) for line in lines
+                for m in [re.match(r"set service snmp community '[^']+' network '([^']+)'", line)] if m]
+    assert networks == ["192.168.2.50/32"]
+    assert not any(re.match(r"set service snmp community '[^']+' client ", line) for line in lines)
     assert "set service snmp vrf 'MGMT'" in lines
     communities = {m.group(1) for line in lines
                    for m in [re.match(r"set service snmp community '([^']+)'", line)] if m}

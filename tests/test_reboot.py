@@ -173,6 +173,20 @@ def test_runner_stops_when_saved_config_lacks_mgmt(tmp_path):
     assert "reboot" not in calls
 
 
+@pytest.mark.parametrize("script", ["run-reboot.sh", "run-e3-e4.sh"])
+def test_saved_config_hides_snmp_community(script):
+    # results/ に残す show configuration commands に、SNMP の community の実値を書かない（鍵・パスワードと同じく伏せる）
+    import re
+    text = (ROOT / "scripts" / script).read_text()
+    expr = re.search(r'show configuration commands\' \\\n\s*\| sed -E "([^"]+)"', text).group(1)
+    sample = ("set service snmp community 'S3cret-x' authorization 'ro'\n"
+              "set service snmp community 'S3cret-x' network '192.168.2.50/32'\n"
+              "set system login user vyos authentication public-keys claude-lab key 'AAAAC3Nz'\n")
+    out = subprocess.run(["sed", "-E", expr], input=sample, capture_output=True, text=True, check=True).stdout
+    assert "S3cret-x" not in out and "AAAAC3Nz" not in out
+    assert "network '192.168.2.50/32'" in out and "authorization 'ro'" in out
+
+
 def test_runner_syntax():
     subprocess.run(["bash", "-n", str(RUNNER)], check=True)
 

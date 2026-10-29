@@ -241,14 +241,17 @@ def snapshot_bidir() -> dict[str, int]:
 
 
 def pc02_cpu_per_core(seconds: float) -> list[float] | None:
-    """直近 seconds 秒の PC02 のコアごとの使用率（0〜1）。取れなければ None（試験は止めない）。"""
+    """直近 seconds 秒の PC02 のコアごとの使用率（0〜1、丸めない生の値）。取れなければ None（試験は止めない）。
+
+    Prometheus が応答しないときに試行ごとに長く待たないよう、curl と ssh に短い上限を付ける。
+    """
     w = max(2, int(seconds) - 2)
     q = f'1 - rate(node_cpu_seconds_total{{host="pc02",mode="idle"}}[{w}s])'
     try:
-        out = ssh("pc03", f"curl -s --get localhost:9090/api/v1/query --data-urlencode {shlex.quote('query=' + q)}",
-                  retries=1)
+        out = ssh("pc03", "curl -s --max-time 10 --get localhost:9090/api/v1/query"
+                  f" --data-urlencode {shlex.quote('query=' + q)}", timeout=30, retries=1)
         res = json.loads(out)["data"]["result"]
-        return [round(float(r["value"][1]), 3) for r in sorted(res, key=lambda r: int(r["metric"]["cpu"]))]
+        return [float(r["value"][1]) for r in sorted(res, key=lambda r: int(r["metric"]["cpu"]))]
     except Exception:  # noqa: BLE001
         return None
 
@@ -390,6 +393,9 @@ def main(argv: list[str]) -> int:
         p.error("--dst は片方向でだけ使える（双方向の返りの捨て先は IPv4 / IPv6 の既定のものに固定）")
     if (a.src_max or a.pc02_before) and a.bidir:
         p.error("--src-max と --pc02-before は片方向でだけ使える")
+    if a.family == 6 and (a.src_max or a.dst_max):
+        # pktgen-run.sh の IPv6 の分岐は SRC_MAX・DST_MAX を使わない（散らしたつもりで固定のまま記録される）
+        p.error("--src-max と --dst-max は IPv4 でだけ使える")
     check_schedule_args(p, a)
 
     extra = {}

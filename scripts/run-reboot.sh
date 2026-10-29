@@ -86,9 +86,10 @@ check_saved || exit 4
 # ---- ここから PC02 を触る ----
 mkdir -p "${out}"
 scp -q scripts/pktgen-run.sh pc01:~/pktgen-run.sh
+# 鍵・パスワードと SNMP の community（vyos/snmp-mgmt.cmds、秘密）を伏せてから残す
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-    | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
+    | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
 }
 wait_ssh_up() {
   local limit=$(($(date +%s) + $1))
