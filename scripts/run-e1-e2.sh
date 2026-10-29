@@ -48,10 +48,11 @@ cfg() {
     | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
 }
 to_base() {
-  bash scripts/pc02-commit.sh --restore-saved >/dev/null
+  bash scripts/pc02-commit.sh --restore-saved >/dev/null || return 1
   ssh pc02 'for i in eth1 eth2; do sudo ethtool -G $i rx 512 tx 512 2>/dev/null || true; done'
 }
-apply() { to_base; bash scripts/pc02-commit.sh "$@" >/dev/null; sleep 5; }
+# 投入の失敗を返す（sleep の成功で隠さない）
+apply() { to_base && bash scripts/pc02-commit.sh "$@" >/dev/null || return 1; sleep 5; }
 t3() { python3 -I scripts/t3_search.py "$@"; }
 # 結果がある点は飛ばす。途中で落ちた点は、前回の試行の記録を消してから流し直す（番号が重なって混ざらないように）
 fresh() {
@@ -66,7 +67,7 @@ last="${e1}"; want E1 || last="${e2}"
 trap 'echo "== 基準に戻す"; to_base; cfg "${last}/pc02-config-end.cmds"' EXIT
 
 for h in pc01 pc03; do scp -q scripts/pktgen-run.sh "${h}:~/pktgen-run.sh"; done
-apply "${v}/tuning-1-offload.cmds" "${v}/test-sink.cmds"
+apply "${v}/tuning-1-offload.cmds" "${v}/test-sink.cmds" || { echo "== $(date '+%H:%M') PC02 への設定の投入に失敗したので止める" >&2; exit 1; }
 
 # ---- E1 RFC 2544 の残りのフレーム長 ----
 if want E1; then
