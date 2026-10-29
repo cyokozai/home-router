@@ -47,7 +47,7 @@ for r in $(seq 1 "${rounds}"); do
     # shellcheck disable=SC2086
     bash "${here}/pc02-commit.sh" ${files[$c]} >/dev/null
     ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-      | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" | sort > "${d}/pc02-config.cmds"
+      | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" | sort > "${d}/pc02-config.cmds"
     sleep 5
     ssh pc01 'ping -c3 -W1 198.51.100.1' > "${d}/ping.txt" 2>&1 || true
 

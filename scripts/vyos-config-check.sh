@@ -101,7 +101,11 @@ for delta in "$@"; do
     echo "-- snmpd.conf の community の行"
     conf="$(docker exec "${c}" sh -c 'grep -E "^r[ow]community6? " /etc/snmp/snmpd.conf' 2>&1 || true)"
     echo "${conf}"
-    if grep -q ' 192\.168\.2\.50/32 ' <<< "${conf}" && ! grep -qE ' (0\.0\.0\.0/0|::/0) ' <<< "${conf}"; then
+    # 全行が「読み取り専用で 192.168.2.50/32 だけ」であること。別の network の行が 1 行でも増えたら落とす
+    # （1 行あるかだけを見ると、192.168.2.0/24 などを足しても通ってしまう）
+    total="$(grep -c . <<< "${conf}" || true)"
+    allowed="$(grep -cE '^rocommunity [^ ]+ 192\.168\.2\.50/32( |$)' <<< "${conf}" || true)"
+    if [[ ${total} -ge 1 && ${allowed} -eq ${total} ]]; then
       echo "OK ${delta}: community は 192.168.2.50/32 だけに許されている"
     else
       echo "NG ${delta}: snmpd.conf の community が 192.168.2.50/32 だけになっていない" >&2

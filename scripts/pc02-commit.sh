@@ -49,11 +49,14 @@ fi
 
 script=$(printf 'source /opt/vyatta/etc/functions/script-template\nconfigure\n%s\ncompare\ncommit-confirm 5\ny\nexit\n' "${lines}")
 out=$(printf '%s\n' "${script}" | ssh pc02 'timeout 120 vbash -s' 2>&1) || true
-# compare の出力に community の値が出るので、表示する前に伏せる
+# compare の出力に community の値が出るので、表示する分だけを伏せる。下の判定は伏せる前の out で行う
+# （community が commit・confirm などの語と重なると「Initialized commit-confirm」まで伏せ字になり、
+#   confirm に進まずに 5 分後に PC02 が再起動するため）
+shown=${out}
 if [[ -n ${secret} ]]; then
-  out=${out//"${secret}"/"***"}
+  shown=${shown//"${secret}"/"***"}
 fi
-printf '%s\n' "${out}" | tail -5
+printf '%s\n' "${shown}" | tail -5
 # すでに同じ設定なら commit-confirm は始まらない（「No configuration changes to commit」）。成功として扱う
 if grep -q "No configuration changes to commit" <<<"${out}"; then
   echo "pc02-commit: 変更なし"
@@ -64,11 +67,20 @@ if ! grep -q "Initialized commit-confirm" <<<"${out}"; then
   exit 3
 fi
 
-# 管理系の SSH が生きていることを、別の接続で確かめてから confirm する
+# 管理系の SSH が生きていることを、別の接続で確かめてから confirm する。1 回も通らなければ confirm しない
+# （commit-confirm の時間切れで PC02 が再起動し、保存済みの設定に戻る）。
+# 接続共有（~/.ssh/config の ControlMaster）で既存の接続を使い回すと鍵の認証をし直さないので、共有を切って新しく入る
+key_ssh=0
 for _ in 1 2 3 4 5 6; do
-  ssh -o BatchMode=yes -o ConnectTimeout=5 pc02 true 2>/dev/null && break
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 -o ControlMaster=no -o ControlPath=none pc02 true 2>/dev/null; then
+    key_ssh=1; break
+  fi
   sleep 5
 done
+if ((!key_ssh)); then
+  echo "pc02-commit: 別の接続で鍵の SSH が通らないので confirm しない（5 分後に PC02 が再起動して保存済みの設定に戻る）" >&2
+  exit 5
+fi
 confirm=$'source /opt/vyatta/etc/functions/script-template\nconfigure\nconfirm\n'
 ((save)) && confirm+=$'save\n'
 confirm+=$'exit\n'

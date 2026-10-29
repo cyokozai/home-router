@@ -12,7 +12,12 @@ to_base() {
   bash "${here}/pc02-commit.sh" --restore-saved >/dev/null
   ssh pc02 'for i in eth1 eth2; do sudo ethtool -G $i rx 512 tx 512 2>/dev/null || true; done'
 }
-trap 'echo "== 基準に戻す"; to_base; ssh pc02 "/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands" | sed -E "s/(encrypted-password|key) '"'"'[^'"'"']*'"'"'/\1 '"'"'<伏せ字>'"'"'/" | sort > "${out}/pc02-config-end.cmds"' EXIT
+# 鍵・パスワードと SNMP の community（vyos/snmp-mgmt.cmds、秘密）を、引用符の有無によらず伏せてから残す
+cfg() {
+  ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
+    | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" | sort > "$1"
+}
+trap 'echo "== 基準に戻す"; to_base; cfg "${out}/pc02-config-end.cmds"' EXIT
 to_base
 bash "${here}/pc02-commit.sh" "${v}/tuning-1-offload.cmds" "${v}/test-sink.cmds" >/dev/null
 python3 -I "${here}/t3_search.py" --frame 64 --flows many --bidir --sender-max --out "${out}/64B-many-bidir-sendermax" | grep -E "^  試行|^保存先" || true

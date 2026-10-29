@@ -20,7 +20,7 @@ scp -q "${here}/pktgen-run.sh" pc01:~/pktgen-run.sh
 
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-    | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
+    | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" | sort > "$1"
 }
 state() {
   ssh pc02 'for i in eth1 eth2; do sudo ethtool -g $i | sed -n "/Current/,+5p"; cat /sys/class/net/$i/queues/rx-0/rps_cpus; sudo tc qdisc show dev $i; done' > "$1" 2>&1

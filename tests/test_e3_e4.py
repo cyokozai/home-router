@@ -42,14 +42,18 @@ GOLDEN_CASES = {
 }
 
 
-def trace(tmp_path: Path, env: dict[str, str]) -> tuple[subprocess.CompletedProcess, list[str]]:
-    """pktgen-run.sh を偽の /proc で流し、pktgen への書き込みと待ち時間を、起きた順に返す。"""
+def trace(tmp_path: Path, env: dict[str, str],
+          stubs: dict[str, str] | None = None) -> tuple[subprocess.CompletedProcess, list[str]]:
+    """pktgen-run.sh を偽の /proc で流し、pktgen への書き込みと待ち時間を、起きた順に返す。
+
+    stubs: 偽物に替えるコマンドと、その中身（シェルの本文）。既定は modprobe と sleep を何もしない偽物にする。
+    """
     proc = tmp_path / "proc"
     proc.mkdir(exist_ok=True)
     stub = tmp_path / "bin"
     stub.mkdir(exist_ok=True)
-    for name in ("modprobe", "sleep"):
-        (stub / name).write_text("#!/bin/sh\nexit 0\n")
+    for name, body in ({"modprobe": "exit 0", "sleep": "exit 0"} | (stubs or {})).items():
+        (stub / name).write_text(f"#!/bin/sh\n{body}\n")
         (stub / name).chmod(0o755)
     full = {"PATH": f"{stub}:{os.environ['PATH']}", "PS4": "+ ", "PKTGEN_PROC": str(proc)} | BASE | env
     r = subprocess.run(["bash", "-x", str(SCRIPT)], env=full, capture_output=True, text=True, timeout=30)
@@ -110,6 +114,27 @@ def test_count_stops_by_count_not_by_time(tmp_path):
 def test_count_timeout_can_be_changed(tmp_path):
     _, lines = trace(tmp_path, {"COUNT": "1000", "COUNT_TIMEOUT": "7"})
     assert any(ln.startswith("+ timeout 7 ") for ln in lines)
+
+
+def test_count_not_finished_in_time_fails_the_trial(tmp_path):
+    # 安全弁（timeout、終了コード 124）で切れたら、止めたうえで失敗を返す。COUNT に届かなかった試行を
+    # 有効なバーストとして記録させない
+    r, lines = trace(tmp_path, {"COUNT": "1000"}, stubs={"timeout": "exit 124"})
+    assert r.returncode == 3  # 冒頭の COUNT_TIMEOUT の説明どおり
+    assert "+ echo stop" in lines
+
+
+def test_rate_switch_stops_pktgen_even_if_the_switch_fails(tmp_path):
+    # 送信を始めたあとで切り替えの途中（ここでは sleep 0.1）が失敗しても、count 0（無制限）の pktgen を止めて抜ける
+    r, lines = trace(tmp_path, {"RATE": "10000000", "RATE2": "1400000", "SWITCH_AFTER": "20", "DURATION": "40"},
+                     stubs={"sleep": '[ "$1" = 0.1 ] && exit 1; exit 0'})
+    assert r.returncode != 0
+    assert lines.count("+ echo stop") == 1
+    # 裏の start がまだ書き込んでいないと、stop の後に start が届いて止まらなくなる。先に start の子を止めて回収する
+    raw = r.stderr.splitlines()
+    stop = max(i for i, ln in enumerate(raw) if ln == "+ echo stop")
+    assert any(ln.startswith("+ kill ") for ln in raw[:stop])
+    assert any(ln.startswith("+ wait ") for ln in raw[:stop])
 
 
 @pytest.mark.parametrize("bad", ["3", "0", "abc"])

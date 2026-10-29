@@ -11,7 +11,7 @@
 #   SPORT_MIN / SPORT_MAX  many のときの送信元ポートの範囲（既定 1024〜65535）
 #   IMIX      "60,7 566,4 1514,1" のように pkt_size,重み を並べると IMIX で送る（SIZE は無視される）
 #   COUNT     送る数（全スレッドの合計）。指定すると DURATION ではなく数で止める（E3 のバースト。下の注記）
-#   COUNT_TIMEOUT  COUNT のときの安全弁の秒数（既定 60）。この秒数で送り終わらなければ止める
+#   COUNT_TIMEOUT  COUNT のときの安全弁の秒数（既定 60）。この秒数で送り終わらなければ止めて、終了コード 3 を返す
 #   RATE2 / SWITCH_AFTER  SWITCH_AFTER 秒たったら、止めずに全体のレートを RATE2 に変える（E4 の過負荷からの戻り。下の注記）。
 #             DURATION は全体の秒数。SWITCH_AFTER と DURATION は整数で、DURATION > SWITCH_AFTER
 #   PKTGEN_PROC  pktgen の /proc の場所（既定 /proc/net/pktgen。検査で偽のディレクトリに替えるため）
@@ -107,14 +107,22 @@ for ((i = 0; i < THREADS; i++)); do
   fi
 done
 
+count_done=1
 if [[ -n ${count} ]]; then
-  # 送り終えるまで start が返らない。安全弁で切れたら（終了コード 124）そのまま止めに進む
+  # 送り終えるまで start が返らない。安全弁で切れたら（終了コード 124）止めたうえで、最後に失敗を返す
+  # （COUNT に届かなかった試行を、有効なバーストとして記録させない）
   # shellcheck disable=SC2016  # $1 は bash -c の中で展開する
-  timeout "${count_timeout}" bash -c 'echo start > "$1"' _ "${proc}/pgctrl" || echo "== ${count_timeout} 秒で送り終わらなかったので止める" >&2
+  timeout "${count_timeout}" bash -c 'echo start > "$1"' _ "${proc}/pgctrl" \
+    || { count_done=0; echo "== ${count_timeout} 秒で送り終わらなかったので止める（この試行は失敗）" >&2; }
   echo stop > "${proc}/pgctrl"
 elif [[ -n ${rate2} ]]; then
   echo start > "${proc}/pgctrl" &
   starter=$!
+  # 送信を始めたあとで切り替えの途中（pg や sleep）が失敗して set -e で抜けても、pktgen を止める
+  # （count 0 なので、止めなければ kernel のスレッドが送り続ける）。正常に止めたら外す。
+  # 裏の start がまだ書き込んでいないと、stop の後に start が届いて止まらなくなるので、先に start の子を止めて回収する
+  # （書き込み中の start が signal を受けると、kernel が全スレッドを止める）
+  trap 'kill "${starter}" 2>/dev/null || true; wait "${starter}" 2>/dev/null || true; echo stop > "${proc}/pgctrl"' EXIT
   sleep "${switch_after}"
   for ((i = 0; i < THREADS; i++)); do pg "${IFACE}@${i}" "delay 1000000"; done
   sleep 0.1
@@ -123,6 +131,7 @@ elif [[ -n ${rate2} ]]; then
   echo "== 切り替え $(date +%s.%N)"
   sleep "$((run_seconds - switch_after))"
   echo stop > "${proc}/pgctrl"
+  trap - EXIT
   wait "${starter}" || true
 else
   echo start > "${proc}/pgctrl" &
@@ -136,3 +145,4 @@ for ((i = 0; i < THREADS; i++)); do
   echo "== ${IFACE}@${i}"
   grep -A2 "^Result" "${proc}/${IFACE}@${i}" || true
 done
+((count_done)) || exit 3

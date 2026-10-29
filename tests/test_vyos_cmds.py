@@ -235,6 +235,40 @@ def test_mape_portsets_match_the_generator():
 SNMP_PLACEHOLDER = "@SNMP_COMMUNITY@"
 
 
+def snmp_allowed(lines: list[str]) -> dict[str, list[str]]:
+    """set / delete を順に当てたあとの、community ごとの network と client（全 community をまとめる）。
+
+    行は shlex で語に分ける（引用符の無い値も VyOS では正しい書き方）。service snmp の delete は
+    当てた結果が読みにくくなるので、このファイルでは使わせない（見つけたら AssertionError）。
+    """
+    import shlex
+
+    allowed: dict[str, list[str]] = {"network": [], "client": []}
+    for line in lines:
+        words = shlex.split(line)
+        if words[:3] == ["delete", "service", "snmp"]:
+            raise AssertionError(f"SNMP の設定を delete している: {line}")
+        if words[:4] == ["set", "service", "snmp", "community"] and len(words) >= 7 and words[5] in allowed:
+            allowed[words[5]].append(words[6])
+    return allowed
+
+
+@pytest.mark.parametrize("extra", [
+    "set service snmp community '@SNMP_COMMUNITY@' network 192.168.2.0/24",   # 引用符なし
+    "set service snmp community other network '192.168.2.50/32'",            # 別の community
+    "set service snmp community '@SNMP_COMMUNITY@' client 192.168.2.99",
+])
+def test_snmp_check_catches_extra_permissions(extra):
+    lines = file_commands("snmp-mgmt.cmds") + [extra]
+    assert snmp_allowed(lines) != {"network": ["192.168.2.50/32"], "client": []}
+
+
+def test_snmp_check_refuses_later_delete():
+    lines = file_commands("snmp-mgmt.cmds") + ["delete service snmp community '@SNMP_COMMUNITY@' network '192.168.2.50/32'"]
+    with pytest.raises(AssertionError):
+        snmp_allowed(lines)
+
+
 def test_snmp_is_read_only_v2c_in_vrf_mgmt_for_the_monitor_only():
     # 家の監視（thin-k8s のノード 192.168.2.50）がプレフィックスを読むための SNMP。community は秘密なので
     # ファイルには置き換え用の印だけを書き、scripts/pc02-commit.sh が環境変数 SNMP_COMMUNITY で置き換える
@@ -244,6 +278,8 @@ def test_snmp_is_read_only_v2c_in_vrf_mgmt_for_the_monitor_only():
     # network の既定は 0.0.0.0/0 ::/0（vyos-1x service_snmp.xml.in）。client だけだと既定の network も
     # snmpd.conf に出て誰からでも読める。network を /32 で明示して既定を上書きする
     assert f"{base} network '192.168.2.50/32'" in lines
+    # 許すのは 192.168.2.50/32 だけ。ほかの network（192.168.2.0/24 など）や client を足したら落とす
+    assert snmp_allowed(lines) == {"network": ["192.168.2.50/32"], "client": []}
     assert "set service snmp vrf 'MGMT'" in lines
     communities = {m.group(1) for line in lines
                    for m in [re.match(r"set service snmp community '([^']+)'", line)] if m}

@@ -16,7 +16,7 @@ runs="${RUNS:-3}" secs="${SECS:-60}" omit="${OMIT:-5}" par="${PARALLEL:-4}" size
 mkdir -p "${out}"
 
 ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-  | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" > "${out}/pc02-config.cmds"
+  | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" > "${out}/pc02-config.cmds"
 cat > "${out}/conditions.json" <<EOF
 {"test": "T2", "started": "$(date -Iseconds)", "runs": ${runs}, "seconds": ${secs}, "omit": ${omit},
  "parallel": ${par}, "udp_payloads": "${sizes}", "path": "pc01 sfp0 -> pc02 eth1/eth2 -> pc03 sfp0",
