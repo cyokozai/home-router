@@ -1,0 +1,4 @@
+T3 64B-many-t4-bidir-tol0: 理論値 29.762 Mpps
+  試行   1: 要求  20.000 Mpps（両向きの合計）× 40s → 送信   4.254 Mpps, PC02 のロス 31852650 (1.87e-01)
+結果: 20.000 Mpps × 40s × 1 回、ロス率の合計 1.87e-01
+保存先: results/E-extra/20261029-e3e4/E4/round2/run

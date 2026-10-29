@@ -1,0 +1,40 @@
+{
+ "test": "T3",
+ "started": "2026-10-29T21:57:32.739218+09:00",
+ "frame": 64,
+ "flows": "many",
+ "threads": 4,
+ "burst": 1,
+ "bidir": true,
+ "family": 4,
+ "flow": {
+  "src": "192.168.10.10",
+  "dst": "192.168.20.2",
+  "sink": "192.168.10.99",
+  "reply_src": "192.168.20.2",
+  "extra": {
+   "RATE2": "1400000",
+   "SWITCH_AFTER": "20"
+  }
+ },
+ "pc02_before": null,
+ "wire_rate_pps": 29761904.76190476,
+ "count": null,
+ "rate2_pps": 2800000.0,
+ "switch_after": 20,
+ "fixed_pps": 20000000.0,
+ "runs": [
+  {
+   "at": "2026-10-29T21:58:37.638043+09:00",
+   "counters": {
+    "pc01_tx": 169543635,
+    "pc02_rx": 168727160,
+    "pc02_tx": 138261844,
+    "pc03_rx": 15116573
+   },
+   "sent_pps": 4238590.875,
+   "dut_loss_ratio": 0.18450584122488586
+  }
+ ],
+ "total_loss_ratio": 0.18450584122488586
+}
