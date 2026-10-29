@@ -18,14 +18,10 @@ tuning-1-offload.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | vet
 #    system option performance の定義（templates/system/option/performance）を削除しているため、set の段階で拒否される
 tuning-4-performance.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
 
-# §6-6 実機の管理系の VRF: 以前は CI のコンテナに VRF デバイスを作る権限が無く、set vrf name MGMT が
-#    「ip link add dev MGMT ... PermissionError」で落ちていた。2026-10-29 の GitHub のランナーでは VRF を作れて
-#    commit が通るので、その行は一覧から外した（PR #10 の CI で 2 回続けて通ることを確認）。
+# §6-6 実機の管理系（mgmt-home.cmds）: 以前は CI のコンテナに VRF デバイスを作る権限が無く、set vrf name MGMT が
+#    「ip link add dev MGMT ... PermissionError」で落ち、VRF を参照する 4 行も「VRF "MGMT" does not exist!」で落ちていた。
+#    2026-10-29 の GitHub のランナーでは VRF を作れて、5 行とも commit が通る（PR #10 の CI で確認）ので、一覧から外した。
 #    実機（PC02）では 2026-10-25 に commit が通ることを確認済み（configs/pc02/baseline.cmds）
-mgmt-home.cmds | set interfaces ethernet eth0 vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
-mgmt-home.cmds | set service ssh vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
-mgmt-home.cmds | set service ntp vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
-mgmt-home.cmds | set service monitoring prometheus node-exporter vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
 
 # SNMP（snmp-mgmt.cmds）の VRF: 差分は基準（フェーズ1）に 1 本ずつ入れて検査するので、VRF MGMT を作る mgmt-home.cmds が
 #    入っておらず「VRF "MGMT" does not exist!」で落ちる（実機では mgmt-home.cmds で作ってある）。community と network の行はコンテナで commit する
