@@ -26,3 +26,7 @@ mgmt-home.cmds | set interfaces ethernet eth0 vrf 'MGMT' | VRF MGMT を作れな
 mgmt-home.cmds | set service ssh vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
 mgmt-home.cmds | set service ntp vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
 mgmt-home.cmds | set service monitoring prometheus node-exporter vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
+
+# SNMP（snmp-mgmt.cmds）の VRF: 上と同じ理由で VRF MGMT を作れない。community と network の行はコンテナで commit する
+#    （community は置き換え用の印 @SNMP_COMMUNITY@ のまま。@ は community の名前に使える文字）
+snmp-mgmt.cmds | set service snmp vrf 'MGMT' | VRF MGMT を作れないので「VRF "MGMT" does not exist!」
