@@ -1,0 +1,7 @@
+traffic_start=1793295046.167
+reboot=1793295076.914
+ssh_down=1793295078.654
+ssh_back=1793295132.535
+router_ready=1793295141.725
+traffic_end=1793295466.167
+config_survived=yes

@@ -1,0 +1,4 @@
+T3 512B-many-t4-bidir-tol0: 理論値 4.699 Mpps
+  試行   1: 要求   1.410 Mpps（両向きの合計）× 30s → 送信   1.408 Mpps, PC02 のロス 0 (0.00e+00)
+結果: 1.410 Mpps × 30.0s × 1 回、ロス率の合計 0.00e+00
+保存先: results/E2-curve/20261029/round1/512B-30pct
