@@ -10,7 +10,8 @@ rows = [["構成", "N1 新規接続の速度 中央値 [範囲] [Mpps]", "N2 最
 for c, label in (("s1", "①（FW なし）"), ("s1fw", "＋ステートフル FW（表は既定）"), ("s1fwbig", "＋ステートフル FW（表 4,194,304）")):
     cps = [json.loads(p.read_text())["result_pps"] / 1e6 for p in sorted(base.glob(f"{c}/round*/C1-new-flows/result.json"))]
     counts, maxes, slabs, tcpmin = [], [], [], []
-    for p in sorted(base.glob(f"{c}/round*/C2-fill.log")):
+    # C2 は送り終えた巡回（C2-fill/result.json がある）だけを数える。途中で止まった巡回の C2-fill.log は使わない
+    for p in sorted(r.parent.parent / "C2-fill.log" for r in base.glob(f"{c}/round*/C2-fill/result.json")):
         text = p.read_text()
         counts.append(max(int(x) for x in re.findall(r"count=(\d+)", text)))
         maxes.append(int(re.findall(r"max=(\d+)", text)[-1]))
@@ -18,7 +19,7 @@ for c, label in (("s1", "①（FW なし）"), ("s1fw", "＋ステートフル F
         try:
             j = json.loads((p.parent / "C2-tcp.json").read_text())
             tcpmin.append(min(i["sum"]["bits_per_second"] for i in j["intervals"]) / 1e6)
-        except (ValueError, KeyError):
+        except (OSError, ValueError, KeyError):
             pass
     cell = f"{st.median(cps):.2f} [{min(cps):.2f}-{max(cps):.2f}]" if cps else "―"
     rows.append([label, cell, f"{st.median(counts):,.0f}" if counts else "―", f"{maxes[0]:,}" if maxes else "―",
