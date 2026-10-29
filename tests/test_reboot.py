@@ -173,30 +173,65 @@ def test_runner_stops_when_saved_config_lacks_mgmt(tmp_path):
     assert "reboot" not in calls
 
 
-DUMPERS = sorted(p.name for p in (ROOT / "scripts").glob("*.sh")
-                 if "show configuration commands'" in p.read_text())
+# 引用符の付け方によらず「show configuration commands」を書き出すものをすべて拾う
+DUMP = "show configuration commands"
+DUMPERS = sorted(p.name for p in (ROOT / "scripts").glob("*.sh") if DUMP in p.read_text())
+
+
+def dump_seds(text: str) -> list[str]:
+    """書き出しの直後（同じ行か、行の継ぎの次の行）にある sed -E の式。"""
+    import re
+    return re.findall(r'show configuration commands[\'"]?(?: \\\n\s*| )\| sed -E "([^"]+)"', text)
 
 
 def test_config_dumpers_are_found():
-    assert {"run-reboot.sh", "run-e3-e4.sh", "run-t0.sh", "run-mape.sh"} <= set(DUMPERS)
+    assert {"run-reboot.sh", "run-e3-e4.sh", "run-t0.sh", "run-mape.sh", "run-bidir.sh"} <= set(DUMPERS)
+
+
+# VyOS の show configuration commands は、タグの名前（community の名前も）を引用符なしで出す
+# （configs/pc02/baseline.cmds の `set interfaces ethernet eth0 ...` と同じ）。名前に記号があると引用符が付く
+SECRET_SAMPLE = ("set service snmp community S3cret-x authorization 'ro'\n"
+                 "set service snmp community S3cret-x network '192.168.2.50/32'\n"
+                 "set service snmp community 'Q!uoted*' authorization 'ro'\n"
+                 "set system login user vyos authentication encrypted-password '$6$abc'\n"
+                 "set system login user vyos authentication public-keys claude-lab key 'AAAAC3Nz'\n"
+                 "set system login user vyos authentication public-keys claude-lab key AAAAunq\n")
 
 
 @pytest.mark.parametrize("script", DUMPERS)
 def test_saved_config_hides_snmp_community(script):
     # results/ に残す show configuration commands に、SNMP の community の実値を書かない（鍵・パスワードと同じく伏せる）。
-    # PC02 の設定を書き出すすべての実行器で、書き出しのたびに伏せていること
-    import re
+    # PC02 の設定を書き出すすべての実行器で、書き出しのたびに、引用符の有無によらず伏せていること
     text = (ROOT / "scripts" / script).read_text()
-    dumps = text.count("show configuration commands'")
-    exprs = re.findall(r'show configuration commands\' \\\n\s*\| sed -E "([^"]+)"', text)
-    assert len(exprs) == dumps, "伏せずに書き出しているところがある"
-    sample = ("set service snmp community 'S3cret-x' authorization 'ro'\n"
-              "set service snmp community 'S3cret-x' network '192.168.2.50/32'\n"
-              "set system login user vyos authentication public-keys claude-lab key 'AAAAC3Nz'\n")
+    exprs = dump_seds(text)
+    assert len(exprs) == text.count(DUMP), "伏せずに書き出しているところがある"
     for expr in exprs:
-        out = subprocess.run(["sed", "-E", expr], input=sample, capture_output=True, text=True, check=True).stdout
-        assert "S3cret-x" not in out and "AAAAC3Nz" not in out
+        out = subprocess.run(["sed", "-E", expr], input=SECRET_SAMPLE, capture_output=True, text=True,
+                             check=True).stdout
+        for secret in ("S3cret-x", "Q!uoted*", "$6$abc", "AAAAC3Nz", "AAAAunq"):
+            assert secret not in out, (script, secret)
         assert "network '192.168.2.50/32'" in out and "authorization 'ro'" in out
+        assert "public-keys claude-lab key" in out   # 鍵の名前（タグ）は残す
+
+
+def test_handoff_runbook_puts_placeholder_back():
+    # CLAUDE.md §6-5 の手順 6（configs/pc02/ に残す前に、community の実値を印に戻す）の sed
+    import re
+    text = (ROOT / "CLAUDE.md").read_text()
+    expr = re.search(r'`sed -E "([^"]*@SNMP_COMMUNITY@[^"]*)"`', text).group(1)
+    out = subprocess.run(["sed", "-E", expr], input=SECRET_SAMPLE, capture_output=True, text=True, check=True).stdout
+    assert "S3cret-x" not in out and "Q!uoted*" not in out
+    assert "set service snmp community '@SNMP_COMMUNITY@' network '192.168.2.50/32'" in out
+
+
+@pytest.mark.parametrize("script", DUMPERS)
+def test_saved_config_masking_changes_nothing_else(script):
+    # 保存済みの PC02 の設定（秘密はすでに伏せてある）に当てても、1 文字も変わらないこと（伏せすぎない）
+    for expr in dump_seds((ROOT / "scripts" / script).read_text()):
+        for cmds in sorted((ROOT / "configs" / "pc02").glob("*.cmds")):
+            src = cmds.read_text()
+            out = subprocess.run(["sed", "-E", expr], input=src, capture_output=True, text=True, check=True).stdout
+            assert out == src, (script, cmds.name)
 
 
 # ---- pktgen-keepalive.sh: リンクが戻ったら送信を流し直す ------------------------------

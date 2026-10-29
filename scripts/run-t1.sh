@@ -16,7 +16,7 @@ pars="${PARS:-1 4 16}" dirs="${DIRS:-up down bidir}" fams="${FAMS:-4 6}"
 mkdir -p "${out}"
 
 ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-  | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" > "${out}/pc02-config.cmds"
+  | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" > "${out}/pc02-config.cmds"
 cat > "${out}/conditions.json" <<EOF
 {"test": "T1", "started": "$(date -Iseconds)", "runs": ${runs}, "seconds": ${secs}, "omit": ${omit},
  "parallel": "${pars}", "directions": "${dirs}", "families": "${fams}",
