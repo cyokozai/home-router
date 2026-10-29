@@ -1,0 +1,39 @@
+{
+ "test": "T3",
+ "started": "2026-10-29T06:23:43.851659+09:00",
+ "frame": 64,
+ "flows": "many",
+ "threads": 4,
+ "burst": 1,
+ "bidir": false,
+ "family": 4,
+ "flow": {
+  "src": "192.168.10.10",
+  "dst": "198.51.100.1",
+  "sink": "192.168.10.99",
+  "reply_src": "192.168.20.2",
+  "extra": {
+   "DST_MAX": "198.51.100.255",
+   "SRC_MAX": "192.168.10.250",
+   "SPORT_MIN": "1024",
+   "SPORT_MAX": "65535"
+  }
+ },
+ "pc02_before": "sudo conntrack -F >/dev/null 2>&1; true",
+ "wire_rate_pps": 14880952.38095238,
+ "fixed_pps": 1000.0,
+ "runs": [
+  {
+   "at": "2026-10-29T06:24:37.562440+09:00",
+   "counters": {
+    "pc01_tx": 40004,
+    "pc02_rx": 40004,
+    "pc02_tx": 39616,
+    "pc03_rx": 39616
+   },
+   "sent_pps": 1000.1,
+   "dut_loss_ratio": 0.0096990300969903
+  }
+ ],
+ "total_loss_ratio": 0.0096990300969903
+}
