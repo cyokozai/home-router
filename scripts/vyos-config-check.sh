@@ -96,6 +96,18 @@ for delta in "$@"; do
       echo "OK ${delta}: eth2 の tc filter に pedit がある"
     fi
   fi
+  if [[ "$(basename "${delta}")" == snmp-*.cmds ]]; then
+    # community の network の既定は 0.0.0.0/0 ::/0。/32 を明示して既定が消えたこと（誰からでも読めないこと）を確かめる
+    echo "-- snmpd.conf の community の行"
+    conf="$(docker exec "${c}" sh -c 'grep -E "^r[ow]community6? " /etc/snmp/snmpd.conf' 2>&1 || true)"
+    echo "${conf}"
+    if grep -q ' 192\.168\.2\.50/32 ' <<< "${conf}" && ! grep -qE ' (0\.0\.0\.0/0|::/0) ' <<< "${conf}"; then
+      echo "OK ${delta}: community は 192.168.2.50/32 だけに許されている"
+    else
+      echo "NG ${delta}: snmpd.conf の community が 192.168.2.50/32 だけになっていない" >&2
+      failed+=("${delta}")
+    fi
+  fi
 done
 
 echo
