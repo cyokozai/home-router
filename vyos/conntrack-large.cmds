@@ -1,0 +1,4 @@
+# conntrack の表を大きくする（C1・C2 の試験で、既定 262144 と比べる）。本番で多数の端末やサーバを収容するときの候補。
+# 1 件あたり約 256 バイト（slab の nf_conntrack）。4194304 件で約 1GB。ハッシュの数も合わせて増やす（既定のままだと探索が長くなる）。
+set system conntrack table-size '4194304'
+set system conntrack hash-size '1048576'

@@ -1,0 +1,1 @@
+count=40 max=4194304 slab_bytes=317696 mem_available_kb=6618632 drop=289 early_drop=21452820 insert_failed=289

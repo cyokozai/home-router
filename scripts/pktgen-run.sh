@@ -7,6 +7,7 @@
 # 任意の指定:
 #   DST・SRC に IPv6 のアドレスを渡すと IPv6 で送る（pktgen の dst6 / src6）
 #   DST_MAX   宛先を DST〜DST_MAX の範囲で散らす（IPv4 のみ。MAP-E の試験で NAT の組を宛先ごとに分けるため）
+#   SRC_MAX   送信元を SRC〜SRC_MAX の範囲でランダムに散らす（IPv4 のみ。新規接続の試験で毎回新しい流れにするため）
 #   SPORT_MIN / SPORT_MAX  many のときの送信元ポートの範囲（既定 1024〜65535）
 #   IMIX      "60,7 566,4 1514,1" のように pkt_size,重み を並べると IMIX で送る（SIZE は無視される）
 #
@@ -18,7 +19,7 @@ set -euo pipefail
 : "${IFACE:?}" "${SIZE:?}" "${DST:?}" "${SRC:?}" "${DMAC:?}" "${THREADS:=4}"
 run_seconds="${DURATION:?}"
 rate="${RATE:-0}" burst="${BURST:-1}" flows="${FLOWS:-single}"
-dst_max="${DST_MAX:-}" sport_min="${SPORT_MIN:-1024}" sport_max="${SPORT_MAX:-65535}" imix="${IMIX:-}"
+dst_max="${DST_MAX:-}" src_max="${SRC_MAX:-}" sport_min="${SPORT_MIN:-1024}" sport_max="${SPORT_MAX:-65535}" imix="${IMIX:-}"
 
 modprobe pktgen
 pg() { echo "$2" > "/proc/net/pktgen/$1"; }
@@ -29,7 +30,10 @@ for ((i = 0; i < THREADS; i++)); do
   pg "kpktgend_${i}" "rem_device_all"
   pg "kpktgend_${i}" "add_device ${dev}"
   pg "${dev}" "count 0"
-  pg "${dev}" "clone_skb 1000"
+  # clone_skb 1000 は同じ skb を 1000 回送るので、送信元・ポートのランダム化も 1000 パケットに 1 回しか変わらない。
+  # 新規接続の試験（SRC_MAX）では毎回新しい流れにするため 0 にする（2026-10-29 実害: 20 万本/秒のつもりが conntrack は 6303 件）。
+  # IMIX も clone_skb と一緒に使えない（imix_weights の書き込みで失敗した）
+  if [[ -n ${imix} || -n ${src_max} ]]; then pg "${dev}" "clone_skb 0"; else pg "${dev}" "clone_skb 1000"; fi
   pg "${dev}" "pkt_size ${SIZE}"
   if [[ -n ${imix} ]]; then
     pg "${dev}" "imix_weights ${imix}"
@@ -42,7 +46,8 @@ for ((i = 0; i < THREADS; i++)); do
     pg "${dev}" "dst_min ${DST}"
     pg "${dev}" "dst_max ${dst_max:-${DST}}"
     pg "${dev}" "src_min ${SRC}"
-    pg "${dev}" "src_max ${SRC}"
+    pg "${dev}" "src_max ${src_max:-${SRC}}"
+    [[ -n ${src_max} ]] && pg "${dev}" "flag IPSRC_RND"
   fi
   pg "${dev}" "dst_mac ${DMAC}"
   pg "${dev}" "queue_map_min ${i}"

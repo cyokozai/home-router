@@ -240,6 +240,19 @@ def snapshot_bidir() -> dict[str, int]:
     }
 
 
+def pc02_cpu_per_core(seconds: float) -> list[float] | None:
+    """直近 seconds 秒の PC02 のコアごとの使用率（0〜1）。取れなければ None（試験は止めない）。"""
+    w = max(2, int(seconds) - 2)
+    q = f'1 - rate(node_cpu_seconds_total{{host="pc02",mode="idle"}}[{w}s])'
+    try:
+        out = ssh("pc03", f"curl -s --get localhost:9090/api/v1/query --data-urlencode {shlex.quote('query=' + q)}",
+                  retries=1)
+        res = json.loads(out)["data"]["result"]
+        return [round(float(r["value"][1]), 3) for r in sorted(res, key=lambda r: int(r["metric"]["cpu"]))]
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: Path,
                      flow: Flow | None = None) -> Trial:
     """PC01 → PC03 と PC03 → PC01 を同時に流す。要求レートは両向きの合計で、半分ずつに分ける。"""
@@ -265,22 +278,27 @@ def make_trial_bidir(frame: int, flows: str, threads: int, burst: int, logdir: P
         after = snapshot_bidir()
         diff = {k: after[k] - before[k] for k in before}
         c = bidir_counters(diff)
+        cpu = pc02_cpu_per_core(seconds) if seconds >= 30 else None  # コアごとの偏りを見るため（長い試行だけ）
         (logdir / f"trial{counter['n']:03d}.json").write_text(json.dumps(
-            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "detail": diff, "pktgen": outs},
+            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "detail": diff, "pc02_cpu": cpu, "pktgen": outs},
             ensure_ascii=False, indent=1))
-        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps（両向きの合計）× {seconds:2d}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
+        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps（両向きの合計）× {seconds:g}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
               f" PC02 のロス {c.dut_lost} ({c.dut_loss_ratio:.2e})", flush=True)
         return c
 
     return trial
 
 
-def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, flow: Flow | None = None) -> Trial:
+def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, flow: Flow | None = None,
+               pc02_before: str | None = None) -> Trial:
+    """pc02_before: 試行ごとに、送る前に PC02 で流すコマンド（新規接続の試験で conntrack を空にする）。"""
     flow = flow or Flow()
     counter = {"n": 0}
 
     def trial(rate_pps: float, seconds: int) -> Counters:
         counter["n"] += 1
+        if pc02_before:
+            ssh("pc02", pc02_before)
         before = snapshot()
         args = {"IFACE": PC01_IF, "SIZE": pktgen_size(frame), "DST": flow.dst, "SRC": flow.src,
                 "DMAC": PC02_ETH1_MAC, "THREADS": threads, "DURATION": seconds,
@@ -290,9 +308,11 @@ def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, f
         time.sleep(1)  # 送り終えたフレームが PC03 まで届くのを待つ
         after = snapshot()
         c = Counters(**{k: after[k] - before[k] for k in before})
+        cpu = pc02_cpu_per_core(seconds) if seconds >= 30 else None
         (logdir / f"trial{counter['n']:03d}.json").write_text(json.dumps(
-            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "pktgen": out}, ensure_ascii=False, indent=1))
-        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps × {seconds:2d}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
+            {"rate_pps": rate_pps, "seconds": seconds, "counters": asdict(c), "pc02_cpu": cpu, "pktgen": out},
+            ensure_ascii=False, indent=1))
+        print(f"  試行 {counter['n']:3d}: 要求 {rate_pps/1e6:7.3f} Mpps × {seconds:g}s → 送信 {c.pc01_tx/seconds/1e6:7.3f} Mpps,"
               f" PC02 のロス {c.dut_lost} ({c.dut_loss_ratio:.2e}), PC03 の取りこぼし {c.receiver_lost}", flush=True)
         return c
 
@@ -308,8 +328,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--burst", type=int, default=1, help="pktgen の burst（レート指定時は 1 を推奨）")
     p.add_argument("--tolerance", type=float, default=0.0, help="許すロス率（NDR は 0、PDR は 0.001）")
     p.add_argument("--precision", type=float, default=0.01, help="探索を打ち切る幅（探索範囲の上端に対する割合）")
-    p.add_argument("--trial-seconds", type=int, default=10)
-    p.add_argument("--final-seconds", type=int, default=60)
+    p.add_argument("--trial-seconds", type=float, default=10)
+    p.add_argument("--final-seconds", type=float, default=60)
     p.add_argument("--sender-max", action="store_true", help="レートを制限せずに送り、送信能力の上限だけを測る")
     p.add_argument("--bidir", action="store_true",
                    help="PC01 → PC03 と PC03 → PC01 を同時に流す（レートは両向きの合計。上限は理論値の 2 倍）")
@@ -319,6 +339,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--dst-max", help="宛先を --dst〜この値の範囲で散らす（IPv4）")
     p.add_argument("--sport-min", type=int, help="many のときの送信元ポートの下限")
     p.add_argument("--sport-max", type=int, help="many のときの送信元ポートの上限")
+    p.add_argument("--src-max", help="送信元を既定の送信元〜この値の範囲でランダムに散らす（IPv4、片方向）")
+    p.add_argument("--pc02-before", help="試行ごとに送る前に PC02 で流すコマンド（片方向のみ。例: sudo conntrack -F）")
     p.add_argument("--fixed-pps", type=float, help="探索せず、このレートで --final-seconds 秒を --repeat 回流す（長時間の試験）")
     p.add_argument("--repeat", type=int, default=1)
     p.add_argument("--out", type=Path)
@@ -327,10 +349,14 @@ def main(argv: list[str]) -> int:
         p.error(f"IPv6 は --frame {MIN_FRAME_IP6} 以上にする")
     if a.dst and a.bidir:
         p.error("--dst は片方向でだけ使える（双方向の返りの捨て先は IPv4 / IPv6 の既定のものに固定）")
+    if (a.src_max or a.pc02_before) and a.bidir:
+        p.error("--src-max と --pc02-before は片方向でだけ使える")
 
     extra = {}
     if a.dst_max:
         extra["DST_MAX"] = a.dst_max
+    if a.src_max:
+        extra["SRC_MAX"] = a.src_max
     if a.sport_min is not None:
         extra["SPORT_MIN"] = str(a.sport_min)
     if a.sport_max is not None:
@@ -346,11 +372,14 @@ def main(argv: list[str]) -> int:
         + ("-sendermax" if a.sender_max else f"-tol{a.tolerance:g}")
     out = a.out or Path("results/T3") / datetime.now().strftime("%Y%m%d") / name
     out.mkdir(parents=True, exist_ok=True)
-    trial = (make_trial_bidir if a.bidir else make_trial)(a.frame, a.flows, a.threads, a.burst, out, flow)
+    if a.bidir:
+        trial = make_trial_bidir(a.frame, a.flows, a.threads, a.burst, out, flow)
+    else:
+        trial = make_trial(a.frame, a.flows, a.threads, a.burst, out, flow, pc02_before=a.pc02_before)
     upper = (imix_wire_rate_pps() if a.imix else wire_rate_pps(a.frame)) * (2 if a.bidir else 1)
     meta = {"test": "T3", "started": datetime.now().astimezone().isoformat(), "frame": "imix" if a.imix else a.frame,
             "flows": a.flows, "threads": a.threads, "burst": a.burst, "bidir": a.bidir, "family": a.family,
-            "flow": asdict(flow), "wire_rate_pps": upper}
+            "flow": asdict(flow), "pc02_before": a.pc02_before, "wire_rate_pps": upper}
     print(f"T3 {name}: 理論値 {upper/1e6:.3f} Mpps", flush=True)
 
     if a.sender_max:

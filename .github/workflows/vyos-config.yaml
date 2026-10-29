@@ -46,6 +46,7 @@ jobs:
           bash scripts/vyos-config-check.sh
           vyos/phase1.cmds
           vyos/tuning-1-offload.cmds
+          vyos/conntrack-large.cmds
           vyos/tuning-2-rps.cmds
           vyos/tuning-3-flowtable.cmds
           vyos/tuning-4-performance.cmds

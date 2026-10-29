@@ -1,0 +1,4 @@
+T3 64B-many-t3-bidir-tol0: 理論値 29.762 Mpps
+  試行   1: 要求   1.000 Mpps（両向きの合計）× 35s → 送信   0.998 Mpps, PC02 のロス 683 (1.96e-05)
+結果: 1.000 Mpps × 35.0s × 1 回、ロス率の合計 1.96e-05
+保存先: results/L-latency-lan/20261029/prod/round1/load-1000000
