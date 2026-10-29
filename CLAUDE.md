@@ -44,6 +44,7 @@
 -	通常の作業ツリーではgitの書き込みが `bash-guard.sh` で拒否される。ルール3・4のcommitは **worktreeの中で** 行い、PRにしてYusukeがGitHub上でマージする。
 -	試験中に取った設定・結果は、まず作業ツリーの `configs/` `results/` に書き出し、区切りのよいところでworktreeからまとめてcommitする。
 -	`.claude/worktrees/` は `.gitignore` 済み。
+-	PR のレビューは CodeRabbit（`.coderabbit.yaml`）。GitHub App の導入はユーザーが行う。
 
 ---
 
