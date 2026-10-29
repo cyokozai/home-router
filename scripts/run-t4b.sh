@@ -22,7 +22,7 @@ scp -q "${here}/pktgen-run.sh" pc01:~/pktgen-run.sh
 
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-    | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
+    | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
 }
 state() {
   # 設定には出ない実行時の状態（リング・RPS・sysctl）も残し、基準に戻ったかを比べる

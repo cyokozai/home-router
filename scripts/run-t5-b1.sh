@@ -25,7 +25,7 @@ scp -q "${here}/pktgen-run.sh" pc01:~/pktgen-run.sh
 
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-    | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
+    | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
 }
 state() {
   ssh pc02 'for i in eth1 eth2; do sudo ethtool -g $i | sed -n "/Current/,+5p"; done; sudo nft list ruleset | grep -E "hook forward|flowtable|dscp set|counter packets" | head -40; sudo conntrack -C 2>/dev/null' > "$1" 2>&1
