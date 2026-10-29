@@ -7,7 +7,7 @@
 #   pktgen は 3 スレッドにして、PC01 の 1 コアを ping の応答に残す
 #   弱点: 往復時間には PC01・PC03 の処理の時間も入る（専用の試験機ではない）。値は負荷ごと・構成ごとの差で読む
 #
-#   scripts/run-latency.sh [出力先（既定: results/L-latency/<日付>）] [巡回数（既定 3）]
+#   scripts/run-latency-lan.sh [出力先（既定: results/L-latency-lan/<日付>）] [巡回数（既定 3）]
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 out="${1:-results/L-latency-lan/$(date +%Y%m%d)}" rounds="${2:-3}"

@@ -9,10 +9,14 @@ wait_pid="${1:?}"
 day=$(date +%Y%m%d)
 echo "== $(date '+%H:%M') PID ${wait_pid} の終わりを待つ"
 while kill -0 "${wait_pid}" 2>/dev/null; do sleep 30; done
+status=0   # どれかが失敗したら、最後まで流したうえで非ゼロで終わる
 for s in "L run-latency.sh results/L-latency/${day}" "C run-conn.sh results/C-conn/${day}"; do
   read -r name script dir <<<"${s}"
   echo "== $(date '+%H:%M') ${name} 開始"
   bash "scripts/${script}" "${dir}" 3
-  echo "== $(date '+%H:%M') ${name} 終了（終了コード $?）"
+  rc=$?   # echo の中の $(date) が $? を上書きするので、先に取っておく
+  if ((rc != 0)); then status=${rc}; fi
+  echo "== $(date '+%H:%M') ${name} 終了（終了コード ${rc}）"
 done
 echo "== $(date '+%H:%M') すべて終了"
+exit "${status}"

@@ -13,4 +13,6 @@ while kill -0 "${wait_pid}" 2>/dev/null; do sleep 30; done
 for d in results/P3-sizes/20261028/round*/imix-*; do [[ -f ${d}/result.json ]] || rm -rf "${d}"; done
 echo "== $(date '+%H:%M') P3（IMIX）開始"
 bash scripts/run-p3-sizes.sh results/P3-sizes/20261028 3
-echo "== $(date '+%H:%M') P3（IMIX）終了（終了コード $?）"
+rc=$?   # echo の中の $(date) が $? を上書きするので、先に取っておく
+echo "== $(date '+%H:%M') P3（IMIX）終了（終了コード ${rc}）"
+exit "${rc}"

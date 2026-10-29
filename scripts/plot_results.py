@@ -451,7 +451,7 @@ def plot_latency() -> None:
             vals = []
             for p in sorted(ROOT.glob(f"results/L-latency/20261029/{c}/round*/load-{load}/result.json")):
                 vals.append(max(json.loads(p.read_text())["runs"][0]["dut_loss_ratio"], 1e-7))
-            meds.append(st.median(vals))
+            meds.append(st.median(vals) if vals else float("nan"))  # 記録が無い点は飛ばして描く
             ax1.scatter([load / 1e6] * len(vals), vals, s=8, color=color, zorder=3)
         ax1.plot([x / 1e6 for x in loads], meds, color=color, marker="o", label=label)
     ax1.set_yscale("log")
@@ -470,8 +470,8 @@ def plot_latency() -> None:
         for load in xs:
             runs = [rtts(p) for p in sorted(ROOT.glob(f"results/L-latency-lan/20261029/{c}/round*/ping-{load}.txt"))]
             runs = [r for r in runs if r]
-            p50.append(st.median([sorted(r)[len(r) // 2] for r in runs]))
-            p99.append(st.median([sorted(r)[int(len(r) * 0.99)] for r in runs]))
+            p50.append(st.median([sorted(r)[len(r) // 2] for r in runs]) if runs else float("nan"))
+            p99.append(st.median([sorted(r)[int(len(r) * 0.99)] for r in runs]) if runs else float("nan"))
         ax2.plot([x / 1e6 for x in xs], p50, color=color, marker="o", label=f"{label} 中央値")
         ax2.plot([x / 1e6 for x in xs], p99, color=color, marker="s", ls="--", label=f"{label} 99% 値")
     ax2.set_xlabel("背景の負荷 [Mpps]")
@@ -610,6 +610,19 @@ def plot_tcp_ft(base: Path) -> None:
 
 
 if __name__ == "__main__":
+    # docs/performance-evaluation.md が参照する図は、すべてここから描く（tests/test_plot_results.py が確かめる）
+    if (ROOT / "results" / "T3-bidir-configs" / "20261028").exists():
+        plot_frame_sizes()
+        plot_bidir_configs(ROOT / "results" / "T3-bidir-configs" / "20261028")
+    if (ROOT / "results" / "P1-ipv6" / "20261028").exists():
+        plot_p1_p2()
+    if (ROOT / "results" / "L-latency" / "20261029").exists():
+        plot_latency()
+    if (ROOT / "results" / "C-conn" / "20261029").exists():
+        plot_conn()
+    extra = ROOT / "results" / "E-extra" / "20261029"
+    if extra.exists():
+        plot_e2_e5(extra)
     tcpft = ROOT / "results" / "T5-tcp" / "20261028"
     if tcpft.exists():
         plot_tcp_ft(tcpft)
