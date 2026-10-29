@@ -1,0 +1,34 @@
+{
+ "test": "T3",
+ "started": "2026-10-29T06:37:01.478161+09:00",
+ "frame": 64,
+ "flows": "many",
+ "threads": 4,
+ "burst": 1,
+ "bidir": true,
+ "family": 4,
+ "flow": {
+  "src": "192.168.10.10",
+  "dst": "192.168.20.2",
+  "sink": "192.168.10.99",
+  "reply_src": "192.168.20.2",
+  "extra": {}
+ },
+ "pc02_before": null,
+ "wire_rate_pps": 29761904.76190476,
+ "fixed_pps": 1000000.0,
+ "runs": [
+  {
+   "at": "2026-10-29T06:37:56.243179+09:00",
+   "counters": {
+    "pc01_tx": 29954036,
+    "pc02_rx": 29954036,
+    "pc02_tx": 29954036,
+    "pc03_rx": 14960552
+   },
+   "sent_pps": 998467.8666666667,
+   "dut_loss_ratio": 0.0
+  }
+ ],
+ "total_loss_ratio": 0.0
+}
