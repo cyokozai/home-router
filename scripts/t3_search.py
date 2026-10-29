@@ -319,6 +319,41 @@ def make_trial(frame: int, flows: str, threads: int, burst: int, logdir: Path, f
     return trial
 
 
+# ---- E3・E4: 数で止める / 途中でレートを変える（scripts/pktgen-run.sh の COUNT・RATE2・SWITCH_AFTER） ----
+
+
+def schedule_env(count: int | None, rate2: float | None, switch_after: int | None, bidir: bool) -> dict[str, str]:
+    """pktgen-run.sh に足す環境変数。数とレートは両向きの合計で受け取り、両向きなら要求レートと同じく半分ずつにする。"""
+    hosts = 2 if bidir else 1
+    env = {}
+    if count is not None:
+        if count % hosts:
+            raise ValueError(f"両向きでは --count を偶数にする（{count}）")
+        env["COUNT"] = str(count // hosts)
+    if rate2 is not None:
+        env["RATE2"] = str(int(rate2 / hosts))
+        env["SWITCH_AFTER"] = str(switch_after)
+    return env
+
+
+def check_schedule_args(p: argparse.ArgumentParser, a: argparse.Namespace) -> None:
+    """--count・--rate2・--switch-after の組み合わせを、実機に触る前に確かめる。"""
+    if (a.count is not None or a.rate2 is not None) and not a.fixed_pps:
+        p.error("--count と --rate2 は --fixed-pps と一緒に使う")
+    if a.count is not None and a.rate2 is not None:
+        p.error("--count と --rate2 は一緒に使えない")
+    if a.count is not None:
+        hosts = 2 if a.bidir else 1
+        if a.count < a.threads * hosts or a.count % hosts:
+            p.error(f"--count は {a.threads * hosts} 以上{'の偶数' if hosts == 2 else ''}にする（count 0 は pktgen では無制限）")
+    if a.rate2 is not None:
+        if a.switch_after is None:
+            p.error("--rate2 には --switch-after が要る")
+        if not float(a.final_seconds).is_integer() or a.final_seconds <= a.switch_after:
+            p.error("--rate2 のとき --final-seconds は --switch-after より長い整数の秒にする")
+        a.final_seconds = int(a.final_seconds)  # pktgen-run.sh は整数の秒で引き算する
+
+
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--frame", type=int, default=64, help="線上のフレーム長（FCS 込み）")
@@ -343,6 +378,10 @@ def main(argv: list[str]) -> int:
     p.add_argument("--pc02-before", help="試行ごとに送る前に PC02 で流すコマンド（片方向のみ。例: sudo conntrack -F）")
     p.add_argument("--fixed-pps", type=float, help="探索せず、このレートで --final-seconds 秒を --repeat 回流す（長時間の試験）")
     p.add_argument("--repeat", type=int, default=1)
+    p.add_argument("--count", type=int,
+                   help="E3: 時間ではなくこの数（両向きの合計）を送って止める。--final-seconds は送信レートの計算にだけ使う")
+    p.add_argument("--rate2", type=float, help="E4: --switch-after 秒たったら、止めずにこのレート（両向きの合計）に変える")
+    p.add_argument("--switch-after", type=int, help="E4: レートを変えるまでの秒数（--final-seconds は全体の秒数）")
     p.add_argument("--out", type=Path)
     a = p.parse_args(argv)
     if a.family == 6 and a.frame < MIN_FRAME_IP6:
@@ -351,6 +390,7 @@ def main(argv: list[str]) -> int:
         p.error("--dst は片方向でだけ使える（双方向の返りの捨て先は IPv4 / IPv6 の既定のものに固定）")
     if (a.src_max or a.pc02_before) and a.bidir:
         p.error("--src-max と --pc02-before は片方向でだけ使える")
+    check_schedule_args(p, a)
 
     extra = {}
     if a.dst_max:
@@ -363,6 +403,7 @@ def main(argv: list[str]) -> int:
         extra["SPORT_MAX"] = str(a.sport_max)
     if a.imix:
         extra["IMIX"] = imix_weights()
+    extra |= schedule_env(a.count, a.rate2, a.switch_after, a.bidir)
     flow = Flow.ipv6(extra) if a.family == 6 else Flow(extra=extra)
     if a.dst:
         flow.dst = a.dst
@@ -380,6 +421,8 @@ def main(argv: list[str]) -> int:
     meta = {"test": "T3", "started": datetime.now().astimezone().isoformat(), "frame": "imix" if a.imix else a.frame,
             "flows": a.flows, "threads": a.threads, "burst": a.burst, "bidir": a.bidir, "family": a.family,
             "flow": asdict(flow), "pc02_before": a.pc02_before, "wire_rate_pps": upper}
+    if a.count is not None or a.rate2 is not None:  # E3・E4（数とレートは両向きの合計）
+        meta |= {"count": a.count, "rate2_pps": a.rate2, "switch_after": a.switch_after}
     print(f"T3 {name}: 理論値 {upper/1e6:.3f} Mpps", flush=True)
 
     if a.sender_max:
