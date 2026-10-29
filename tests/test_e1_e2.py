@@ -108,6 +108,26 @@ def test_runner_restores_base_on_exit_and_makes_log_dirs_first():
     assert text.count('> "${d}/') == text.count('fresh "${d}"')
 
 
+def _run_apply(tmp_path: Path, to_base_rc: int, commit_rc: int) -> int:
+    """run-e1-e2.sh の apply() だけを取り出し、to_base と pc02-commit.sh を差し替えて戻り値を見る。"""
+    line = re.search(r"^apply\(\) \{.*\}$", RUNNER.read_text(), flags=re.M)[0]
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "pc02-commit.sh").write_text(f"exit {commit_rc}\n")
+    script = f"sleep() {{ :; }}\nto_base() {{ return {to_base_rc}; }}\n{line}\napply x\n"
+    return subprocess.run(["bash", "-c", script], cwd=tmp_path, check=False).returncode
+
+
+@pytest.mark.parametrize(("to_base_rc", "commit_rc", "ok"), [(0, 0, True), (1, 0, False), (0, 3, False)])
+def test_runner_apply_propagates_failure(tmp_path, to_base_rc, commit_rc, ok):
+    # 設定の投入に失敗したら apply は失敗を返す（sleep の成功で隠さない）
+    assert (_run_apply(tmp_path, to_base_rc, commit_rc) == 0) is ok
+
+
+def test_runner_stops_when_apply_fails():
+    # 設定の投入に失敗したまま、別の設定で測り続けない
+    assert re.search(r"^apply .*\|\| \{.*exit 1; \}$", RUNNER.read_text(), flags=re.M)
+
+
 def test_runner_skips_existing_results():
     assert "result.json ]]" in RUNNER.read_text()
 
