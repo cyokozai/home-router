@@ -35,9 +35,9 @@ SECTION_FILES = {
     "6-4": "qos-ngn-out.cmds",
     "6-6": MGMT_HOME,
 }
-DELTAS = list(TUNING_PARTS.values()) + ["phase2-mape.cmds", "qos-ngn-out.cmds", MGMT_HOME,
+DELTAS = list(TUNING_PARTS.values()) + ["conntrack-large.cmds", "phase2-mape.cmds", "qos-ngn-out.cmds", MGMT_HOME,
                                         "fw-stateful.cmds", "dscp-firewall.cmds", "mape-portsets.cmds",
-                                        "test-sink.cmds", "test-sink-fw.cmds", "conntrack-large.cmds"]
+                                        "test-sink.cmds", "test-sink-fw.cmds", "snmp-mgmt.cmds"]
 # §1 ルール1: 管理系（eth0）を触ってよいのは、基準と実機の管理系のファイルだけ
 TEST_DELTAS = [name for name in DELTAS if name != MGMT_HOME]
 
@@ -230,6 +230,26 @@ def test_mape_portsets_match_the_generator():
     rules = [line for line in file_commands("mape-portsets.cmds")
              if re.match(r"set nat source rule 1(0[1-9]|1[0-5]) ", line)]
     assert rules == out
+
+
+SNMP_PLACEHOLDER = "@SNMP_COMMUNITY@"
+
+
+def test_snmp_is_read_only_v2c_in_vrf_mgmt_for_the_monitor_only():
+    # 家の監視（thin-k8s のノード 192.168.2.50）がプレフィックスを読むための SNMP。community は秘密なので
+    # ファイルには置き換え用の印だけを書き、scripts/pc02-commit.sh が環境変数 SNMP_COMMUNITY で置き換える
+    lines = file_commands("snmp-mgmt.cmds")
+    base = f"set service snmp community '{SNMP_PLACEHOLDER}'"
+    assert f"{base} authorization 'ro'" in lines
+    # network の既定は 0.0.0.0/0 ::/0（vyos-1x service_snmp.xml.in）。client だけだと既定の network も
+    # snmpd.conf に出て誰からでも読める。network を /32 で明示して既定を上書きする
+    assert f"{base} network '192.168.2.50/32'" in lines
+    assert "set service snmp vrf 'MGMT'" in lines
+    communities = {m.group(1) for line in lines
+                   for m in [re.match(r"set service snmp community '([^']+)'", line)] if m}
+    assert communities == {SNMP_PLACEHOLDER}
+    assert not any(" rw" in line or "'rw'" in line or " v3 " in line or "listen-address" in line
+                   for line in lines)
 
 
 def test_ipv6_flowtable_mirrors_ipv4():

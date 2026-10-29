@@ -1,0 +1,12 @@
+# PC02 の SNMP（読み取り専用の v2c）。家の監視（thin-k8s のノード 192.168.2.50）が、WAN 側の委任プレフィックスを
+# 読んで変化を見張るために使う（CLAUDE.md §6-5 の「プレフィックスが変わったとき」）。
+#  - 待ち受けは管理系の VRF MGMT の中だけ（§6-6。10G 側からは届かない）。listen-address は書かない
+#    （管理系は DHCP でアドレスが変わりうるため。VRF の中の全アドレスで 161 番を待つ）
+#  - 問い合わせを受け付けるのは 192.168.2.50 だけ。client ではなく network を /32 で書く。network の既定は
+#    0.0.0.0/0 ::/0（vyos-1x service_snmp.xml.in）で、client だけを書くと既定の network も snmpd.conf に出て、
+#    VRF の中の誰からでも読めてしまう
+#  - community の値は秘密なので書かない。@SNMP_COMMUNITY@ を scripts/pc02-commit.sh が環境変数
+#    SNMP_COMMUNITY で置き換える（未設定なら止まる）。CI のコンテナでは印のまま commit する（@ は名前に使える文字）
+set service snmp community '@SNMP_COMMUNITY@' authorization 'ro'
+set service snmp community '@SNMP_COMMUNITY@' network '192.168.2.50/32'
+set service snmp vrf 'MGMT'
