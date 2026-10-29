@@ -156,7 +156,7 @@ def test_runner_refuses_without_confirm(tmp_path, value):
 
 def test_runner_stops_on_pending_commit_confirm(tmp_path):
     # pgrep が commit-confirm を見つけた（終了コード 0）ら、再起動しない
-    script = 'case "$*" in *commit-confirm-notify*) exit 0 ;; esac\nexit 1'
+    script = 'case "$*" in *ommit-confirm-notify*) exit 0 ;; esac\nexit 1'
     p, calls = run_runner(tmp_path, {"CONFIRM_REBOOT": "yes"}, script)
     assert p.returncode != 0
     assert "commit-confirm" in p.stderr
@@ -165,7 +165,7 @@ def test_runner_stops_on_pending_commit_confirm(tmp_path):
 
 def test_runner_stops_when_saved_config_lacks_mgmt(tmp_path):
     # 保存済みの設定に VRF MGMT の SSH が無ければ、再起動の後に入れなくなるので止める
-    script = ('case "$*" in *commit-confirm-notify*) exit 1 ;; '
+    script = ('case "$*" in *ommit-confirm-notify*) exit 1 ;; '
               "*config.boot*) echo \"set interfaces ethernet eth0 address 'dhcp'\"; exit 0 ;; esac\nexit 1")
     p, calls = run_runner(tmp_path, {"CONFIRM_REBOOT": "yes"}, script)
     assert p.returncode != 0
