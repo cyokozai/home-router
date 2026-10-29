@@ -484,6 +484,7 @@ set service router-advert interface eth1 prefix ::/64
 -	CEのインターフェースIDは、v6プラスが採用する draft-ietf-softwire-map-03 の形が既定（`--iid-format rfc7597` でRFC 7597の形）。
 -	ひかり電話なしの/64で、第4 hextetの下位8ビットが0でないと、CEアドレスが自分の/64の外になる。このときは警告が出る。
 -	家の監視（thin-k8s）は、PC02のSNMP（`vyos/snmp-mgmt.cmds`。読み取り専用のv2c、VRF MGMTの中、問い合わせは 192.168.2.50 だけ）でプレフィックスを見張り、変わったらDiscordに通知する。communityの値は秘密なので、ファイルには `@SNMP_COMMUNITY@` だけを書き、`scripts/pc02-commit.sh` が環境変数 `SNMP_COMMUNITY` で置き換える（未設定なら止まる）。
+	-	communityを替えるときは、旧値の `delete service snmp community '<旧値>'` を、新しい値のsetと**同じcommit**で `scripts/pc02-commit.sh` から入れる（VyOSはcommunityを名前ごとに持つので、新しい値をsetするだけでは旧値が残り、旧値でも読める）。旧値を書いたcmdsはリポジトリに置かない。
 
 **プレフィックスが変わったとき（Discordに通知が来たとき）の手順**: プレフィックスが変わると、IPv6は通るままIPv4だけが止まる。
 
@@ -499,7 +500,7 @@ python3 -I scripts/mape_calc.py --cmds --wan-if <WAN> --lan <LANの網> \
 
 4.	**`scripts/pc02-commit.sh` で入れる。** `scripts/pc02-commit.sh /tmp/mape-new.cmds`（`commit-confirm 5` → 鍵のSSHを確かめて `confirm`。saveはしない）。
 5.	**IPv4の疎通を確かめる。** LAN側の端末から `ping -4` と `curl -4 https://ifconfig.io` で、外から見えるIPv4が計算したアドレスと一致することを確かめる。PC02では `show interfaces tunnel tun0` と `show nat source translations` を見る。通らなければ `scripts/pc02-commit.sh --restore-saved` で戻す。
-6.	**save する。** 通ったら、PC02で `configure` → `save` し、`show configuration commands` を `configs/pc02/` に保存してcommitする（§1 ルール3）。
+6.	**save する。** 通ったら、PC02で `configure` → `save` し、`show configuration commands` を `configs/pc02/` に保存してcommitする（§1 ルール3）。保存の前に、SNMPのcommunityの実値を印に戻す（`sed -E "s/ community ('[^']*'|[^ ']+)/ community '@SNMP_COMMUNITY@'/g"` を通す。communityの名前はタグなので、`show configuration commands` は引用符なしで出すことがある）。PC02の設定には実値が平文で入っているので、そのまま保存するとgitの履歴に残る。commitの前に `configs/pc02/` に実値が無いことを `grep` で確かめる。
 
 ### 6-6. 実機の管理系: 自宅LANとVRF MGMT
 

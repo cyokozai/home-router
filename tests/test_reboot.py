@@ -173,6 +173,118 @@ def test_runner_stops_when_saved_config_lacks_mgmt(tmp_path):
     assert "reboot" not in calls
 
 
+# 引用符の付け方によらず「show configuration commands」を書き出すものをすべて拾う
+DUMP = "show configuration commands"
+DUMPERS = sorted(p.name for p in (ROOT / "scripts").glob("*.sh") if DUMP in p.read_text())
+
+
+def dump_seds(text: str) -> list[str]:
+    """書き出しの直後（同じ行か、行の継ぎの次の行）にある sed -E の式。"""
+    import re
+    return re.findall(r'show configuration commands[\'"]?(?: \\\n\s*| )\| sed -E "([^"]+)"', text)
+
+
+def test_config_dumpers_are_found():
+    assert {"run-reboot.sh", "run-e3-e4.sh", "run-t0.sh", "run-mape.sh", "run-bidir.sh"} <= set(DUMPERS)
+
+
+# VyOS の show configuration commands は、タグの名前（community の名前も）を引用符なしで出す
+# （configs/pc02/baseline.cmds の `set interfaces ethernet eth0 ...` と同じ）。名前に記号があると引用符が付く
+SECRET_SAMPLE = ("set service snmp community S3cret-x authorization 'ro'\n"
+                 "set service snmp community S3cret-x network '192.168.2.50/32'\n"
+                 "set service snmp community 'Q!uoted*' authorization 'ro'\n"
+                 "set system login user vyos authentication encrypted-password '$6$abc'\n"
+                 "set system login user vyos authentication public-keys claude-lab key 'AAAAC3Nz'\n"
+                 "set system login user vyos authentication public-keys claude-lab key AAAAunq\n")
+
+
+@pytest.mark.parametrize("script", DUMPERS)
+def test_saved_config_hides_snmp_community(script):
+    # results/ に残す show configuration commands に、SNMP の community の実値を書かない（鍵・パスワードと同じく伏せる）。
+    # PC02 の設定を書き出すすべての実行器で、書き出しのたびに、引用符の有無によらず伏せていること
+    text = (ROOT / "scripts" / script).read_text()
+    exprs = dump_seds(text)
+    assert len(exprs) == text.count(DUMP), "伏せずに書き出しているところがある"
+    for expr in exprs:
+        out = subprocess.run(["sed", "-E", expr], input=SECRET_SAMPLE, capture_output=True, text=True,
+                             check=True).stdout
+        for secret in ("S3cret-x", "Q!uoted*", "$6$abc", "AAAAC3Nz", "AAAAunq"):
+            assert secret not in out, (script, secret)
+        assert "network '192.168.2.50/32'" in out and "authorization 'ro'" in out
+        assert "public-keys claude-lab key" in out   # 鍵の名前（タグ）は残す
+
+
+def test_handoff_runbook_puts_placeholder_back():
+    # CLAUDE.md §6-5 の手順 6（configs/pc02/ に残す前に、community の実値を印に戻す）の sed
+    import re
+    text = (ROOT / "CLAUDE.md").read_text()
+    expr = re.search(r'`sed -E "([^"]*@SNMP_COMMUNITY@[^"]*)"`', text).group(1)
+    out = subprocess.run(["sed", "-E", expr], input=SECRET_SAMPLE, capture_output=True, text=True, check=True).stdout
+    assert "S3cret-x" not in out and "Q!uoted*" not in out
+    assert "set service snmp community '@SNMP_COMMUNITY@' network '192.168.2.50/32'" in out
+
+
+@pytest.mark.parametrize("script", DUMPERS)
+def test_saved_config_masking_changes_nothing_else(script):
+    # 保存済みの PC02 の設定（秘密はすでに伏せてある）に当てても、1 文字も変わらないこと（伏せすぎない）
+    for expr in dump_seds((ROOT / "scripts" / script).read_text()):
+        for cmds in sorted((ROOT / "configs" / "pc02").glob("*.cmds")):
+            src = cmds.read_text()
+            out = subprocess.run(["sed", "-E", expr], input=src, capture_output=True, text=True, check=True).stdout
+            assert out == src, (script, cmds.name)
+
+
+# ---- pktgen-keepalive.sh: リンクが戻ったら送信を流し直す ------------------------------
+
+KEEPALIVE = ROOT / "scripts" / "pktgen-keepalive.sh"
+
+
+def test_runner_copies_and_launches_keepalive():
+    # pktgen はリンクが落ちると止まる（2026-10-30 の R1 で 34 秒目に止まった）。見張り役を通して送る
+    text = RUNNER.read_text()
+    assert "scp -q scripts/pktgen-run.sh scripts/pktgen-keepalive.sh pc01:~/" in text
+    assert "KEEP_SECONDS=${duration}" in text and "bash ~/pktgen-keepalive.sh" in text
+    assert "bash ~/pktgen-run.sh" not in text
+    assert '[p]ktgen-keepalive.sh' in text   # 後始末で見張り役も止める
+
+
+def test_keepalive_syntax():
+    subprocess.run(["bash", "-n", str(KEEPALIVE)], check=True)
+
+
+@pytest.mark.skipif(shutil.which("shellcheck") is None, reason="shellcheck が無い")
+def test_keepalive_shellcheck():
+    subprocess.run(["shellcheck", str(KEEPALIVE)], check=True)
+
+
+def test_keepalive_restarts_once_with_remaining_seconds(tmp_path):
+    # carrier が 1 → 0 → 1 と変わったら、残りの秒数で pktgen-run.sh を 1 回だけ流し直す
+    import time
+
+    carrier = tmp_path / "carrier"
+    carrier.write_text("1\n")
+    proc = tmp_path / "proc"
+    proc.mkdir()
+    log = tmp_path / "starts"
+    stub = tmp_path / "pktgen-run.sh"
+    stub.write_text(f'echo "DURATION=$DURATION" >> {log}\nexec sleep 100\n')
+    env = os.environ | {"KEEP_SECONDS": "5", "IFACE": "sfp0", "CARRIER_FILE": str(carrier),
+                        "PKTGEN_PROC": str(proc), "PKTGEN_RUN": str(stub)}
+    p = subprocess.Popen(["bash", str(KEEPALIVE)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    time.sleep(1.0)
+    carrier.write_text("0\n")
+    time.sleep(1.0)
+    carrier.write_text("1\n")
+    out, err = p.communicate(timeout=20)
+    assert p.returncode == 0, err
+    starts = [int(x.split("=")[1]) for x in log.read_text().split()]
+    assert len(starts) == 2, out
+    assert starts[0] == 5
+    assert 1 <= starts[1] < 5
+    assert "リンクが落ちた" in out and "リンクが戻った" in out
+    assert (proc / "pgctrl").read_text().strip() == "stop"   # 終わりに止める
+
+
 def test_runner_syntax():
     subprocess.run(["bash", "-n", str(RUNNER)], check=True)
 

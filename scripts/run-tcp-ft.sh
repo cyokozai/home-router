@@ -22,7 +22,7 @@ mkdir -p "${out}"
 
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-    | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" | sort > "$1"
+    | sed -E "s/ (encrypted-password|key|community) ('[^']*'|[^ ']+)/ \1 '<伏せ字>'/g" | sort > "$1"
 }
 to_base() {
   bash "${here}/pc02-commit.sh" --restore-saved >/dev/null
