@@ -5,6 +5,7 @@
 #
 #   scripts/pc02-commit.sh [--save] <cmds ファイル>...
 #   scripts/pc02-commit.sh --restore-saved      保存済みの設定（/config/config.boot）を読み直して戻す
+#   SNMP_COMMUNITY=<値> scripts/pc02-commit.sh vyos/snmp-mgmt.cmds   印 @SNMP_COMMUNITY@ を置き換えて入れる
 #
 # 段階を戻すときに「入れた set 行を delete に変える」形は使わない。基準にもとから同じ行がある
 # （例: offload gro/gso/sg/tso はインストール時の既定で入っている）と、基準の行まで消してしまう
@@ -21,6 +22,23 @@ else
   [[ $# -gt 0 ]] || { echo "cmds ファイルを指定する" >&2; exit 1; }
   lines=$(cat "$@" | grep -E '^(set|delete) ')
 fi
+# SNMP の community（vyos/snmp-mgmt.cmds）は秘密なので、ファイルには印 @SNMP_COMMUNITY@ だけを書いてある。
+# 環境変数 SNMP_COMMUNITY で置き換える。未設定・使えない文字なら、PC02 に何も送らずに止める。
+# 使える文字は VyOS の community の名前の制約（[[:alnum:]\-_!@*#]{1,100}）から、行末コメントと誤読される # を除いたもの
+secret=""
+if grep -qF '@SNMP_COMMUNITY@' <<<"${lines}"; then
+  if [[ -z ${SNMP_COMMUNITY+x} ]]; then
+    echo "pc02-commit: @SNMP_COMMUNITY@ を置き換える環境変数 SNMP_COMMUNITY が未設定（何も送っていない）" >&2
+    exit 1
+  fi
+  re='^[A-Za-z0-9_!@*-]{1,100}$'
+  if ! [[ ${SNMP_COMMUNITY} =~ ${re} ]]; then
+    echo "pc02-commit: SNMP_COMMUNITY に使えない文字があるか、長さが 1〜100 でない（何も送っていない）" >&2
+    exit 1
+  fi
+  secret=${SNMP_COMMUNITY}
+  lines=${lines//@SNMP_COMMUNITY@/"${secret}"}
+fi
 # 前の commit-confirm が confirm 前に中断されて残っていると、新しい commit-confirm は始まらず、5 分後に PC02 が再起動する
 # （2026-10-27 実害寸前: 試験を途中で止めたとき、後始末の復元が commit-confirm の途中で切れた）。止めて人に見せる
 # [c] は、pgrep -f が ssh の受け側のシェルのコマンド行に一致しないようにするため
@@ -31,6 +49,10 @@ fi
 
 script=$(printf 'source /opt/vyatta/etc/functions/script-template\nconfigure\n%s\ncompare\ncommit-confirm 5\ny\nexit\n' "${lines}")
 out=$(printf '%s\n' "${script}" | ssh pc02 'timeout 120 vbash -s' 2>&1) || true
+# compare の出力に community の値が出るので、表示する前に伏せる
+if [[ -n ${secret} ]]; then
+  out=${out//"${secret}"/"***"}
+fi
 printf '%s\n' "${out}" | tail -5
 # すでに同じ設定なら commit-confirm は始まらない（「No configuration changes to commit」）。成功として扱う
 if grep -q "No configuration changes to commit" <<<"${out}"; then
