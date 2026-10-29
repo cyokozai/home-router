@@ -1,0 +1,12 @@
+== sfp0@0
+Result: OK: 33983901(c1073295+d32910606) usec, 849599 (60byte,0frags)
+  25000pps 12Mb/sec (12000000bps) errors: 0
+== sfp0@1
+Result: OK: 33983920(c1082457+d32901462) usec, 849599 (60byte,0frags)
+  25000pps 12Mb/sec (12000000bps) errors: 0
+== sfp0@2
+Result: OK: 33983920(c1080876+d32903043) usec, 849599 (60byte,0frags)
+  25000pps 12Mb/sec (12000000bps) errors: 0
+== sfp0@3
+Result: OK: 33983920(c1078871+d32905048) usec, 849599 (60byte,0frags)
+  25000pps 12Mb/sec (12000000bps) errors: 0
