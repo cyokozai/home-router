@@ -484,6 +484,7 @@ set service router-advert interface eth1 prefix ::/64
 -	CEのインターフェースIDは、v6プラスが採用する draft-ietf-softwire-map-03 の形が既定（`--iid-format rfc7597` でRFC 7597の形）。
 -	ひかり電話なしの/64で、第4 hextetの下位8ビットが0でないと、CEアドレスが自分の/64の外になる。このときは警告が出る。
 -	家の監視（thin-k8s）は、PC02のSNMP（`vyos/snmp-mgmt.cmds`。読み取り専用のv2c、VRF MGMTの中、問い合わせは 192.168.2.50 だけ）でプレフィックスを見張り、変わったらDiscordに通知する。communityの値は秘密なので、ファイルには `@SNMP_COMMUNITY@` だけを書き、`scripts/pc02-commit.sh` が環境変数 `SNMP_COMMUNITY` で置き換える（未設定なら止まる）。
+	-	communityを替えるときは、旧値の `delete service snmp community '<旧値>'` を、新しい値のsetと**同じcommit**で `scripts/pc02-commit.sh` から入れる（VyOSはcommunityを名前ごとに持つので、新しい値をsetするだけでは旧値が残り、旧値でも読める）。旧値を書いたcmdsはリポジトリに置かない。
 
 **プレフィックスが変わったとき（Discordに通知が来たとき）の手順**: プレフィックスが変わると、IPv6は通るままIPv4だけが止まる。
 

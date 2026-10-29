@@ -13,7 +13,7 @@ scp -q "${here}/pktgen-run.sh" pc01:~/pktgen-run.sh
 
 cfg() {
   ssh pc02 '/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration commands' \
-    | sed -E "s/(encrypted-password|key) '[^']*'/\1 '<伏せ字>'/" > "$1"
+    | sed -E "s/(encrypted-password|key|community) '[^']*'/\1 '<伏せ字>'/" > "$1"
 }
 cfg "${out}/pc02-config-baseline.cmds"
 
