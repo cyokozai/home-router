@@ -48,7 +48,9 @@ prom_tx() {
 trap 'echo "== 基準に戻す"; to_base; br_down; cfg "${out}/pc02-config-end.cmds"' EXIT
 
 # ---- E4 過負荷からの戻り ----
-if in_time E4; then
+# ログの置き場所を先に作る（2026-10-29 実害: 作っていなかったので E3・E5・E2 はリダイレクトで失敗し、1 本も流れなかった）
+mkdir -p "${out}/E3/ring512" "${out}/E3/ring4096" "${out}/E5" "${out}/E2"
+if [[ -d ${out}/E4/round3/half ]]; then echo "== E4 は結果があるので飛ばす"; elif in_time E4; then
   echo "== $(date '+%H:%M') E4 開始"
   apply "${v}/tuning-1-offload.cmds" "${v}/test-sink.cmds"
   cfg "${out}/E4-pc02-config.cmds"
@@ -66,7 +68,9 @@ if in_time E4; then
 fi
 
 # ---- E3 バースト ----
-if in_time E3; then
+# 0.01 秒のような短い送信では、pktgen の stop が start より先に届き、送信が止まらなくなる（2026-10-29 実害）。
+# 回数（count）で止める形に直すまでは SKIP=E3 で飛ばす
+if [[ ${SKIP:-} == *E3* ]]; then echo "== E3 を飛ばす（SKIP）"; elif in_time E3; then
   echo "== $(date '+%H:%M') E3 開始"
   for c in ring512 ring4096; do
     if [[ ${c} == ring512 ]]; then apply "${v}/test-sink.cmds"; else apply "${v}/tuning-1-offload.cmds" "${v}/test-sink.cmds"; fi

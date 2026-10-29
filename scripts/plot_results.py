@@ -382,7 +382,7 @@ def plot_frame_sizes() -> None:
     imix = _pps("results/P3-sizes/20261028/round*/imix-many-bidir-tol0.001/result.json")
     if imix:
         mean = (7 * 64 + 4 * 570 + 1518) / 12
-        rows.append(("IMIX\n7:4:1", imix, 2 * LINE_RATE / ((mean + 20) * 8), ""))
+        rows.append(("IMIX\n7:4:1", imix, 2 * LINE_RATE / ((mean + 20) * 8), "送信側の上限"))
     fig, ax = plt.subplots(figsize=(10, 4.4))
     for i, (label, vals, wire, note) in enumerate(rows):
         pct = [v / wire * 100 for v in vals]
@@ -436,6 +436,121 @@ def plot_p1_p2() -> None:
     ax2.legend(fontsize=8, loc="upper right")
     ax2.set_title("P2: MAP-E（ipip6＋NAT 15 組）の転送能力")
     save(fig, "P1-P2", "P1 は PC02 ①、捨て先あり。P2 は宛先 256 × 送信元ポート 240 の流れ。各 n=3、棒は中央値、ひげは最小〜最大。2026-10-29")
+
+
+def plot_latency() -> None:
+    """L1・L2: 背景の負荷ごとの、PC02 自身のロス率（リング 512 / 4096）と、ping の往復時間（LAN → WAN）。"""
+    import json
+    import re
+
+    loads = [1000000, 2000000, 3000000]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.4))
+    for c, label, color in (("base", "リング 512", "#d62728"), ("s1", "リング 4096（①）", "#1f77b4")):
+        meds = []
+        for load in loads:
+            vals = []
+            for p in sorted(ROOT.glob(f"results/L-latency/20261029/{c}/round*/load-{load}/result.json")):
+                vals.append(max(json.loads(p.read_text())["runs"][0]["dut_loss_ratio"], 1e-7))
+            meds.append(st.median(vals))
+            ax1.scatter([load / 1e6] * len(vals), vals, s=8, color=color, zorder=3)
+        ax1.plot([x / 1e6 for x in loads], meds, color=color, marker="o", label=label)
+    ax1.set_yscale("log")
+    ax1.axhline(1e-3, color="#555555", ls="--", lw=1, label="判定の基準 0.1%")
+    ax1.set_xlabel("背景の負荷 [Mpps]（64B 多数フロー、両向きの合計）")
+    ax1.set_ylabel("PC02 のロス率")
+    ax1.legend(fontsize=8, loc="upper left")
+    ax1.set_title("L2: 負荷ごとの PC02 のロス率")
+
+    def rtts(path: Path) -> list[float]:
+        return [float(m) for m in re.findall(r"time=([0-9.]+) ms", path.read_text(errors="replace"))]
+
+    xs = [0] + loads
+    for c, label, color in (("s1", "①", "#1f77b4"), ("prod", "本番に近い構成", "#ff7f0e")):
+        p50, p99 = [], []
+        for load in xs:
+            runs = [rtts(p) for p in sorted(ROOT.glob(f"results/L-latency-lan/20261029/{c}/round*/ping-{load}.txt"))]
+            runs = [r for r in runs if r]
+            p50.append(st.median([sorted(r)[len(r) // 2] for r in runs]))
+            p99.append(st.median([sorted(r)[int(len(r) * 0.99)] for r in runs]))
+        ax2.plot([x / 1e6 for x in xs], p50, color=color, marker="o", label=f"{label} 中央値")
+        ax2.plot([x / 1e6 for x in xs], p99, color=color, marker="s", ls="--", label=f"{label} 99% 値")
+    ax2.set_xlabel("背景の負荷 [Mpps]")
+    ax2.set_ylabel("ping の往復時間 [ms]（PC01 → PC03）")
+    ax2.legend(fontsize=8, loc="upper left")
+    ax2.set_title("L1・L2: ping の往復時間（端末の処理を含む）")
+    save(fig, "L-latency", "背景の負荷は pktgen 3 スレッド。ping は 2 ms おきに 1 万回、各 n=3 の中央値。2 Mpps 以上の ping の損失 17〜25% は端末側。2026-10-29")
+
+
+def plot_conn() -> None:
+    """N2: conntrack を新しい流れで埋めたときの件数の推移（表の既定と拡大）。"""
+    import re
+
+    fig, ax = plt.subplots(figsize=(10, 4.2))
+    for c, label, color in (("s1fw", "既定（262,144）", "#ff7f0e"), ("s1fwbig", "拡大（4,194,304）", "#1f77b4")):
+        for r in (1, 2, 3):
+            path = ROOT / f"results/C-conn/20261029/{c}/round{r}/C2-fill.log"
+            if not path.exists():
+                continue
+            pts = [(int(m.group(1)), int(m.group(2))) for m in re.finditer(r"t=(\d+) count=(\d+)", path.read_text())]
+            ax.plot([t for t, _ in pts], [n / 1e6 for _, n in pts], color=color, marker="o", ms=3,
+                    label=label if r == 1 else None, alpha=0.8)
+    ax.axvspan(5, 45, color="#eeeeee", zorder=0, label="新しい流れを送った時間（20 万本/秒）")
+    ax.set_xlabel("経過時間 [秒]")
+    ax.set_ylabel("conntrack の件数 [百万]")
+    ax.legend(fontsize=8, loc="upper left")
+    ax.set_title("N2: conntrack を埋めたときの件数（ステートフル FW、各 3 回）")
+    save(fig, "N-conntrack", "返事の無い UDP は 30 秒残る。並行して流した TCP 500 Mbps はどの回も 492〜500 Mbps のまま。2026-10-29")
+
+
+def plot_e2_e5(base: Path) -> None:
+    """E2 ロス率の曲線（決まった負荷ごと）と、E5 MAP-E の新規接続のレートごとのロス率。"""
+    import json
+    import re
+
+    def fixed(path: Path) -> tuple[float, float] | None:
+        try:
+            r = json.loads(path.read_text())["runs"][0]
+        except (OSError, ValueError, KeyError, IndexError):
+            return None
+        return r["sent_pps"], max(r["dut_loss_ratio"], 1e-7)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.4))
+    for frame, color, pat in ((512, "#1f77b4", "512B-*pct"), (64, "#d62728", "64B-*")):
+        pts = sorted(p for d in sorted(base.glob(f"E2/{pat}")) if d.is_dir() and (p := fixed(d / "result.json")))
+        if pts:
+            ax1.plot([s / 1e6 for s, _ in pts], [l for _, l in pts], color=color, marker="o", label=f"{frame}B")
+    ax1.set_yscale("log")
+    ax1.axhline(1e-3, color="#555555", ls="--", lw=1, label="判定の基準 0.1%")
+    ax1.axvline(2 * wire_pps(512) / 1e6, color="#1f77b4", ls=":", lw=1, label="512B の理論値")
+    ax1.set_xlabel("実際に送った量 [Mpps]（両向きの合計）")
+    ax1.set_ylabel("PC02 のロス率")
+    ax1.legend(fontsize=8, loc="upper left")
+    ax1.set_title("E2: 負荷ごとのロス率（PC02 は ①、1 巡）")
+
+    rates, loss, count = [], [], []
+    for d in sorted((p for p in base.glob("E5/rate-*") if p.is_dir()), key=lambda p: int(p.name.split("-")[1])):
+        f = fixed(d / "result.json")
+        ct = (base / "E5" / f"{d.name}-ct.txt")
+        if f and ct.exists():
+            m = re.search(r"count=(\d+)", ct.read_text())
+            rates.append(int(d.name.split("-")[1]))
+            loss.append(f[1] * 100)
+            count.append(int(m.group(1)) / 1e3 if m else 0)
+    ax2.plot(rates, loss, color="#9467bd", marker="o", label="ロス率 [%]（左の目盛り）")
+    ax2.axvline(61440 / 30, color="#555555", ls="--", lw=1, label="理論上の上限 61,440 / 30 秒 = 約 2,048 本/秒")
+    ax2.set_xscale("log")
+    ax2.set_xlabel("新しい流れ [本/秒]")
+    ax2.set_ylabel("ロス率 [%]")
+    ax2b = ax2.twinx()
+    ax2b.plot(rates, count, color="#2ca02c", marker="s", ls=":", label="conntrack の件数 [千]（右の目盛り）")
+    ax2b.axhline(61.44, color="#2ca02c", lw=0.8, alpha=0.6)
+    ax2b.set_ylabel("conntrack の件数 [千]")
+    ax2b.set_ylim(0, 70)
+    h1, l1 = ax2.get_legend_handles_labels()
+    h2, l2 = ax2b.get_legend_handles_labels()
+    ax2.legend(h1 + h2, l1 + l2, fontsize=8, loc="upper left")
+    ax2.set_title("E5: MAP-E の新規接続のレートごとのロス率")
+    save(fig, "E2-E5", "E2 は決まった負荷を 30 秒、ロス 0 の点は 1e-7 に置いた。E5 は送信元・ポート・宛先 256 個を散らした新しい流れを 40 秒、NAT の組は 240 ポート × 256 宛先。2026-10-29")
 
 
 def plot_bidir_configs(base: Path) -> None:

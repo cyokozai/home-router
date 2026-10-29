@@ -1,0 +1,11 @@
+t=0 count=7 max=262144 slab_bytes=360448 mem_available_kb=6719236 drop=289 early_drop=13856615 insert_failed=289
+t=5 count=262144 max=262144 slab_bytes=67113216 mem_available_kb=6649076 drop=289 early_drop=14271905 insert_failed=289
+t=10 count=262141 max=262144 slab_bytes=67113216 mem_available_kb=6659608 drop=289 early_drop=15314860 insert_failed=289
+t=15 count=262137 max=262144 slab_bytes=67114240 mem_available_kb=6656204 drop=289 early_drop=16356970 insert_failed=289
+t=20 count=262139 max=262144 slab_bytes=67113728 mem_available_kb=6660076 drop=289 early_drop=17398634 insert_failed=289
+t=25 count=262132 max=262144 slab_bytes=67113472 mem_available_kb=6662160 drop=289 early_drop=18441254 insert_failed=289
+t=30 count=262134 max=262144 slab_bytes=67109888 mem_available_kb=6658176 drop=289 early_drop=19484567 insert_failed=289
+t=35 count=262115 max=262144 slab_bytes=67112704 mem_available_kb=6662376 drop=289 early_drop=20525053 insert_failed=289
+t=40 count=262136 max=262144 slab_bytes=67113472 mem_available_kb=6663800 drop=289 early_drop=21452809 insert_failed=289
+t=45 count=262144 max=262144 slab_bytes=67116544 mem_available_kb=6656196 drop=289 early_drop=21452809 insert_failed=289
+t=50 count=262136 max=262144 slab_bytes=67113472 mem_available_kb=6655056 drop=289 early_drop=21452820 insert_failed=289

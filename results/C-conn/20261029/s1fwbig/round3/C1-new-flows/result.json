@@ -1,0 +1,69 @@
+{
+ "test": "T3",
+ "started": "2026-10-29T06:15:49.072508+09:00",
+ "frame": 64,
+ "flows": "many",
+ "threads": 4,
+ "burst": 1,
+ "bidir": false,
+ "family": 4,
+ "flow": {
+  "src": "192.168.10.10",
+  "dst": "192.168.20.2",
+  "sink": "192.168.10.99",
+  "reply_src": "192.168.20.2",
+  "extra": {
+   "SRC_MAX": "192.168.10.250",
+   "SPORT_MIN": "1024",
+   "SPORT_MAX": "65535"
+  }
+ },
+ "pc02_before": "sudo conntrack -F >/dev/null 2>&1; true",
+ "wire_rate_pps": 14880952.38095238,
+ "tolerance": 0.001,
+ "precision": 0.01,
+ "trial_seconds": 1.0,
+ "final_seconds": 1.0,
+ "result_pps": 2059272.0,
+ "searched_upper_pps": 2059272.0,
+ "result_ratio_of_wire": 0.1383830784,
+ "sender_limited": true,
+ "final_counters": {
+  "pc01_tx": 1855207,
+  "pc02_rx": 1855207,
+  "pc02_tx": 1855207,
+  "pc03_rx": 1852842
+ },
+ "trials": [
+  {
+   "rate_pps": 14880952.38095238,
+   "seconds": 1.0,
+   "sent_pps": 2059272.0,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 2883,
+   "sender_limited": true,
+   "passed": true
+  },
+  {
+   "rate_pps": 2059272.0,
+   "seconds": 1.0,
+   "sent_pps": 1846036.0,
+   "dut_lost": 1,
+   "dut_loss_ratio": 5.417012452628226e-07,
+   "receiver_lost": 0,
+   "sender_limited": true,
+   "passed": true
+  },
+  {
+   "rate_pps": 2059272.0,
+   "seconds": 1.0,
+   "sent_pps": 1855207.0,
+   "dut_lost": 0,
+   "dut_loss_ratio": 0.0,
+   "receiver_lost": 2365,
+   "sender_limited": true,
+   "passed": true
+  }
+ ]
+}
