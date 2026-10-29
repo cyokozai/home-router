@@ -499,7 +499,7 @@ python3 -I scripts/mape_calc.py --cmds --wan-if <WAN> --lan <LANの網> \
 
 4.	**`scripts/pc02-commit.sh` で入れる。** `scripts/pc02-commit.sh /tmp/mape-new.cmds`（`commit-confirm 5` → 鍵のSSHを確かめて `confirm`。saveはしない）。
 5.	**IPv4の疎通を確かめる。** LAN側の端末から `ping -4` と `curl -4 https://ifconfig.io` で、外から見えるIPv4が計算したアドレスと一致することを確かめる。PC02では `show interfaces tunnel tun0` と `show nat source translations` を見る。通らなければ `scripts/pc02-commit.sh --restore-saved` で戻す。
-6.	**save する。** 通ったら、PC02で `configure` → `save` し、`show configuration commands` を `configs/pc02/` に保存してcommitする（§1 ルール3）。
+6.	**save する。** 通ったら、PC02で `configure` → `save` し、`show configuration commands` を `configs/pc02/` に保存してcommitする（§1 ルール3）。保存の前に、SNMPのcommunityの実値を印に戻す（`sed -E "s/(community) '[^']*'/\1 '@SNMP_COMMUNITY@'/"` を通す）。PC02の設定には実値が平文で入っているので、そのまま保存するとgitの履歴に残る。commitの前に `configs/pc02/` に実値が無いことを `grep` で確かめる。
 
 ### 6-6. 実機の管理系: 自宅LANとVRF MGMT
 

@@ -41,7 +41,7 @@ reviews:
       instructions: |
         VyOS へ投入する設定の差分。次を確かめる。
         - 本番で使う機能は VyOS の `set` だけで書けているか（CLAUDE.md §1 ルール 10）。シェル・生の nftables・起動スクリプト（vyos-postconfig-bootup.script など）で補っていないか。
-        - 管理系（`eth0`、VRF `MGMT`、`service ssh` / `service ntp` / node-exporter の listen-address や vrf）に触れていないか（§1 ルール 1）。触ってよいのは `vyos/phase1.cmds` と `vyos/mgmt-home.cmds` だけ。
+        - 管理系（`eth0`、VRF `MGMT`、`service ssh` / `service ntp` / node-exporter の listen-address や vrf）に触れていないか（§1 ルール 1）。触ってよいのは `vyos/phase1.cmds` と `vyos/mgmt-home.cmds` だけ。例外は `vyos/snmp-mgmt.cmds` の `set service snmp vrf 'MGMT'` の 1 行だけ（SNMP を VRF MGMT の中で待ち受けさせる。読み取り専用の v2c、問い合わせは 192.168.2.50/32 だけ）。このファイルでも、それ以外に管理系の設定（`eth0`、`vrf name MGMT`、ssh / ntp / node-exporter）に触れていたら指摘する。
         - 値に `#` が入っていないか。`scripts/vyos-apply.sh` は `#` 以降をコメントとして切るので、値が途中で切れる。
         - 秘密の値（SNMP の community・鍵・パスワード・WireGuard の private-key など）を直接書いていないか。置き換え用の印にする。
         - `CLAUDE.md` §6 のコードブロックと食い違っていないか（`tests/test_vyos_cmds.py` が検査している。片方だけ直していないか）。

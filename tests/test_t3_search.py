@@ -211,3 +211,28 @@ def test_ssh_does_not_retry_command_failures(monkeypatch):
 def test_dst_override_is_one_way_only():
     with pytest.raises(SystemExit):
         t3.main(["--dst", "198.51.100.1", "--bidir"])
+
+
+@pytest.mark.parametrize("opt", [["--src-max", "192.168.10.250"], ["--dst-max", "192.168.20.200"]])
+def test_ipv4_only_ranges_are_refused_with_ipv6(opt, monkeypatch, tmp_path):
+    # pktgen-run.sh の IPv6 の分岐は SRC_MAX・DST_MAX を使わない。散らしたつもりで固定のまま記録させない
+    monkeypatch.setattr(t3, "ssh", lambda *a, **k: pytest.fail("実機に触れた"))
+    with pytest.raises(SystemExit):
+        t3.main(["--family", "6", "--frame", "78", *opt, "--out", str(tmp_path)])
+
+
+def test_pc02_cpu_keeps_raw_values_and_does_not_wait_long(monkeypatch):
+    # 丸めずに保存する（後から元の精度で集計できるように）。Prometheus が応答しなくても試行を長く止めない
+    calls = []
+
+    def fake_ssh(host, command, timeout=300, retries=5, wait=10.0):
+        calls.append((host, command, timeout))
+        return ('{"data": {"result": [{"metric": {"cpu": "1"}, "value": [0, "0.123456789"]},'
+                ' {"metric": {"cpu": "0"}, "value": [0, "0.5"]}]}}')
+
+    monkeypatch.setattr(t3, "ssh", fake_ssh)
+    assert t3.pc02_cpu_per_core(30) == [0.5, 0.123456789]
+    (host, command, timeout), = calls
+    assert host == "pc03"
+    assert "--max-time" in command
+    assert timeout <= 30
