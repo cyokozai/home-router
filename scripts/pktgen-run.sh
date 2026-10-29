@@ -119,8 +119,10 @@ elif [[ -n ${rate2} ]]; then
   echo start > "${proc}/pgctrl" &
   starter=$!
   # 送信を始めたあとで切り替えの途中（pg や sleep）が失敗して set -e で抜けても、pktgen を止める
-  # （count 0 なので、止めなければ kernel のスレッドが送り続ける）。正常に止めたら外す
-  trap 'echo stop > "${proc}/pgctrl"' EXIT
+  # （count 0 なので、止めなければ kernel のスレッドが送り続ける）。正常に止めたら外す。
+  # 裏の start がまだ書き込んでいないと、stop の後に start が届いて止まらなくなるので、先に start の子を止めて回収する
+  # （書き込み中の start が signal を受けると、kernel が全スレッドを止める）
+  trap 'kill "${starter}" 2>/dev/null || true; wait "${starter}" 2>/dev/null || true; echo stop > "${proc}/pgctrl"' EXIT
   sleep "${switch_after}"
   for ((i = 0; i < THREADS; i++)); do pg "${IFACE}@${i}" "delay 1000000"; done
   sleep 0.1

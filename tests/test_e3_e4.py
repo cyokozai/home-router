@@ -120,7 +120,7 @@ def test_count_not_finished_in_time_fails_the_trial(tmp_path):
     # 安全弁（timeout、終了コード 124）で切れたら、止めたうえで失敗を返す。COUNT に届かなかった試行を
     # 有効なバーストとして記録させない
     r, lines = trace(tmp_path, {"COUNT": "1000"}, stubs={"timeout": "exit 124"})
-    assert r.returncode != 0
+    assert r.returncode == 3  # 冒頭の COUNT_TIMEOUT の説明どおり
     assert "+ echo stop" in lines
 
 
@@ -130,6 +130,11 @@ def test_rate_switch_stops_pktgen_even_if_the_switch_fails(tmp_path):
                      stubs={"sleep": '[ "$1" = 0.1 ] && exit 1; exit 0'})
     assert r.returncode != 0
     assert lines.count("+ echo stop") == 1
+    # 裏の start がまだ書き込んでいないと、stop の後に start が届いて止まらなくなる。先に start の子を止めて回収する
+    raw = r.stderr.splitlines()
+    stop = max(i for i, ln in enumerate(raw) if ln == "+ echo stop")
+    assert any(ln.startswith("+ kill ") for ln in raw[:stop])
+    assert any(ln.startswith("+ wait ") for ln in raw[:stop])
 
 
 @pytest.mark.parametrize("bad", ["3", "0", "abc"])

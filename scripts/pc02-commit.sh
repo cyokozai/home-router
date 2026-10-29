@@ -68,10 +68,13 @@ if ! grep -q "Initialized commit-confirm" <<<"${out}"; then
 fi
 
 # 管理系の SSH が生きていることを、別の接続で確かめてから confirm する。1 回も通らなければ confirm しない
-# （commit-confirm の時間切れで PC02 が再起動し、保存済みの設定に戻る）
+# （commit-confirm の時間切れで PC02 が再起動し、保存済みの設定に戻る）。
+# 接続共有（~/.ssh/config の ControlMaster）で既存の接続を使い回すと鍵の認証をし直さないので、共有を切って新しく入る
 key_ssh=0
 for _ in 1 2 3 4 5 6; do
-  if ssh -o BatchMode=yes -o ConnectTimeout=5 pc02 true 2>/dev/null; then key_ssh=1; break; fi
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 -o ControlMaster=no -o ControlPath=none pc02 true 2>/dev/null; then
+    key_ssh=1; break
+  fi
   sleep 5
 done
 if ((!key_ssh)); then
