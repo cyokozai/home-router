@@ -3,8 +3,6 @@ home-router
 
 NGN（フレッツ）網内に特化した10G自作ルータ（VyOS）の検証リポジトリ。
 
-計画・機材・設定・試験の正典は [CLAUDE.md](CLAUDE.md) にある。
-
 構成
 ----
 
