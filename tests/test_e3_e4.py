@@ -126,7 +126,8 @@ def test_count_smaller_than_threads_is_refused(tmp_path, bad):
 def test_rate_switch_without_stopping(tmp_path):
     r, lines = trace(tmp_path, {"RATE": "10000000", "RATE2": "1400000", "SWITCH_AFTER": "20", "DURATION": "40"})
     assert r.returncode == 0, r.stderr
-    seq = [ln for ln in lines if not ln.startswith("+ pg ") or "'ratep " in ln or "'delay " in ln]
+    # start は裏で走るので、出力の順は決まらない。並びからは外し、数だけ見る
+    seq = [ln for ln in lines if ln != "+ echo start" and (not ln.startswith("+ pg ") or "'ratep " in ln or "'delay " in ln)]
     # 設定のときの ratep（1 スレッド 2,500,000）は start の前
     assert pg_lines(lines).count("+ pg sfp0@0 'ratep 2500000'") == 1
     # 切り替え: 20 秒 → 遅れの取り戻し（delay 1ms）→ 0.1 秒 → 新しいレート → 残りの 20 秒 → stop。stop は最後に 1 回だけ
@@ -172,10 +173,10 @@ def test_schedule_env_bidir_halves_like_rate():
         {"COUNT": "29000", "RATE2": "1400000", "SWITCH_AFTER": "20"}
 
 
-def test_burst_count_from_seconds():
-    # E3: 送れるだけの速さ（両向きの合計 pps）で seconds 秒ぶんの数
-    assert t3.burst_count(5_800_000, 0.01) == 58_000
-    assert t3.burst_count(5_800_000, 3) == 17_400_000
+def test_schedule_env_bidir_odd_count_is_refused():
+    # 2 台に同じ値を渡すので、両向きの合計は偶数にする（黙って 1 つ減らさない）
+    with pytest.raises(ValueError):
+        t3.schedule_env(count=7, rate2=None, switch_after=None, bidir=True)
 
 
 @pytest.mark.parametrize("argv", [
