@@ -3,8 +3,8 @@ Version:          VyOS 2026.10.16-0024-rolling
 Built on:         Fri 16 Oct 2026 00:25 UTC
 Hardware vendor:  HP
 Hardware model:   HP ProDesk 400 G7 Small Form Factor PC
-Hardware S/N:     JPH116W0QN
-Hardware UUID:    d6128ed8-159a-4299-b984-efcdfec01741
+Hardware S/N:     <伏せ字>
+Hardware UUID:    <伏せ字>
 6.18.55-vyos
 CPU(s):                                  12
 Model name:                              Intel(R) Core(TM) i5-10500 CPU @ 3.10GHz

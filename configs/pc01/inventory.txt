@@ -34,7 +34,7 @@ eno1             UP             40:b0:34:f2:23:bb <BROADCAST,MULTICAST,UP,LOWER_
 enp1s0f0np0      DOWN           6c:fe:54:6d:f2:60 <BROADCAST,MULTICAST> 
 enp1s0f1np1      DOWN           6c:fe:54:6d:f2:61 <BROADCAST,MULTICAST> 
 lo               UNKNOWN        127.0.0.1/8 ::1/128 
-eno1             UP             192.168.2.190/24 240b:12:1601:dd00:42b0:34ff:fef2:23bb/64 fe80::42b0:34ff:fef2:23bb/64 
+eno1             UP             192.168.2.190/24 <global-ipv6>/64 <link-local>/64 
 enp1s0f0np0      DOWN           
 enp1s0f1np1      DOWN           
 cat: '/sys/bus/pci/devices/0000:00:1f.6/current_link_speed': No such file or directory
