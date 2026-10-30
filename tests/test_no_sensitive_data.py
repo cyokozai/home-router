@@ -33,10 +33,17 @@ ALLOWED = {
 }
 
 GLOBAL_UNICAST = ipaddress.ip_network("2000::/3")
-# 前後に 16 進や「:」が続くものは拾わない（RSS の鍵のような 「xx:xx:…」 の長い並びを、途中で切って拾わないため）
-IPV6 = re.compile(r"(?<![0-9A-Za-z:.])[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:/\d{1,3})?(?![0-9A-Za-z:])")
+# 後ろに 16 進や「:」が続くものは拾わない（RSS の鍵のような 「xx:xx:…」 の長い並びを、途中で切って拾わないため）。
+# 前に「:」があるときは、項目名の区切り（`IPv6:…` `addr:…`）のときだけ拾う。判定は LABEL_BEFORE で行う
+IPV6 = re.compile(r"(?<![0-9A-Za-z.])[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?:/\d{1,3})?(?![0-9A-Za-z:])")
+# 「:」の直前の語に 16 進の数字でない文字があれば項目名とみなす（`8e:` `fe80:` のような並びの途中は項目名ではない）
+LABEL_BEFORE = re.compile(r"[0-9A-Za-z_.-]*[G-Zg-z_.-][0-9A-Za-z_.-]*:\Z")
 SERIAL = re.compile(r"(S/N|Serial Number|UUID|product_uuid)\s*[:=]\s*(\S+)", re.IGNORECASE)
-SECRET = re.compile(r"(encrypted-password|plaintext-password|community)\s+('[^']*'|\S+)|\bkey\s+('[^']*')")
+# 鍵は、`private-key` と `public-keys <名前> key` の形なら引用符なしの値も見る。それ以外の `key` は引用符付きの値だけ
+# （tc の `key ht 800` のような行を拾わないため）
+SECRET = re.compile(r"(encrypted-password|plaintext-password|community)\s+('[^']*'|\S+)"
+                    r"|\b(?:private-key|public-keys\s+\S+\s+key)\s+('[^']*'|\S+)"
+                    r"|\bkey\s+('[^']*')")
 
 
 def find_sensitive(text: str) -> list[str]:
@@ -51,6 +58,9 @@ def find_sensitive(text: str) -> list[str]:
         token = m.group(0)
         if token.lower() in ALLOWED:
             continue
+        start = m.start()
+        if start and text[start - 1] == ":" and not LABEL_BEFORE.search(text, max(0, start - 64), start):
+            continue
         try:
             ip = ipaddress.ip_interface(token).ip
         except ValueError:
@@ -61,7 +71,7 @@ def find_sensitive(text: str) -> list[str]:
         if m.group(2) not in MASKS:
             found.append(f"{at(m)}: {m.group(1)} の値")
     for m in SECRET.finditer(text):
-        kind, value = (m.group(1), m.group(2)) if m.group(1) else ("key", m.group(3))
+        kind, value = (m.group(1), m.group(2)) if m.group(1) else ("key", m.group(3) or m.group(4))
         if value not in MASKS:
             found.append(f"{at(m)}: {kind} の値")
     return found
@@ -116,6 +126,11 @@ def test_tracked_files_have_no_sensitive_data():
     "filter parent 1: protocol all pref 1 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0",
     "echo \"::endgroup::\"",
     "BR 2404:9200:225:100::64、ルール 240b:12::/31",
+    # 2000::/3 に入る値の並ぶ RSS の鍵（項目名の直後でも、末尾の 8 組だけを拾わない）
+    "net.core.netdev_rss_key = " + ":".join(["2a"] * 52),
+    "rss_key:" + ":".join(["2a"] * 52),
+    "set system login user vyos authentication public-keys claude-lab key <伏せ字>",
+    "set interfaces wireguard wg0 private-key <伏せ字>",
 ])
 def test_masked_and_harmless_lines_pass(line):
     assert find_sensitive(line) == []
@@ -130,6 +145,10 @@ def test_masked_and_harmless_lines_pass(line):
     ("set system login user vyos authentication encrypted-password '$6$abc'", "encrypted-password"),
     ("set service snmp community S3cret-x authorization 'ro'", "community"),
     ("set interfaces wireguard wg0 private-key 'abcdef'", "key"),
+    ("IPv6:2400:4050:1234:5600::1/64", "IPv6"),
+    ("addr:2400:4050:1234:5600::1", "IPv6"),
+    ("set system login user vyos authentication public-keys claude-lab key AAAAexample", "key"),
+    ("set interfaces wireguard wg0 private-key abcdef", "key"),
 ])
 def test_unmasked_values_are_found(line, kind):
     found = find_sensitive(line)
