@@ -28,7 +28,7 @@ enp16s0f1        DOWN           0c:c4:7a:eb:56:2a <BROADCAST,MULTICAST>
 enp16s0f2        DOWN           0c:c4:7a:eb:56:2c <BROADCAST,MULTICAST> 
 enp16s0f3        DOWN           0c:c4:7a:eb:56:2e <BROADCAST,MULTICAST> 
 lo               UNKNOWN        127.0.0.1/8 ::1/128 
-enp34s0          UP             192.168.2.13/24 metric 100 <global-ipv6>/64 fe80::67c:16ff:fec1:36a6/64 
+enp34s0          UP             192.168.2.13/24 metric 100 <global-ipv6>/64 <link-local>/64 
 enp42s0          DOWN           
 enp16s0f0        DOWN           
 enp16s0f1        DOWN           
