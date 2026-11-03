@@ -55,7 +55,7 @@
 
 | ID       | 機種                                       | CPU / メモリ / ディスク                                                         | OS                                          | 役割                                                            |
 |----------|--------------------------------------------|---------------------------------------------------------------------------------|---------------------------------------------|-----------------------------------------------------------------|
-| **PC01** | HP ProDesk 600 G3 SFF                      | Core i5-7500（4コア4スレッド）/ DDR4-2400 8GB **1枚** / SATA SSD 238.5GB        | Ubuntu 24.04.5 Server（カーネル 6.8.0-147） | 送信側の端末                                                    |
+| **PC01** | HP ProDesk 600 G3 SFF                      | Core i5-7500（4コア4スレッド）/ DDR4-2400 8GB **1枚** / SATA SSD 238.5GB        | Ubuntu 24.04.2 Server（カーネル 6.8.0-147） | 送信側の端末                                                    |
 | **PC02** | HP ProDesk 400 G7 SFF                      | Core i5-10500（6コア12スレッド）/ DDR4-2400 8GB **1枚** / ADATA SU650 223.6GB  | VyOS 2026.10.16-0024-rolling（6.18.55）     | **ルータ本体**。このまま本番ルータにする予定で、入れ替えはしない |
 | **PC03** | MSI MAG B550 TOMAHAWK（MS-7C91）           | Ryzen 7 5700G（8コア16スレッド）/ DDR4 64GB / NVMe 953.9GB                     | Ubuntu 24.04.5 Server（カーネル 6.8.0-147） | 受信側の端末、MAP-EのBR役、監視（Prometheus）、NTPサーバ        |
 | **SW**   | Aruba Instant On 1930（24ポート＋SFP 4口） | ―                                                                               | ―                                           | 自宅のRTX830につないだ1Gスイッチ（管理系）                      |
@@ -605,7 +605,7 @@ set service monitoring prometheus node-exporter vrf 'MGMT'
 -	[x] PC02の管理系をVRF MGMTに分け（§6-6）、フェーズ1を投入して `baseline.cmds` を保存（`configs/pc02/`）
 -	[x] 疎通確認（2026-10-25）: 10Gは両区間とも10000Mb/s、PCIeは3台とも8GT/s x8、PC01→PC03のv4/v6 ping、`ping -M do -s 1472` は通り1473は止まる、Prometheusの対象3台ともup、NTPは3台ともPC03に同期、10G側からPC02の22・9100番に届かない
 -	[ ] Grafanaの導入
--	[x] T0〜T8と追加の試験（2026-10-25〜30）。結果は `results/`、まとめは `docs/performance-evaluation.md`。試験の後、3台とも基準の状態に戻した
+-	[x] T0〜T8と、L1・L2を除く追加の試験（2026-10-25〜30）。結果は `results/`、まとめは `docs/performance-evaluation.md`。試験の後、3台とも基準の状態に戻した
 -	[x] MAP-Eのポートセット全数利用（§6-3のB2、`vyos/mape-portsets.cmds`）
 -	[ ] 本番の設定（WAN側IF・ステートフルFW・MAP-Eの実値・DHCPv6-PDまたはNDプロキシ・SNMP）をまとめたcmds。本番回線の種別が決まってから作る
 -	[ ] VyOSとNixOSの比較（§7）
