@@ -1,0 +1,26 @@
+# 生成: scripts/render_config.py（site: example.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/10-lan.cmds.j2）か site を直して描き直す
+# LAN: IPv4 と ULA のアドレス、DHCPv4 サーバ、DNS の転送、RA
+# ULA の上位 4 組は印 @ULA_PREFIX@ のまま出し（site の lan.ula_prefix に書けばその値）、投入時に環境変数 ULA_PREFIX で置き換える
+set interfaces ethernet eth1 description 'LAN'
+set interfaces ethernet eth1 address '192.168.2.1/24'
+set interfaces ethernet eth1 address '@ULA_PREFIX@::1/64'
+
+set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 subnet-id '1'
+set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 option default-router '192.168.2.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 option name-server '192.168.2.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 range 0 start '192.168.2.100'
+set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 range 0 stop '192.168.2.199'
+set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 static-mapping monitor ip-address '192.168.2.50'
+set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 static-mapping monitor mac '02:00:00:00:00:50'
+
+# DNS の転送は LAN のアドレスだけで待ち受ける。上流は WAN の DHCP で受けた DNS
+set service dns forwarding listen-address '192.168.2.1'
+set service dns forwarding listen-address '@ULA_PREFIX@::1'
+set service dns forwarding allow-from '192.168.2.0/24'
+set service dns forwarding allow-from '@ULA_PREFIX@::/64'
+set service dns forwarding allow-from '::/0'
+set service dns forwarding dhcp 'eth2'
+
+# RA: LAN の IF に付いた /64（ULA と、委任プレフィックスから付いた分）をすべて配る
+set service router-advert interface eth1 prefix '::/64'
+set service router-advert interface eth1 name-server '@ULA_PREFIX@::1'

@@ -7,7 +7,7 @@ configs/ と results/ の追跡中のテキストファイルをすべて読み�
   v6プラスの MAP ルールの範囲と BR のように、公開されている値だけを ALLOWED に書いて通す。
 - (b) `S/N:` `Serial Number:` `UUID:` `product_uuid` の後ろの、伏せ字でない値。
 - (c) `encrypted-password` `plaintext-password` `community` と `key '…'` の、伏せ字でない値。
-  伏せ字は `<伏せ字>`、SNMP の community は `@SNMP_COMMUNITY@`（scripts/pc02-commit.sh が置き換える印）。
+  伏せ字は `<伏せ字>`、SNMP の community は `@SNMP_COMMUNITY@`、SSH の公開鍵は `@SSH_PUBKEY@`（scripts/pc02-commit.sh が置き換える印）。
 
 PC02 の設定を書き出すときに伏せているかは tests/test_reboot.py が見る。ここは、書き出した後のファイルを見る。
 """
@@ -23,7 +23,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 SCANNED = ("configs", "results")
 
-MASKS = {"<伏せ字>", "'<伏せ字>'", "@SNMP_COMMUNITY@", "'@SNMP_COMMUNITY@'", "''"}
+MASKS = {"<伏せ字>", "'<伏せ字>'", "@SNMP_COMMUNITY@", "'@SNMP_COMMUNITY@'", "@SSH_PUBKEY@", "'@SSH_PUBKEY@'", "''"}
 
 # 公開されている値（CLAUDE.md §6-5 の v6プラスの MAP ルールと BR）。範囲は書かれた形のまま一致したときだけ通す
 # （範囲の中の個々のアドレスは通さない）。
@@ -121,6 +121,7 @@ def test_tracked_files_have_no_sensitive_data():
     "set system login user vyos authentication public-keys claude-lab key '<伏せ字>'",
     "set service snmp community '@SNMP_COMMUNITY@' authorization 'ro'",
     "set service snmp community @SNMP_COMMUNITY@ network '192.168.2.50/32'",
+    "set system login user vyos authentication public-keys admin key '@SSH_PUBKEY@'",
     "Src IP addr: :: mask: ffff:ffff::ffff:ffff:ffff:ffff",
     "net.core.netdev_rss_key = " + ":".join(["8e"] * 52),
     "filter parent 1: protocol all pref 1 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0",

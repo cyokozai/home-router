@@ -9,3 +9,7 @@
 # Python
 __pycache__/
 .pytest_cache/
+
+# 本番の site の実際の値と、それを描いた結果（scripts/render_config.py）
+site/*.local.yaml
+site/*.local/

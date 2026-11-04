@@ -1,0 +1,5 @@
+# WAN（NGN）の共通部分。RA を受けて既定経路を作る（ipv6 address autoconf で accept_ra=2 になる）
+# トンネルの外側のトラフィッククラス（tun0 parameters ipv6 tclass '0x00'）は、tun0 を作る MAP-E の段（40-mape、
+# scripts/mape_calc.py）に入っている。tun0 の残りの設定が無いままここで書くと、トンネルが作れず commit が通らない
+set interfaces ethernet {{ i.wan }} description 'WAN-NGN'
+set interfaces ethernet {{ i.wan }} ipv6 address autoconf

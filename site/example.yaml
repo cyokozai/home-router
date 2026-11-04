@@ -1,0 +1,57 @@
+# 本番の PC02 の site の例（光クロス 10G・ひかり電話なし・v6プラス）。ここにはリポジトリに置いてよい値だけを書く。
+# 実際の値（委任プレフィックスなど）は site/<名前>.local.yaml に書く（.gitignore 済み）。
+# 書かなかったキーは scripts/render_config.py の既定値になる。既定値と同じ値もここに書いて、何が変えられるかを見せる。
+#
+#   python3 -I scripts/render_config.py site/example.yaml -o <出力先>
+#
+# 描いた結果は vyos/prod/example/ に置いてある（--all-wan-types で 3 つの型の WAN を全部描いたもの）。
+
+host_name: home-router
+time_zone: Asia/Tokyo
+ntp_servers: [ntp.nict.jp, time.google.com]
+
+interfaces:
+  rescue: eth0   # 救出用（直結した PC から入る）
+  lan: eth1
+  wan: eth2
+
+login:
+  user: vyos
+  key_name: admin
+  key_type: ssh-ed25519   # 鍵の本体は投入時に環境変数 SSH_PUBKEY で入れる
+
+rescue:
+  address: 192.168.255.1/24   # ゲートウェイは持たない
+
+lan:
+  address: 192.168.2.1/24
+  # ULA の /64 の上位 4 組（例 fd12:3456:789a:1）。印のままなら投入時に環境変数 ULA_PREFIX で入れる
+  ula_prefix: "@ULA_PREFIX@"
+  dhcp:
+    subnet_id: 1
+    range: {start: 192.168.2.100, stop: 192.168.2.199}
+    static_mappings:
+      - {name: monitor, mac: "02:00:00:00:00:50", ip: 192.168.2.50}
+
+wan:
+  # pd56: 型A（ONU 直結、DHCPv6-PD /56）/ pd60: 型B（HGW 配下、/60）/ ra64: 型C（RA の /64 と ND proxy）
+  type: pd56
+  # 接続後に受けた委任プレフィックス。.local.yaml に書いて --mape を付けると MAP-E の段（40-mape.cmds）も描く
+  # prefix: <委任プレフィックス>/56
+  # 型C だけで使う。印のままなら投入時に環境変数 WAN_PREFIX64 / NGN_GW_LLA で入れる
+  prefix64: "@WAN_PREFIX64@"
+  ngn_gw_lla: "@NGN_GW_LLA@"
+
+tuning:
+  ring_buffer: 4096
+  conntrack_table_size: 1048576
+  conntrack_hash_size: 262144
+  performance: network-throughput
+
+firewall:
+  dscp_udp_port: 51820      # NGN 向けに DSCP を 0 にする WireGuard のポート
+  router_wireguard: false   # WireGuard をルータで終端するなら true（ルータ自身が送る分も 0 にする）
+
+monitor:
+  snmp: {enabled: true, network: 192.168.2.50/32}
+  node_exporter: true

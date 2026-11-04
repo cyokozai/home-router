@@ -1,0 +1,7 @@
+# 生成: scripts/render_config.py（site: example.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/50-monitor.cmds.j2）か site を直して描き直す
+# 監視: SNMP（読み取り専用の v2c）と node-exporter。どちらも LAN から読む
+# vyos/snmp-mgmt.cmds の形から vrf を外したもの。network を明示して既定の 0.0.0.0/0 ::/0 を消す。
+# 秘密の値（community）は印 @SNMP_COMMUNITY@ のまま出し、投入時に環境変数 SNMP_COMMUNITY で置き換える
+set service snmp community '@SNMP_COMMUNITY@' authorization 'ro'
+set service snmp community '@SNMP_COMMUNITY@' network '192.168.2.50/32'
+set service monitoring prometheus node-exporter listen-address '192.168.2.1'

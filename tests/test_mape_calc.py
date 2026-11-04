@@ -160,6 +160,23 @@ def test_cmds_old_prefix_deletes_the_old_addresses():
     assert f"set interfaces ethernet eth9 address '{new.ce}/64'" in lines
 
 
+def test_ce_plen_128_for_type_c():
+    # 型C（RA の /64 を LAN へ回す）では、WAN に置く CE のアドレスを /128 にする（/64 は LAN 側が持つ）
+    new = mc.calc("240b:12:3456:7800::/64")
+    old = mc.calc("240b:11:fe:fe00::/56")
+    lines = mc.result_cmds(new, wan_if="eth2", lan="192.168.2.0/24", old=old, ce_plen=128)
+    assert lines[0] == f"delete interfaces ethernet eth2 address '{old.ce}/128'"
+    assert f"set interfaces ethernet eth2 address '{new.ce}/128'" in lines
+    assert not [x for x in lines if x.endswith("/64'") and "ethernet" in x]
+
+
+def test_ce_plen_default_is_64():
+    r = mc.calc("240b:12:3456:7800::/64")
+    assert mc.result_cmds(r, wan_if="eth2") == mc.result_cmds(r, wan_if="eth2", ce_plen=64)
+    with pytest.raises(ValueError):
+        mc.result_cmds(r, wan_if="eth2", ce_plen=56)
+
+
 def run(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, "-I", str(SCRIPTS / "mape_calc.py"), *args],
                           capture_output=True, text=True)
@@ -185,6 +202,17 @@ def test_cli_error_and_warning():
     assert out.returncode != 0 and "v6プラス" in out.stderr
     out = run("240b:10:aabb:ccdd::/64")
     assert out.returncode == 0 and "/64" in out.stderr
+
+
+def test_cli_ce_plen_and_help():
+    out = run("--cmds", "--wan-if", "eth2", "--ce-plen", "128", "240b:12:3456:7800::/64")
+    assert out.returncode == 0, out.stderr
+    assert "set interfaces ethernet eth2 address '240b:12:3456:7800:e:834:5600:7800/128'" in out.stdout
+    assert run("--cmds", "--wan-if", "eth2", "--ce-plen", "60", "240b:12:3456:7800::/64").returncode != 0
+    # 型B（HGW 配下）の使い方: WAN で観測した /64 をそのまま渡す
+    help_text = run("--help").stdout
+    assert "型B" in help_text and "/64" in help_text
+
 
 
 # ---- gen_mape_portsets.py の引数 ------------------------------------------------------
