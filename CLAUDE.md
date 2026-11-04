@@ -465,6 +465,8 @@ set qos interface eth2 egress 'NGN-OUT'    # 検証環境ではWAN役のeth2。�
 
 ### 6-5. 本番向け: DHCPv6-PD
 
+本番の回線は光クロス 10G・ひかり電話なし・enひかり（v6プラス）に決まった（2026-11-05）。設計と当日の切り替え手順は `docs/production-cutover.md`。
+
 ```
 set interfaces ethernet eth0 ipv6 address autoconf
 set interfaces ethernet eth0 dhcpv6-options pd 0 length '56'      # HGWの配下なら60
@@ -607,12 +609,12 @@ set service monitoring prometheus node-exporter vrf 'MGMT'
 -	[ ] Grafanaの導入
 -	[x] T0〜T8と、L1・L2を除く追加の試験（2026-10-25〜30）。結果は `results/`、まとめは `docs/performance-evaluation.md`。試験の後、3台とも基準の状態に戻した
 -	[x] MAP-Eのポートセット全数利用（§6-3のB2、`vyos/mape-portsets.cmds`）
--	[ ] 本番の設定（WAN側IF・ステートフルFW・MAP-Eの実値・DHCPv6-PDまたはNDプロキシ・SNMP）をまとめたcmds。本番回線の種別が決まってから作る
+-	[ ] 本番の設定のテンプレートと生成器、閉域網での予行演習（`docs/production-cutover.md` §4・§6）
 -	[ ] VyOSとNixOSの比較（§7）
 
 ### 未決定・要確認
 
--	本番回線の種別（ネクスト / クロス）と、ひかり電話の有無。DHCPv6-PDとNDプロキシのどちらを使うか、DSCPの扱いが変わる。
+-	家のLANのアドレス・VRF MGMTの扱い・LANの配線・ULA（`docs/production-cutover.md` §0 のD1〜D5）。
 -	v6プラスのCEアドレスのIIDの形式。非公開のドラフト版の形式なので、実機で観測するか、コミュニティの計算方法と照合する。
 -	QoSの set-dscp が、NGNの実回線で効くかどうか。
 -	光クロスでのDHCPv6-PDの挙動。
