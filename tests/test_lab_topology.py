@@ -144,6 +144,21 @@ def script(name: str) -> str:
     return (LAB / name).read_text(encoding="utf-8")
 
 
+def expand_defaults(text: str) -> str:
+    """`name="${N:-既定値}"` と `name="${other%/*}"` の代入を読み、`"${name}"` を値に置き換える。
+
+    引数で値を差し替えられるスクリプト（pc03-br.sh）を、引数なしで流したときの形にして検査するため。
+    """
+    env: dict[str, str] = {}
+    for m in re.finditer(r'^(\w+)="\$\{(?:\d+|\w+):-([^}]*)\}"$', text, flags=re.M):
+        env[m.group(1)] = m.group(2)
+    for m in re.finditer(r'^(\w+)="\$\{(\w+)%/\*\}"$', text, flags=re.M):
+        env[m.group(1)] = env[m.group(2)].rsplit("/", 1)[0]
+    for name, value in env.items():
+        text = re.sub(r'"\$\{' + name + r'\}([^"]*)"', lambda m, v=value: v + m.group(1), text)
+    return text
+
+
 def eth(lines, name):
     return interfaces(lines, name)
 
@@ -173,8 +188,29 @@ def test_hosts_are_linux_with_a_pinned_image(nodes, name):
     assert repo and tag and tag != "latest", "端末のイメージはタグを固定する"
 
 
-def test_both_hosts_use_the_same_image(nodes):
-    assert nodes["pc01"]["image"] == nodes["pc03"]["image"]
+# pc03 は NGN 役（DHCPv6-PD と RA）の道具を足したイメージ。lab/pc03-ngn.Dockerfile から作る
+PC03_IMAGE = "home-router/pc03-ngn:lab"
+PC03_DOCKERFILE = "pc03-ngn.Dockerfile"
+
+
+def dockerfile_base(text: str) -> str:
+    (base,) = re.findall(r"^FROM\s+(\S+)", text, flags=re.M)
+    return base
+
+
+def test_pc03_image_is_pc01_image_plus_the_ngn_tools(nodes):
+    assert nodes["pc03"]["image"] == PC03_IMAGE
+    text = script(PC03_DOCKERFILE)
+    assert dockerfile_base(text) == nodes["pc01"]["image"]
+    # Kea（IA_PD を配る DHCPv6 サーバ）と radvd
+    assert re.search(r"apk add [^\n]*\bkea-dhcp6\b", text)
+    assert re.search(r"apk add [^\n]*\bradvd\b", text)
+
+
+def test_ci_builds_the_pc03_image_before_deploying(nodes):
+    wf = (ROOT / ".github" / "workflows" / "lab-e2e.yaml").read_text(encoding="utf-8")
+    build = wf.index(f"docker build -t {PC03_IMAGE} -f lab/{PC03_DOCKERFILE} lab")
+    assert build < wf.index("containerlab deploy")
 
 
 def test_vyos_settings_are_not_inlined_into_the_topology(nodes):
@@ -337,7 +373,16 @@ def test_pc03_mtu_is_standard(pc03, netplan_sfp0):
 
 @pytest.fixture(scope="module")
 def br():
-    return ip_commands(script("pc03-br.sh"))
+    return ip_commands(expand_defaults(script("pc03-br.sh")))
+
+
+def test_br_script_takes_the_ngn_values_as_arguments():
+    # NGN 役（§6-5 の v6プラス）では、BR と CE の値を scripts/mape_calc.py の計算から渡す
+    text = script("pc03-br.sh")
+    for n in (1, 2, 3):
+        assert re.search(r'^\w+="\$\{' + str(n) + r':-[^}]+\}"$', text, flags=re.M), f"引数 {n} を受けていない"
+    # 2 回目に別の値で流したときも、トンネルの両端を合わせ直す
+    assert re.search(r'^ip -6 tunnel change br0 mode ipip6 local \S+ remote \S+ encaplimit none$', text, flags=re.M)
 
 
 @pytest.fixture(scope="module")
@@ -409,27 +454,201 @@ def test_phase1_scripts_do_not_build_the_tunnel(pc03):
 # ---- スクリプトの書き方 --------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", ["pc01.sh", "pc03.sh", "pc03-br.sh"])
+LAB_SCRIPTS = ["pc01.sh", "pc03.sh", "pc03-br.sh", "pc03-ngn.sh"]
+
+
+@pytest.mark.parametrize("name", LAB_SCRIPTS)
 def test_scripts_stop_on_error(name):
     lines = script(name).splitlines()
     assert lines[0].startswith("#!")
     assert any(re.fullmatch(r"set -e\w*", line.strip()) for line in lines)
 
 
-@pytest.mark.parametrize("name", ["pc01.sh", "pc03.sh", "pc03-br.sh"])
+@pytest.mark.parametrize("name", LAB_SCRIPTS)
 def test_scripts_are_idempotent(name):
-    # add は 2 回目で「File exists」になる。replace を使い、トンネルの作成は存在確認で守る
+    # add は 2 回目で「File exists」になる。replace を使い、トンネルの作成は存在確認で守る。
+    # 消すとき（del）は、無いときに落ちないよう || true を付ける
     text = script(name)
     for tokens in ip_commands(text):
         _, rest = family_and_rest(tokens)
         if rest[:1] in (["addr"], ["address"], ["route"]):
-            assert rest[1] == "replace", " ".join(tokens)
+            assert rest[1] in ("replace", "del"), " ".join(tokens)
+    for line in text.splitlines():
+        if re.search(r"\bip (-6 )?(addr|route) del\b", line):
+            assert "|| true" in line, line
     if "tunnel add" in text:
         assert re.search(r"ip link show (dev )?br0[^\n]*\|\|\s*ip -6 tunnel add", text)
 
 
-@pytest.mark.parametrize("name", ["pc01.sh", "pc03.sh", "pc03-br.sh"])
+@pytest.mark.parametrize("name", LAB_SCRIPTS)
 def test_scripts_never_touch_the_mgmt_interface(name):
     # §1 ルール1。containerlab の linux ノードでは eth0 が管理系
     for tokens in ip_commands(script(name)):
         assert "eth0" not in tokens and "mgmt0" not in tokens, " ".join(tokens)
+
+
+# ---- PC03 の NGN 役（lab/pc03-ngn.sh。光クロスの WAN 側を模す） -----------------------
+
+NGN = "pc03-ngn.sh"
+NGN_SCENARIOS = ("pd56", "pd60", "ra64")
+# v6プラスの MAP ルール 240b:10::/31 の例（tests/test_mape_calc.py の 240b:10:aabb:ccdd::/64 を含む /56）
+NGN_EXAMPLE_IN_MAPE_TEST = "240b:10:aabb:ccdd::/64"
+
+
+def shell_constants(text: str) -> dict[str, str]:
+    """`NAME=値` の行（大文字の名前、行頭）を読む。"""
+    return {m.group(1): m.group(2).strip("'\"")
+            for m in re.finditer(r"^([A-Z][A-Z0-9_]*)=(\S+)", text, flags=re.M)}
+
+
+@pytest.fixture(scope="module")
+def ngn():
+    return shell_constants(script(NGN))
+
+
+@pytest.fixture(scope="module")
+def ngn_net(ngn):
+    return {k: ipaddress.ip_network(v) for k, v in ngn.items() if k in ("PD56", "PD60", "HGW_LAN", "WAN_SUBNET")}
+
+
+def load_mape_calc():
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location("mape_calc", ROOT / "scripts" / "mape_calc.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault("mape_calc", mod)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_ngn_prefix_is_the_v6plus_example_used_by_the_mape_tests(ngn_net):
+    pd56 = ngn_net["PD56"]
+    assert pd56.prefixlen == 56
+    assert ipaddress.ip_network(NGN_EXAMPLE_IN_MAPE_TEST).subnet_of(pd56)
+    assert NGN_EXAMPLE_IN_MAPE_TEST in (ROOT / "tests" / "test_mape_calc.py").read_text(encoding="utf-8")
+    mc = load_mape_calc()
+    assert mc.find_rule(pd56, mc.V6PLUS_RULES).ipv6 == "240b:10::/31"
+
+
+def test_hgw_emulation_ras_the_first_64_and_delegates_a_60_beside_it(ngn, ngn_net):
+    pd56, pd60, lan = ngn_net["PD56"], ngn_net["PD60"], ngn_net["HGW_LAN"]
+    assert lan == next(pd56.subnets(new_prefix=64))
+    assert pd60.prefixlen == 60 and pd60.subnet_of(pd56)
+    assert not pd60.overlaps(lan)
+    assert ipaddress.ip_interface(ngn["HGW_ADDR"]).network == lan
+
+
+def test_dhcpv6_server_serves_pc03_wan_link(ngn, ngn_net, pc03):
+    assert ngn["IF"] == HOST_IF
+    assert ngn_net["WAN_SUBNET"] in {a.network for _, a in addresses(pc03) if a.version == 6}
+
+
+@pytest.mark.parametrize("scenario", NGN_SCENARIOS)
+def test_ngn_script_knows_every_scenario(scenario):
+    assert re.search(rf"^\s*{scenario}\)", script(NGN), flags=re.M)
+
+
+def test_ngn_script_validates_the_kea_config_before_starting():
+    text = script(NGN)
+    assert "kea-dhcp6 -t" in text
+    # Kea 3 は保存先を決まった場所に限る。リースはファイルに残さない（流し直しのたびに新しく配る）
+    assert re.search(r'"persist":\s*false', text)
+
+
+def test_pc03_mounts_the_ngn_script(nodes):
+    assert f"{NGN}:/lab/{NGN}:ro" in nodes["pc03"]["binds"]
+
+
+# ---- PC02 側（lab/pc02-ngn-*.cmds。DHCPv6-PD のクライアントと LAN の RA だけ） -------------
+
+WAN_IF, LAN_IF = "eth2", "eth1"
+
+
+def lab_cmds(name: str) -> list[str]:
+    lines = []
+    for raw in script(name).splitlines():
+        line = raw.split("#")[0].strip()
+        if line:
+            lines.append(line)
+    return lines
+
+
+@pytest.mark.parametrize("scenario", NGN_SCENARIOS)
+def test_pc02_ngn_cmds_are_set_lines_without_the_mgmt_interface(scenario):
+    lines = lab_cmds(f"pc02-ngn-{scenario}.cmds")
+    assert lines
+    for line in lines:
+        assert re.match(r"^(set|delete) ", line), line
+        assert "eth0" not in line, line  # §1 ルール1（lab でも eth0 は管理系）
+
+
+def test_wan_and_lan_ifs_match_the_topology(topo):
+    for link in topo["topology"]["links"]:
+        ends = dict(e.split(":") for e in link["endpoints"])
+        assert ends["pc02"] == (WAN_IF if "pc03" in ends else LAN_IF)
+
+
+@pytest.mark.parametrize(("scenario", "length"), [("pd56", 56), ("pd60", 60)])
+def test_pc02_requests_the_delegated_length_and_puts_subnet_1_on_the_lan(scenario, length):
+    lines = lab_cmds(f"pc02-ngn-{scenario}.cmds")
+    pd = f"set interfaces ethernet {WAN_IF} dhcpv6-options pd 0"
+    assert vyos_value(lines, f"{pd} length") == [str(length)]
+    assert vyos_value(lines, f"{pd} interface {LAN_IF} sla-id") == ["1"]
+    assert vyos_value(lines, f"{pd} interface {LAN_IF} address") == ["1"]
+    assert vyos_value(lines, f"set service router-advert interface {LAN_IF} prefix") == ["::/64"]
+    assert f"set interfaces ethernet {WAN_IF} ipv6 address autoconf" in lines
+
+
+def test_pc02_ra64_only_accepts_the_ra():
+    lines = lab_cmds("pc02-ngn-ra64.cmds")
+    assert f"set interfaces ethernet {WAN_IF} ipv6 address autoconf" in lines
+    assert not any("dhcpv6-options pd" in line for line in lines)
+
+
+@pytest.mark.parametrize(("scenario", "key"), [("pd56", "PD56"), ("pd60", "PD60")])
+def test_pc02_requested_length_matches_what_pc03_delegates(ngn_net, scenario, key):
+    lines = lab_cmds(f"pc02-ngn-{scenario}.cmds")
+    (length,) = vyos_value(lines, f"set interfaces ethernet {WAN_IF} dhcpv6-options pd 0 length")
+    assert int(length) == ngn_net[key].prefixlen
+
+
+# ---- scripts/lab-e2e.sh の期待値が pc03-ngn.sh と食い違わないこと ---------------------
+
+
+@pytest.fixture(scope="module")
+def e2e():
+    return (ROOT / "scripts" / "lab-e2e.sh").read_text(encoding="utf-8")
+
+
+def e2e_value(e2e: str, name: str) -> str:
+    m = re.search(rf"\b{name}=(\S+)", e2e)
+    assert m, f"scripts/lab-e2e.sh に {name} が無い"
+    return m.group(1)
+
+
+def sla_address(net: ipaddress.IPv6Network, sla_id: int, host: int) -> ipaddress.IPv6Interface:
+    sub = list(net.subnets(new_prefix=64))[sla_id]
+    return ipaddress.IPv6Interface(f"{sub.network_address + host}/64")
+
+
+@pytest.mark.parametrize(("e2e_name", "key"),
+                         [("ngn_pd56", "PD56"), ("ngn_pd60", "PD60"), ("ngn_hgw_lan", "HGW_LAN")])
+def test_e2e_prefixes_match_the_ngn_script(e2e, ngn_net, e2e_name, key):
+    assert ipaddress.ip_network(e2e_value(e2e, e2e_name)) == ngn_net[key]
+
+
+@pytest.mark.parametrize(("e2e_name", "key"), [("ngn_lan56", "PD56"), ("ngn_lan60", "PD60")])
+def test_e2e_expects_sla_id_1_address_1_on_eth1(e2e, ngn_net, e2e_name, key):
+    # pc02-ngn-*.cmds の sla-id '1' と address '1'
+    assert ipaddress.IPv6Interface(e2e_value(e2e, e2e_name)) == sla_address(ngn_net[key], 1, 1)
+
+
+@pytest.mark.parametrize("scenario", NGN_SCENARIOS)
+def test_e2e_runs_every_ngn_scenario(e2e, scenario):
+    assert re.search(rf"^ngn_round {scenario}\b", e2e, flags=re.M)
+
+
+def test_e2e_takes_the_mape_values_from_mape_calc(e2e):
+    # MAP-E の値は scripts/mape_calc.py に計算させる（手で書き写さない）
+    assert re.search(r"mape_calc\.py\"? --cmds --wan-if eth2\b", e2e)

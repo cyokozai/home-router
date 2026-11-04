@@ -16,13 +16,18 @@
 #     SYN の MSS が 1420 以下（pc02 の手前では超えることを対照に見る）、ping -M do -s 1432 は通り -s 1472 は
 #     Frag needed（mtu = 1460）が返ること
 #     BR 役は実際の BR に揃えて encaplimit none で作る（lab/pc03-br.sh）
+#   - NGN 役（lab/pc03-ngn.sh と lab/pc02-ngn-*.cmds）: pc03 が DHCPv6-PD（Kea）と RA（radvd）を返し、
+#     pd56（ONU 直結の光クロス）では pc02 が /56 を受けて eth1 にサブネット ID 1 の ::1/64 を付け、pc01 が SLAAC の
+#     アドレスから pc03 に IPv6 で届くこと。続けて scripts/mape_calc.py が /56 から計算した MAP-E の set を入れ、
+#     pc03 の BR 役（同じ値で lab/pc03-br.sh）を通して IPv4 が届くこと（外側の Next Header 4、内側の送信元と
+#     ポートセット）。pd60（HGW の配下、/60 の PD と /64 の RA）と ra64（/64 の RA だけ）も見る
 #   - 判定は scripts/lab-judge.py（tests/test_lab_e2e_judge.py で検査）。項目ごとの OK / NG はジョブの要約に出る。
 #     設定の誤りが分かっていて直すまで NG になる項目は lab/e2e-known-ng.txt に理由つきで載せ、KNOWN として扱う
 #     （載せた項目が通ったら落とす）。現在は載せている項目は無い
 #   - あわせて scripts/lab-*.sh と lab/*.sh を shellcheck にかける
 # 何を検査しないか: 性能（veth の上の数字は実機の 10G と無関係。T0〜T8 は実機で測る）、
 #   チューニング①〜④（commit できるかは VyOS config で見る）、MAP-E の 15 ポートセットの全数利用（§6-3 の既知の課題）、
-#   NGN の実回線での DSCP の扱い、§6-5（本番向け）。
+#   NGN の実回線での DSCP の扱い、§6-5 の本番の設定そのもの（NGN 役では試験に要る行だけを入れる）。
 name: Lab E2E
 
 on:
@@ -67,6 +72,10 @@ jobs:
           sudo install -m 0755 "${RUNNER_TEMP}/clab/containerlab" /usr/local/bin/containerlab
           containerlab version
 
+      - name: Build pc03 image
+        # pc03 は netshoot に NGN 役の Kea（DHCPv6-PD）と radvd を足したもの（lab/pc03-ngn.Dockerfile）
+        run: docker build -t home-router/pc03-ngn:lab -f lab/pc03-ngn.Dockerfile lab
+
       - name: Load kernel modules
         # ipip6 の BR 役（pc03 の br0）は netshoot の中で作るので、ホストで ip6_tunnel を読み込んでおく
         run: sudo modprobe -a ip6_tunnel tunnel6
@@ -91,6 +100,11 @@ jobs:
             docker exec "${c}" ip -d addr || true
             docker exec "${c}" ip route || true
             docker exec "${c}" ip -6 route || true
+            echo "::endgroup::"
+          done
+          for f in kea.log radvd.log kea-dhcp6.json radvd.conf; do
+            echo "::group::pc03 /tmp/ngn/${f}"
+            docker exec clab-home-router-pc03 cat "/tmp/ngn/${f}" || true
             echo "::endgroup::"
           done
           echo "::group::pc02 configuration"

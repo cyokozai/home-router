@@ -14,17 +14,23 @@
   route-default <GW|dev:IF>      ip -4 route show default の既定経路が 1 本だけで、GW（か IF）を向く
   listen-only <PORT> <ADDR>      PORT で待ち受けているのは ADDR だけ（1 つ以上ある）
   outer-nh <NH> <SRC6> <DST6>    SRC6 → DST6 の IPv6 パケットの Next Header がすべて NH
-  inner-src <SRC6> <ADDR> <LO-HI>
+  inner-src <SRC6> <ADDR> <PORTS>
                                  SRC6 から出たトンネルの中の IPv4 の送信元がすべて ADDR で、
-                                 TCP / UDP の送信元ポートが LO-HI に収まる
-  src-port-outside <ADDR> <LO-HI>
-                                 ADDR から出た TCP / UDP の送信元ポートがすべて LO-HI の外（対照用）
+                                 TCP / UDP の送信元ポートが PORTS に収まる
+  src-port-outside <ADDR> <PORTS>
+                                 ADDR から出た TCP / UDP の送信元ポートがすべて PORTS の外（対照用）
   mss-max <N> <ADDR>             ADDR から出た SYN の MSS がすべて N 以下
   tclass <HEX> <SPORT>           送信元ポート SPORT の IPv6 UDP の Traffic Class がすべて HEX
+  addr-is <ADDR/LEN>             ip -6 addr show に ADDR/LEN がある（DAD に失敗したものは数えない）
+  addr-in <PREFIX>               ip -6 addr show に PREFIX の中のグローバルなアドレスがある。
+                                 OK の直後に、見つけた最初のアドレスを ADDR/LEN で出す
+
+PORTS は LO-HI か、それをカンマで並べたもの（v6プラスの 15 組のポートセット）。
 """
 
 from __future__ import annotations
 
+import ipaddress
 import re
 import sys
 from dataclasses import dataclass, field
@@ -158,11 +164,24 @@ def ipv4_packets(text: str) -> list[Ip]:
     return out
 
 
-def port_range(text: str) -> tuple[int, int]:
-    m = re.fullmatch(r"(\d+)-(\d+)", text)
-    if not m:
-        raise Usage(f"ポートの範囲は LO-HI で書く: {text}")
-    return int(m.group(1)), int(m.group(2))
+def port_ranges(text: str) -> list[tuple[int, int]]:
+    out = []
+    for part in text.split(","):
+        m = re.fullmatch(r"(\d+)-(\d+)", part)
+        if not m:
+            raise Usage(f"ポートの範囲は LO-HI か、それをカンマで並べて書く: {text}")
+        out.append((int(m.group(1)), int(m.group(2))))
+    return out
+
+
+def in_ranges(port: int, ranges: list[tuple[int, int]]) -> bool:
+    return any(lo <= port <= hi for lo, hi in ranges)
+
+
+def ranges_text(ranges: list[tuple[int, int]]) -> str:
+    if len(ranges) <= 2:
+        return ", ".join(f"{lo}-{hi}" for lo, hi in ranges)
+    return f"{ranges[0][0]}-{ranges[0][1]} ほか {len(ranges)} 組"
 
 
 # ---- 検査 -------------------------------------------------------------------------
@@ -263,7 +282,7 @@ def check_outer_nh(text: str, nh: str, src: str, dst: str) -> tuple[bool, str]:
 
 
 def check_inner_src(text: str, outer_src: str, addr: str, ports: str) -> tuple[bool, str]:
-    lo, hi = port_range(ports)
+    ranges = port_ranges(ports)
     inner = [p.inner for p in packets(text) if p.inner and p.outer.src == outer_src]
     with_port = [i for i in inner if i.sport is not None]
     if not with_port:
@@ -271,22 +290,23 @@ def check_inner_src(text: str, outer_src: str, addr: str, ports: str) -> tuple[b
     bad_src = sorted({i.src for i in inner if i.src != addr})
     if bad_src:
         return False, f"送信元が {', '.join(bad_src)}（期待 {addr}）"
-    bad_port = sorted({i.sport for i in with_port if not lo <= i.sport <= hi})
+    bad_port = sorted({i.sport for i in with_port if not in_ranges(i.sport, ranges)})
     if bad_port:
-        return False, f"送信元ポート {', '.join(map(str, bad_port))} が {lo}-{hi} の外"
+        return False, f"送信元ポート {', '.join(map(str, bad_port))} が {ranges_text(ranges)} の外"
     used = sorted({i.sport for i in with_port})
     return True, f"{len(inner)} パケット、送信元 {addr}、ポート {', '.join(map(str, used))}"
 
 
 def check_src_port_outside(text: str, addr: str, ports: str) -> tuple[bool, str]:
-    lo, hi = port_range(ports)
+    ranges = port_ranges(ports)
     mine = [i for i in ipv4_packets(text) if i.src == addr and i.sport is not None]
     if not mine:
         return False, f"{addr} から出た TCP / UDP が無い"
-    inside = sorted({i.sport for i in mine if lo <= i.sport <= hi})
+    inside = sorted({i.sport for i in mine if in_ranges(i.sport, ranges)})
     if inside:
-        return False, f"送信元ポート {', '.join(map(str, inside))} が {lo}-{hi} に入っている"
-    return True, f"送信元ポート {', '.join(map(str, sorted({i.sport for i in mine})))} はすべて {lo}-{hi} の外"
+        return False, f"送信元ポート {', '.join(map(str, inside))} が {ranges_text(ranges)} に入っている"
+    return True, (f"送信元ポート {', '.join(map(str, sorted({i.sport for i in mine})))} はすべて"
+                  f" {ranges_text(ranges)} の外")
 
 
 def check_mss_max(text: str, limit: str, addr: str) -> tuple[bool, str]:
@@ -311,6 +331,49 @@ def check_tclass(text: str, want: str, sport: str) -> tuple[bool, str]:
     return all(c == target for c in seen), f"{len(seen)} パケット、class {classes}"
 
 
+# ---- ip -6 addr show -------------------------------------------------------------
+
+INET6 = re.compile(r"^\s*inet6 (?P<addr>\S+) scope (?P<scope>\S+)(?P<flags>.*)$")
+
+
+def inet6_addrs(text: str) -> list[tuple[ipaddress.IPv6Interface, str]]:
+    """(アドレス, scope) の並び。DAD に失敗したものは除く。"""
+    out = []
+    for line in text.splitlines():
+        m = INET6.match(line)
+        if not m or "dadfailed" in m.group("flags").split():
+            continue
+        try:
+            out.append((ipaddress.IPv6Interface(m.group("addr")), m.group("scope")))
+        except ValueError:
+            continue
+    return out
+
+
+def check_addr_is(text: str, want: str) -> tuple[bool, str]:
+    try:
+        target = ipaddress.IPv6Interface(want)
+    except ValueError as e:
+        raise Usage(f"IPv6 のアドレス/長さとして読めない: {want}") from e
+    have = [a for a, _ in inet6_addrs(text)]
+    if target in have:
+        return True, f"{target} がある"
+    listed = ", ".join(str(a) for a in have) or "なし"
+    return False, f"{target} が無い（あるのは {listed}）"
+
+
+def check_addr_in(text: str, prefix: str) -> tuple[bool, str]:
+    try:
+        net = ipaddress.IPv6Network(prefix)
+    except ValueError as e:
+        raise Usage(f"IPv6 のプレフィックスとして読めない: {prefix}") from e
+    found = [a for a, scope in inet6_addrs(text) if scope == "global" and a.ip in net]
+    if found:
+        return True, f"{found[0]} は {net} の中"
+    listed = ", ".join(str(a) for a, scope in inet6_addrs(text) if scope == "global") or "なし"
+    return False, f"{net} の中のグローバルなアドレスが無い（あるのは {listed}）"
+
+
 CHECKS = {
     "ping-ok": (check_ping_ok, 0),
     "ping-fails": (check_ping_fails, 0),
@@ -323,6 +386,8 @@ CHECKS = {
     "src-port-outside": (check_src_port_outside, 2),
     "mss-max": (check_mss_max, 2),
     "tclass": (check_tclass, 2),
+    "addr-is": (check_addr_is, 1),
+    "addr-in": (check_addr_in, 1),
 }
 
 

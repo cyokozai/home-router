@@ -1,0 +1,4 @@
+# lab 専用。NGN 役（lab/pc03-ngn.sh ra64: RA の /64 だけ、PD なし）で、PC02 が WAN（eth2）の RA で
+# SLAAC のアドレスを付ける。LAN へ配る手段（ND プロキシ）はここでは扱わない（CLAUDE.md §6-5）。
+# scripts/lab-e2e.sh がフェーズ1（基準）に足して投入する。
+set interfaces ethernet eth2 ipv6 address autoconf
