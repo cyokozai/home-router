@@ -1,0 +1,49 @@
+# 本番の PC02 の設定（vyos/prod/）
+
+光クロス 10G・ひかり電話なし・enひかり（v6プラス）につなぐ PC02 の VyOS の設定を、site の yaml とこのディレクトリのテンプレートから描く。出力は `set` の行だけの部分ごとの `.cmds`（CLAUDE.md §1 ルール 10）。
+
+## 描く
+
+```
+python3 -I scripts/render_config.py site/example.yaml -o <出力先>
+python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --mape   # 接続後、MAP-E の段も
+python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example --all-wan-types
+```
+
+- 実際の値は `site/<名前>.local.yaml` に書く。描いた結果は `site/<名前>.local/` に出す（どちらも `.gitignore` 済み）。
+- `vyos/prod/example/` は `site/example.yaml` を `--all-wan-types` で描いた結果。手で直さない。CI が再生成して一致を確かめる。
+
+## 部分
+
+| ファイル | 中身 |
+|---|---|
+| `00-base` | ホスト名・時刻・NTP・鍵のログイン・SSH・救出用の `eth0`・オフロードとリング・性能プロファイル・conntrack |
+| `10-lan` | LAN の IPv4 と ULA、DHCPv4 サーバ、DNS の転送、RA |
+| `20-wan-common` | WAN の説明と RA の受け入れ |
+| `20-wan-pd56` / `pd60` / `ra64` | `wan.type` で 1 つ選ぶ。型A（ONU 直結、/56）・型B（HGW 配下、/60）・型C（RA の /64 と ND proxy） |
+| `30-firewall` | forward（DSCP の書き換え・flowtable・ステートフル）と、ルータ宛ての input |
+| `40-mape` | `--mape` のときだけ。`wan.prefix` から `scripts/mape_calc.py` で計算した MAP-E と、tun0 の flowtable |
+| `50-monitor` | SNMP（読み取り専用）と node-exporter |
+
+投入する順は番号の順。型によらない部分と、選んだ型の WAN の部分を同じ commit で入れる。
+
+## 印
+
+リポジトリに書けない値は `@名前@` の印のまま出す。`scripts/pc02-commit.sh` が投入時に、同じ名前の環境変数で置き換える（`scripts/placeholders.sh`）。不明な印・未設定・形の合わない値があれば、PC02 に何も送らずに止まる。
+
+| 印 | 値 |
+|---|---|
+| `@SSH_PUBKEY@` | ログインに使う公開鍵の本体（base64） |
+| `@ULA_PREFIX@` | ULA の /64 の上位 4 組（例 `fd12:3456:789a:1`）。site の `lan.ula_prefix` に書けばその値で描く |
+| `@SNMP_COMMUNITY@` | SNMP の community（秘密。表示では伏せる） |
+| `@WAN_PREFIX64@` | 型C だけ。RA で受けた /64 の上位 4 組 |
+| `@NGN_GW_LLA@` | 型C だけ。NGN 側のルータのリンクローカル |
+
+```
+SSH_PUBKEY=... ULA_PREFIX=... SNMP_COMMUNITY=... scripts/pc02-commit.sh site/home.local/*.cmds
+```
+
+## 検査
+
+- `tests/test_render_config.py`: 例と描いた結果の一致、検証済みの `vyos/*.cmds` の行を使っていること、RPS・QoS の shaper・VRF を使わないこと、出力が `tests/test_no_sensitive_data.py` の検査を通ること、site の誤りで止まること。
+- `.github/workflows/vyos-config.yaml`: 印に文書用の値を入れ、型によらない部分（`prod-example.cmds`）を基準にして、型 A・B・C と MAP-E の段を 1 本ずつ VyOS のコンテナで commit する。
