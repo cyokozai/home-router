@@ -5,7 +5,8 @@
 #
 # アドレスと経路はここに書かない。
 #   - VyOS: vyos/ の set コマンドを scripts/vyos-apply.sh でデプロイ後に投入する
-#   - 端末: lab/pc01.sh・lab/pc03.sh を exec で流す。フェーズ2 の BR 役は lab/pc03-br.sh を後から流す
+#   - 端末: lab/pc01.sh・lab/pc03.sh を exec で流す。フェーズ2 の BR 役は lab/pc03-br.sh、
+#     NGN 役（DHCPv6-PD と RA）は lab/pc03-ngn.sh を後から流す
 # endpoint に ipv4/ipv6 を書くと containerlab が VyOS に address を自動投入し、
 # 設定の正典（vyos/ と CLAUDE.md §6）が二重になるので使わない。
 name: home-router
@@ -37,11 +38,14 @@ topology:
 
     pc03:
       kind: linux
-      image: nicolaka/netshoot:v0.14
+      # pc01 と同じ netshoot に、NGN 役（lab/pc03-ngn.sh）の Kea（DHCPv6-PD）と radvd を足したもの。
+      # デプロイの前に作る: docker build -t home-router/pc03-ngn:lab -f lab/pc03-ngn.Dockerfile lab
+      image: home-router/pc03-ngn:lab
       mgmt-ipv4: 172.16.0.13
       binds:
         - pc03.sh:/lab/pc03.sh:ro
         - pc03-br.sh:/lab/pc03-br.sh:ro
+        - pc03-ngn.sh:/lab/pc03-ngn.sh:ro
       exec:
         - sh /lab/pc03.sh
 

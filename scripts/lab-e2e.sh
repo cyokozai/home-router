@@ -9,6 +9,9 @@
 #   1. フェーズ1: lab/pc02-clab-defaults.cmds と vyos/phase1.cmds を入れ、基準として保存する
 #   2. QoS: 入れる前に DSCP 0x88 がそのまま届くこと（対照）を見てから vyos/qos-ngn-out.cmds を入れる
 #   3. フェーズ2: 基準に戻して vyos/phase2-mape.cmds を入れ、PC03 に BR 役（lab/pc03-br.sh）を足す（§8 T7）
+#   4. NGN 役: PC03 が DHCPv6-PD と RA を返し（lab/pc03-ngn.sh）、基準に戻した PC02 に lab/pc02-ngn-<場面>.cmds を
+#      入れる。場面は ra64（RA の /64 だけ）→ pd60（HGW の配下）→ pd56（ONU 直結の光クロス）の順。
+#      pd56 では続けて、scripts/mape_calc.py が /56 から計算した MAP-E の set を入れ、PC03 の BR 役を同じ値で組む
 # 判定は scripts/lab-judge.py。項目ごとに OK / NG を出し、最後に一覧を出す。NG が 1 つでもあれば 1 で終わる。
 # 設定（vyos/*.cmds）の誤りが分かっていて、直すまで NG になる項目は lab/e2e-known-ng.txt に理由つきで載せる。
 # 載せた項目の NG は KNOWN として数えない。載せた項目が通ったら NG にする（直ったら一覧から外させる）。
@@ -26,6 +29,13 @@ known_ng="${root}/lab/e2e-known-ng.txt"
 
 # MAP-E（§6-3）の値
 ce6=2001:db8:20::c br6=2001:db8:20::b ce4=192.0.2.18 ports=8160-8175 inet=198.51.100.1
+
+# NGN 役（lab/pc03-ngn.sh と同じ値。tests/test_lab_topology.py が突き合わせる）。
+# 委任されるプレフィックスと、PC02 が eth1 に付けるアドレス（lab/pc02-ngn-*.cmds の sla-id '1'・address '1'）
+ngn_pd56=240b:10:aabb:cc00::/56 ngn_lan56=240b:10:aabb:cc01::1/64
+ngn_pd60=240b:10:aabb:cc10::/60 ngn_lan60=240b:10:aabb:cc11::1/64
+# HGW の配下（pd60）と ra64 で pc03 が RA する /64 と、pc03（HGW 役）のアドレス
+ngn_hgw_lan=240b:10:aabb:cc00::/64 ngn_hgw=240b:10:aabb:cc00::1
 
 summary=()
 failures=0
@@ -313,6 +323,116 @@ check P2-4 "トンネルに出た SYN の MSS が 1420 以下" "${wan}" mss-max 
 expect_ng P2-4c "対照: pc02 の手前の SYN は MSS 1420 を超える" "${lan}" mss-max 1420 192.168.10.10
 check P2-5 "ping -M do -s 1432 が通る" "${pmtu_ok}" ping-ok
 check P2-6 "ping -M do -s 1472 は Frag needed（mtu = 1460）が返る" "${pmtu_ng}" ping-frag-needed 1460
+
+# ---- 4. NGN 役（DHCPv6-PD と RA、v6プラスの MAP-E。lab/pc03-ngn.sh） ----------------------
+
+section "4. NGN 役（lab/pc03-ngn.sh と lab/pc02-ngn-*.cmds）"
+# PC02 の eth2 のリンクローカル。pc03 は委任したプレフィックスをここへ向ける
+pc02_ll="$(x "${pc02}" ip -6 -o addr show dev eth2 scope link | awk 'NR == 1 { split($4, a, "/"); print a[1] }')"
+echo "pc02 の eth2 のリンクローカル: ${pc02_ll}"
+# pc01 は端末として PC02 の RA を受ける（コンテナでは転送が有効なことがあるので accept_ra は 2）
+x "${pc01}" sysctl -qw net.ipv6.conf.sfp0.accept_ra=2
+x "${pc01}" sysctl -qw net.ipv6.conf.sfp0.autoconf=1
+
+# poll <秒> <lab-judge.py の引数...> -- <ノード> <コマンド...>
+#   判定が OK になるまで 1 秒ごとに取り直し、最後に取ったログを返す（PD と RA は届くまで数秒かかる）
+poll() {
+  local secs="$1" log="" args=()
+  shift
+  while [[ "$1" != -- ]]; do args+=("$1"); shift; done
+  shift
+  for _ in $(seq 1 "${secs}"); do
+    log="$(run_log "$@")"
+    [[ "$(judge_log "${log}" "${args[@]}")" == OK* ]] && break
+    sleep 1
+  done
+  printf '%s\n' "${log}"
+}
+# slaac_addr <ノード> <IF> <プレフィックス>   プレフィックスの中のアドレス（長さなし）。無ければ空
+slaac_addr() {
+  local out
+  out="$(judge_log "$(run_log "$1" ip -6 addr show dev "$2")" addr-in "$3")"
+  [[ "${out}" == OK* ]] || return 0
+  out="${out#OK }"
+  echo "${out%%/*}"
+}
+# ngn_round <場面>   pc03 の NGN 役を始めてから、基準に戻した PC02 に lab/pc02-ngn-<場面>.cmds を入れる
+ngn_round() {
+  if ! x "${pc03}" sh /lab/pc03-ngn.sh "$1" "${pc02_ll}"; then
+    abort "N-$1-ngn" "pc03 の NGN 役（$1）の起動" "lab/pc03-ngn.sh が失敗した"
+  fi
+  if ! apply --load "${baseline}" "${pc02}" "${root}/lab/pc02-ngn-$1.cmds"; then
+    abort "N-$1-apply" "NGN 役（$1）の投入" "vyos-apply.sh が失敗した"
+  fi
+}
+
+# ra64: RA の /64 だけ（PD なし）。PC02 の WAN が SLAAC のアドレスを付ける。前の場面の SLAAC が残らないよう最初に見る
+ngn_round ra64
+check N-C1 "ra64: pc02 の eth2 に RA の ${ngn_hgw_lan} から SLAAC のアドレスが付く" \
+  "$(poll 60 addr-in "${ngn_hgw_lan}" -- "${pc02}" ip -6 addr show dev eth2)" addr-in "${ngn_hgw_lan}"
+check N-C2 "ra64: pc02 → pc03（${ngn_hgw}）IPv6 ping" "$(run_log "${pc02}" ping -6 -c 3 -W 2 "${ngn_hgw}")" ping-ok
+
+# pd60: HGW の配下。/56 の最初の /64 を RA し、隣の /60 を DHCPv6-PD で委任する
+ngn_round pd60
+check N-B1 "pd60: pc02 が /60 を受け、eth1 に ${ngn_lan60} が付く" \
+  "$(poll 90 addr-is "${ngn_lan60}" -- "${pc02}" ip -6 addr show dev eth1)" addr-is "${ngn_lan60}"
+expect_rc N-B2 "pd60: pc03 の Kea が ${ngn_pd60} を委任した" 0 x "${pc03}" grep -q DHCP6_PD_LEASE_ALLOC /tmp/ngn/kea.log
+lan60="${ngn_lan60%::1/64}::/64"
+check N-B3 "pd60: pc01 に PC02 の RA で ${lan60} の SLAAC のアドレスが付く" \
+  "$(poll 60 addr-in "${lan60}" -- "${pc01}" ip -6 addr show dev sfp0)" addr-in "${lan60}"
+src="$(slaac_addr "${pc01}" sfp0 "${lan60}")"
+check N-B4 "pd60: pc01（${src:-なし}）→ pc03（HGW 役 ${ngn_hgw}）IPv6 ping" \
+  "$(run_log "${pc01}" ping -6 -c 3 -W 2 -I "${src:-::}" "${ngn_hgw}")" ping-ok
+
+# pd56: ONU 直結の光クロス（ひかり電話なし）。/56 を DHCPv6-PD で委任し、RA にはプレフィックスを載せない
+ngn_round pd56
+check N-A1 "pd56: pc02 が /56 を受け、eth1 に ${ngn_lan56} が付く" \
+  "$(poll 90 addr-is "${ngn_lan56}" -- "${pc02}" ip -6 addr show dev eth1)" addr-is "${ngn_lan56}"
+expect_rc N-A2 "pd56: pc03 の Kea が ${ngn_pd56} を委任した" 0 x "${pc03}" grep -q DHCP6_PD_LEASE_ALLOC /tmp/ngn/kea.log
+lan56="${ngn_lan56%::1/64}::/64"
+check N-A3 "pd56: pc01 に PC02 の RA で ${lan56} の SLAAC のアドレスが付く" \
+  "$(poll 60 addr-in "${lan56}" -- "${pc01}" ip -6 addr show dev sfp0)" addr-in "${lan56}"
+src="$(slaac_addr "${pc01}" sfp0 "${lan56}")"
+check N-A4 "pd56: pc01（${src:-なし}）→ pc03（2001:db8:20::2）IPv6 ping" \
+  "$(run_log "${pc01}" ping -6 -c 3 -W 2 -I "${src:-::}" 2001:db8:20::2)" ping-ok
+
+# MAP-E: scripts/mape_calc.py が /56 から計算した値で、PC02 の set と pc03 の BR 役を組む（§6-5）
+# 出力を変数に受けて終了コードを見る（read に直接つなぐと、失敗したとき read が EOF で止まり、一覧が出ない）
+if ! mape_vals="$(python3 -I - "${here}" "${ngn_pd56}" <<'PY'
+import sys
+
+sys.path.insert(0, sys.argv[1])
+import mape_calc  # noqa: E402
+
+r = mape_calc.calc(sys.argv[2])
+print(r.ce, r.ipv4, r.br, ",".join(f"{lo}-{hi}" for lo, hi in r.ports))
+PY
+)" || [[ -z "${mape_vals}" ]]; then
+  abort N-M-calc "MAP-E の値の計算" "mape_calc.calc が失敗した"
+fi
+read -r m_ce6 m_ce4 m_br6 m_ports <<< "${mape_vals}"
+echo "MAP-E: CE ${m_ce6}、IPv4 ${m_ce4}、BR ${m_br6}、ポート ${m_ports}"
+if ! mape_cmds="$(python3 -I "${here}/mape_calc.py" --cmds --wan-if eth2 --lan 192.168.10.0/24 "${ngn_pd56}")"; then
+  abort N-M-calc "MAP-E の値の計算" "mape_calc.py が失敗した"
+fi
+if ! printf '%s\n' "${mape_cmds}" | apply "${pc02}" -; then
+  abort N-M-apply "MAP-E（mape_calc.py --cmds）の投入" "vyos-apply.sh が失敗した"
+fi
+x "${pc03}" sh /lab/pc03-br.sh "${m_br6}/128" "${m_ce6}" "${m_ce4}"
+x "${pc03}" pgrep -x iperf3 >/dev/null || x -d "${pc03}" iperf3 -s -B "${inet}"
+check N-M0 "MAP-E: pc02 の既定経路が tun0" "$(run_log "${pc02}" ip -4 route show default)" route-default dev:tun0
+
+cap_start "${pc03}" sfp0 ngn-wan ip6
+warm_up "${pc01}" "${inet}"
+ping_out="$(run_log "${pc01}" ping -c 3 -W 2 "${inet}")"
+iperf_out="$(run_log "${pc01}" iperf3 -c "${inet}" -t 1 -b 1M -P 4)"
+wan="$(cap_stop "${pc03}" ngn-wan)"
+echo "${iperf_out}" | tail -n 4
+
+check N-M1 "MAP-E: pc01 → ${inet} ping" "${ping_out}" ping-ok
+check N-M2 "MAP-E: 外側 IPv6（${m_ce6} → ${m_br6}）の Next Header が 4" "${wan}" outer-nh 4 "${m_ce6}" "${m_br6}"
+check N-M3 "MAP-E: 内側の送信元が ${m_ce4}、送信元ポートが PSID のポートセットの中" \
+  "${wan}" inner-src "${m_ce6}" "${m_ce4}" "${m_ports}"
 
 print_summary
 [[ "${failures}" -eq 0 ]]
