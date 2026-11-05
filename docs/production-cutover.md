@@ -276,6 +276,7 @@ set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
 	-	`show log | match dhcp6` でPDを受けている。`eth1` に `<委任プレフィックス>:1::1/64` が付いている
 	-	プレフィックスが `240b:10::/31`、`240b:12::/31`、`240b:250::/31`、`240b:252::/31` のどれかに入っている（入っていなければv6プラスではない。VNEを確かめる）
 	-	PC02から `ping 2001:4860:4860::8888`（Google Public DNSのIPv6）が通る
+	-	DNSの上流（2026-11-05 Yusuke決定: siteの `dns.upstream` は空のまま、ここで確かめる）: `show dns forwarding nameservers` に上流が載っているか、PC02から `dig @<LANのアドレス> www.flets-east.jp AAAA` が答えるかを見る。型A・BはPDだけを求めるので、DHCPv6でDNSが来ない見込み。答えなければ、`dns.upstream` にNGNかVNEのDNSを書いて描き直すか、WANに `address dhcpv6` を足すかを、その場で決める
 4.	観測した委任プレフィックスを控える。**gitには入れない**。
 
 ### 段階B: MAP-EでIPv4を通す
