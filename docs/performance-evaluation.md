@@ -61,6 +61,7 @@ PC01（送信） ──10G── PC02（VyOS） ──10G── PC03（受信・
 | 双方向 | PC01 → PC03 と、PC03 → 捨て先（`192.168.10.99`）を同時に送る。値は両向きの合計 |
 | TCP | iperf3 3.16、60 秒、最初の 5 秒は捨てる |
 | 回数 | 断りが無ければ各条件 3 回、代表値は中央値 |
+| 試験の前後 | PC02 の保存済みの設定は基準（`configs/pc02/baseline.cmds`）のまま。試験ごとに、その構成の差分（`vyos/tuning-*.cmds` など）だけを save せずに入れ、終わったら保存済みの設定へ戻す（付録 B） |
 
 ### 送る側の上限
 
@@ -497,6 +498,11 @@ P2 の多数フローは、宛先 256 個 × 送信元ポート 240 個。E5 は
 付録 B 測り方の注記
 -------------------
 
+-	**基準への戻し方**: `CLAUDE.md` §8 の「試験ごとに PC02 を `baseline.cmds` の状態に戻し、差分の設定だけを入れる」は、次の手順で行った。
+	1.	PC02 の保存済みの設定（`/config/config.boot`）は、基準（フェーズ1＋VRF MGMT、`configs/pc02/baseline.cmds`）のままにし、試験中は save しない。
+	2.	試験のスクリプト（`scripts/run-*.sh`）が、その構成の差分のファイルを `scripts/pc02-commit.sh` で入れる。差分のファイルは `vyos/tuning-1-offload.cmds`〜`tuning-4-performance.cmds`、`fw-stateful.cmds`、`dscp-firewall.cmds`、`qos-ngn-out.cmds`、`mape-portsets.cmds`、`conntrack-large.cmds`、`test-sink.cmds`・`test-sink-fw.cmds` など（構成ごとの組み合わせは各スクリプト）。
+	3.	終わったら（途中で止まったときも）`scripts/pc02-commit.sh --restore-saved` で保存済みの設定へ戻す。VyOS はリングバッファの設定を消しても NIC の値を戻さないので、`ethtool -G` で i40e の既定の 512 に戻す。
+	4.	試験中と戻した後の PC02 の設定は、各回のディレクトリに `pc02-config*.cmds` として残した。R1（再起動）だけは、差分を save して再起動し、終わったら写しておいた基準の `config.boot` に戻した（`scripts/run-reboot.sh`）。
 -	**PDR の境界**: `CLAUDE.md` §8 は合否の基準を「ロス率 0.1% 未満」としているが、`scripts/t3_search.py` はロス率がちょうど 0.1% の点も合格にする（`dut_loss_ratio <= loss_tolerance`）。表の PDR はこの判定で求めた値。
 -	**T5-tcp の時間**: §8 の「60 秒を 3 回」と違い、各回 30 秒（`-t 30 -O 5 -P 16`、3 回）。最初の 5 秒は捨てている。
 -	**NIC のカウンタ**: `CLAUDE.md` §8 は試験の前後で `ethtool -S` の全項目を保存するとしている。pktgen の試験（`scripts/t3_search.py`）は、ロスの判定に使う 4 つ（PC01 の送信、PC02 の受信と送信、PC03 の受信）だけを各試行の JSON（`final_counters`）に残した。
