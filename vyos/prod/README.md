@@ -18,7 +18,7 @@ python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example 
 | ファイル | 中身 |
 |---|---|
 | `00-base` | ホスト名・時刻・NTP・鍵のログイン・SSH・救出用の `eth0`・オフロードとリング・性能プロファイル・conntrack |
-| `10-lan` | LAN の IPv4 と ULA、DHCPv4 サーバ、DNS の転送、RA |
+| `10-lan` | LAN の IPv4 と ULA、DHCPv4 サーバ、DNS の転送、RA（`deprecate-prefix` 付き） |
 | `20-wan-common` | WAN の説明と RA の受け入れ |
 | `20-wan-pd56` / `pd60` / `ra64` | `wan.type` で 1 つ選ぶ。型A（ONU 直結、/56）・型B（HGW 配下、/60）・型C（RA の /64 と ND proxy） |
 | `30-firewall` | forward（DSCP の書き換え・flowtable・ステートフル）と、ルータ宛ての input |
@@ -26,6 +26,21 @@ python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example 
 | `50-monitor` | SNMP（読み取り専用）と node-exporter |
 
 投入する順は番号の順。型によらない部分と、選んだ型の WAN の部分を同じ commit で入れる。
+
+- `-o` の出力先に、今回描かなかった `*.cmds`（前に描いた別の型や古い `40-mape`）が残っていると警告が出る。消してから投入する。
+- 型C（`ra64`）を描くと、実機で未確認の仮説である旨の警告が出る。
+
+## DNS の上流
+
+- 型A・B の WAN は PD だけを求めるので、VyOS の DHCPv6 クライアントは DNS サーバを求めない（vyos-1x `data/templates/dhcp-client/ipv6.j2` で、`request domain-name-servers` は `address dhcpv6` のときだけ）。`dns forwarding dhcp 'eth2'` には何も届かない見込み。
+- 上流を決めるときは、site の `dns.upstream` に IP アドレスを並べる。`service dns forwarding name-server` が描かれる。空なら上流なし（今の既定）。
+- 上流なしで名前を引けるか、光クロスで DHCPv6 の DNS がどう来るかは、実回線で確かめる。
+
+## 委任プレフィックスが変わったとき
+
+- RA に `deprecate-prefix` を付けている。radvd が止まるときに、配っていたプレフィックスの寿命を 0 にして知らせる。
+- `decrement-lifetime` は付けていない。`::/64` は同じ口の ULA も含むので、ULA まで寿命が減って失効するため。
+- プレフィックスが変わったときに、前の /64 が LAN の端末で本当に廃止されるかは、実機で確かめていない。
 
 ## 印
 
