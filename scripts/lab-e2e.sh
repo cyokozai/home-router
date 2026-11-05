@@ -358,7 +358,9 @@ slaac_addr() {
 }
 # ngn_round <場面>   pc03 の NGN 役を始めてから、基準に戻した PC02 に lab/pc02-ngn-<場面>.cmds を入れる
 ngn_round() {
-  x "${pc03}" sh /lab/pc03-ngn.sh "$1" "${pc02_ll}"
+  if ! x "${pc03}" sh /lab/pc03-ngn.sh "$1" "${pc02_ll}"; then
+    abort "N-$1-ngn" "pc03 の NGN 役（$1）の起動" "lab/pc03-ngn.sh が失敗した"
+  fi
   if ! apply --load "${baseline}" "${pc02}" "${root}/lab/pc02-ngn-$1.cmds"; then
     abort "N-$1-apply" "NGN 役（$1）の投入" "vyos-apply.sh が失敗した"
   fi
@@ -395,7 +397,8 @@ check N-A4 "pd56: pc01（${src:-なし}）→ pc03（2001:db8:20::2）IPv6 ping"
   "$(run_log "${pc01}" ping -6 -c 3 -W 2 -I "${src:-::}" 2001:db8:20::2)" ping-ok
 
 # MAP-E: scripts/mape_calc.py が /56 から計算した値で、PC02 の set と pc03 の BR 役を組む（§6-5）
-read -r m_ce6 m_ce4 m_br6 m_ports < <(python3 -I - "${here}" "${ngn_pd56}" <<'PY'
+# 出力を変数に受けて終了コードを見る（read に直接つなぐと、失敗したとき read が EOF で止まり、一覧が出ない）
+if ! mape_vals="$(python3 -I - "${here}" "${ngn_pd56}" <<'PY'
 import sys
 
 sys.path.insert(0, sys.argv[1])
@@ -404,7 +407,10 @@ import mape_calc  # noqa: E402
 r = mape_calc.calc(sys.argv[2])
 print(r.ce, r.ipv4, r.br, ",".join(f"{lo}-{hi}" for lo, hi in r.ports))
 PY
-)
+)" || [[ -z "${mape_vals}" ]]; then
+  abort N-M-calc "MAP-E の値の計算" "mape_calc.calc が失敗した"
+fi
+read -r m_ce6 m_ce4 m_br6 m_ports <<< "${mape_vals}"
 echo "MAP-E: CE ${m_ce6}、IPv4 ${m_ce4}、BR ${m_br6}、ポート ${m_ports}"
 if ! mape_cmds="$(python3 -I "${here}/mape_calc.py" --cmds --wan-if eth2 --lan 192.168.10.0/24 "${ngn_pd56}")"; then
   abort N-M-calc "MAP-E の値の計算" "mape_calc.py が失敗した"
