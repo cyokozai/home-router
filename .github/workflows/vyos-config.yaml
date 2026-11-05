@@ -10,8 +10,12 @@
 #     載せた行が実は通る、または載っていない行が落ちる、のどちらでも失敗にする
 #   - QoS は commit 後に eth2 の tc filter に pedit（set-dscp）が入ったことまで確かめる
 #   - SNMP は commit 後の snmpd.conf で、community が 192.168.2.50/32 だけに許され、0.0.0.0/0 が無いことを確かめる
+#   - 本番の設定（vyos/prod/、scripts/render_config.py）: site/example.yaml を描いた結果が vyos/prod/example/ と
+#     一致することを確かめ、印（@…@）に文書用の値を入れて、別のコンテナで検査する。型によらない部分をつないだ
+#     prod-example.cmds を基準にし、WAN の型 A・B・C（20-wan-pd56 / pd60 / ra64）と MAP-E の段（40-mape、
+#     例の委任プレフィックスから描く）を 1 本ずつ入れる
 #   - あわせてシェルスクリプトを shellcheck にかける
-# 何を検査しないか: 性能（10G の転送性能は実機の試験 T0〜T8 で測る）、§6-5（本番向け）。
+# 何を検査しないか: 性能（10G の転送性能は実機の試験 T0〜T8 で測る）、本番の回線での動作（NGN に実際につないで確かめる）。
 name: VyOS config
 
 on:
@@ -33,7 +37,19 @@ jobs:
         uses: actions/checkout@v5
 
       - name: shellcheck
-        run: shellcheck scripts/build-vyos-image.sh scripts/vyos-*.sh
+        run: shellcheck scripts/build-vyos-image.sh scripts/vyos-*.sh scripts/placeholders.sh scripts/fill-placeholders.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Render vyos/prod/ and compare with the example
+        run: |
+          pip install -r requirements-dev.txt
+          python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example --all-wan-types
 
       - name: Prepare VyOS image
         id: vyos
@@ -59,3 +75,34 @@ jobs:
           vyos/test-sink.cmds
           vyos/test-sink-fw.cmds
           vyos/snmp-mgmt.cmds
+
+      - name: Check vyos/prod/ in VyOS container
+        # 検証用の差分の検査が落ちても、本番の設定の検査は行う
+        if: ${{ !cancelled() && steps.vyos.outcome == 'success' }}
+        env:
+          VYOS_IMAGE: ${{ steps.vyos.outputs.image }}
+          # 印に入れる文書用の値（本物の値ではない）。@SSH_PUBKEY@ はこの場で作った使い捨ての鍵
+          SNMP_COMMUNITY: ci-community
+          ULA_PREFIX: fd00:db8:0:1
+          WAN_PREFIX64: 2001:db8:0:1
+          NGN_GW_LLA: fe80::1
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/prod"
+          mkdir -p "${work}"
+          ssh-keygen -q -t ed25519 -N '' -C ci -f "${work}/ci-key"
+          SSH_PUBKEY="$(cut -d' ' -f2 "${work}/ci-key.pub")"
+          export SSH_PUBKEY
+          e=vyos/prod/example
+          # 型によらない部分をつないで基準にする（名前は vyos/container-unsupported.txt の 1 列目）
+          bash scripts/fill-placeholders.sh "${e}/00-base.cmds" "${e}/10-lan.cmds" "${e}/20-wan-common.cmds" \
+            "${e}/30-firewall.cmds" "${e}/50-monitor.cmds" > "${work}/prod-example.cmds"
+          bash scripts/fill-placeholders.sh "${e}/20-wan-pd56.cmds" > "${work}/20-wan-pd56.cmds"
+          bash scripts/fill-placeholders.sh "${e}/20-wan-pd60.cmds" > "${work}/20-wan-pd60.cmds"
+          bash scripts/fill-placeholders.sh "${e}/20-wan-ra64.cmds" > "${work}/20-wan-ra64.cmds"
+          # MAP-E の段: 例の委任プレフィックス（tests/test_mape_calc.py の既知の例と同じ、作った値）から描く
+          printf 'host_name: home-router\nwan: {type: pd56, prefix: "240b:10:aabb:cc00::/56"}\n' > "${work}/mape.local.yaml"
+          python3 -I scripts/render_config.py "${work}/mape.local.yaml" -o "${work}/mape" --mape
+          cp "${work}/mape/40-mape.cmds" "${work}/40-mape.cmds"
+          bash scripts/vyos-config-check.sh "${work}/prod-example.cmds" \
+            "${work}/20-wan-pd56.cmds" "${work}/20-wan-pd60.cmds" "${work}/20-wan-ra64.cmds" "${work}/40-mape.cmds"

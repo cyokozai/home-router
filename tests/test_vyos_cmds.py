@@ -47,6 +47,8 @@ TEST_DELTAS = [name for name in DELTAS if name != MGMT_HOME]
 DOC_CORRECTIONS: dict[str, str] = {}
 
 UNSUPPORTED = VYOS / "container-unsupported.txt"
+# vyos/ の直下には無く、CI が vyos/prod/example/ からつないで作る cmds の名前（一覧の 1 列目に出てくる）
+RENDERED = {"prod-example.cmds"}
 
 
 # ---- 読み取り ---------------------------------------------------------------
@@ -311,6 +313,8 @@ def test_eth2_offload_mirrors_eth1():
 
 def test_unsupported_entries_point_to_real_lines():
     for name, line, reason in unsupported_entries():
+        if name in RENDERED:
+            continue  # 本番の設定（vyos/prod/）を描いてつないだもの。tests/test_render_config.py が見る
         assert name in [BASELINE] + DELTAS, name
         assert line in file_commands(name), f"vyos/{name} に無い行: {line}"
         assert reason, f"理由が空: {line}"

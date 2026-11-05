@@ -27,3 +27,12 @@ tuning-4-performance.cmds | set system option performance 'network-throughput' |
 #    入っておらず「VRF "MGMT" does not exist!」で落ちる（実機では mgmt-home.cmds で作ってある）。community と network の行はコンテナで commit する
 #    （community は置き換え用の印 @SNMP_COMMUNITY@ のまま。@ は community の名前に使える文字）
 snmp-mgmt.cmds | set service snmp vrf 'MGMT' | この差分だけでは VRF MGMT が無いので「VRF "MGMT" does not exist!」
+
+# 本番の設定（vyos/prod/、scripts/render_config.py）: CI は vyos/prod/example/ の型によらない部分（00-base・10-lan・20-wan-common・
+#    30-firewall・50-monitor）を、印に文書用の値を入れてから prod-example.cmds の名前でつなぎ、基準として commit する
+#    （.github/workflows/vyos-config.yaml）。リングバッファと性能プロファイルは、上の ① と ④ と同じ理由でコンテナでは通らない
+prod-example.cmds | set interfaces ethernet eth1 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-example.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-example.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-example.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-example.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid

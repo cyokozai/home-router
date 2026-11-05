@@ -1,0 +1,10 @@
+# 監視: SNMP（読み取り専用の v2c）と node-exporter。どちらも LAN から読む
+{% if monitor.snmp.enabled %}
+# vyos/snmp-mgmt.cmds の形から vrf を外したもの。network を明示して既定の 0.0.0.0/0 ::/0 を消す。
+# 秘密の値（community）は印 @SNMP_COMMUNITY@ のまま出し、投入時に環境変数 SNMP_COMMUNITY で置き換える
+set service snmp community '@SNMP_COMMUNITY@' authorization 'ro'
+set service snmp community '@SNMP_COMMUNITY@' network '{{ monitor.snmp.network }}'
+{% endif %}
+{% if monitor.node_exporter %}
+set service monitoring prometheus node-exporter listen-address '{{ lan.ip }}'
+{% endif %}

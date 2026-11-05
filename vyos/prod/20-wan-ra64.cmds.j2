@@ -1,0 +1,8 @@
+# 型C: RA の /64 だけを受ける回線。受けた /64 を LAN に置き、WAN 側の近隣探索には ND proxy で答える（仮説の段階）
+# WAN では RA の /64 を自動で付けない（LAN と同じ /64 が両側に載るため）。既定経路は NGN 側のルータのリンクローカルへ書く
+# /64 の上位 4 組は印 @WAN_PREFIX64@、NGN 側のルータは印 @NGN_GW_LLA@（site の wan.prefix64 / wan.ngn_gw_lla に書けばその値）
+# MAP-E の CE は WAN に /128 で置く（scripts/mape_calc.py --ce-plen 128）
+delete interfaces ethernet {{ i.wan }} ipv6 address autoconf
+set interfaces ethernet {{ i.lan }} address '{{ wan.prefix64 }}::1/64'
+set protocols static route6 ::/0 next-hop '{{ wan.ngn_gw_lla }}' interface '{{ i.wan }}'
+set service ndp-proxy interface {{ i.wan }} prefix '{{ wan.prefix64 }}::/64' mode 'static'

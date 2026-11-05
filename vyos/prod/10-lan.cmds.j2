@@ -1,0 +1,35 @@
+# LAN: IPv4 と ULA のアドレス、DHCPv4 サーバ、DNS の転送、RA
+# ULA の上位 4 組は印 @ULA_PREFIX@ のまま出し（site の lan.ula_prefix に書けばその値）、投入時に環境変数 ULA_PREFIX で置き換える
+set interfaces ethernet {{ i.lan }} description 'LAN'
+set interfaces ethernet {{ i.lan }} address '{{ lan.address }}'
+set interfaces ethernet {{ i.lan }} address '{{ lan.ula_prefix }}::1/64'
+
+{% set net = "set service dhcp-server shared-network-name LAN subnet " ~ lan.network %}
+{{ net }} subnet-id '{{ lan.dhcp.subnet_id }}'
+{{ net }} option default-router '{{ lan.ip }}'
+{{ net }} option name-server '{{ lan.ip }}'
+{{ net }} range 0 start '{{ lan.dhcp.start }}'
+{{ net }} range 0 stop '{{ lan.dhcp.stop }}'
+{% for m in lan.dhcp.static_mappings %}
+{{ net }} static-mapping {{ m.name }} ip-address '{{ m.ip }}'
+{{ net }} static-mapping {{ m.name }} mac '{{ m.mac }}'
+{% endfor %}
+
+# DNS の転送は LAN のアドレスだけで待ち受ける。上流は WAN の DHCP で受けた DNS と、site の dns.upstream
+# （VyOS の DHCPv6 のクライアントは、WAN に address dhcpv6 が無いと DNS を求めない。型A・B は PD だけなので
+#   DHCP からは届かない見込みで、そのときは dns.upstream が無ければルートから自分で引く）
+set service dns forwarding listen-address '{{ lan.ip }}'
+set service dns forwarding listen-address '{{ lan.ula_prefix }}::1'
+set service dns forwarding allow-from '{{ lan.network }}'
+set service dns forwarding allow-from '{{ lan.ula_prefix }}::/64'
+set service dns forwarding allow-from '::/0'
+set service dns forwarding dhcp '{{ i.wan }}'
+{% for server in dns.upstream %}
+set service dns forwarding name-server '{{ server }}'
+{% endfor %}
+
+# RA: LAN の IF に付いた /64（ULA と、委任プレフィックスから付いた分）をすべて配る
+# deprecate-prefix: radvd を止めるとき（委任プレフィックスが変わって出し直すときを含む）に、配っていた /64 を廃止として知らせる。
+# decrement-lifetime は付けない: ::/64 は同じ IF の ULA も含むので、ULA の寿命まで減って失効する
+set service router-advert interface {{ i.lan }} prefix '::/64' deprecate-prefix
+set service router-advert interface {{ i.lan }} name-server '{{ lan.ula_prefix }}::1'
