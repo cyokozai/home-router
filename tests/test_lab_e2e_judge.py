@@ -409,6 +409,14 @@ def test_addr_in_ignores_an_address_whose_dad_failed():
     ng("addr-in", "240b:10:aabb:cc01::/64", stdin=text)
 
 
+def test_addr_in_waits_until_dad_is_done():
+    # DAD の途中（tentative）のアドレスはまだ送信元に使えない（ping -I が「Address not available」で落ちる。
+    # 2026-11-05 に CI で実際に起きた）
+    text = ADDR_PC01.replace("scope global dynamic mngtmpaddr", "scope global tentative dynamic mngtmpaddr")
+    ng("addr-in", "240b:10:aabb:cc01::/64", stdin=text)
+    ng("addr-is", "240b:10:aabb:cc01:a8c1:abff:fe00:2/64", stdin=text)
+
+
 # ---- 使い方 ------------------------------------------------------------------
 
 

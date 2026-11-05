@@ -21,7 +21,7 @@
                                  ADDR から出た TCP / UDP の送信元ポートがすべて PORTS の外（対照用）
   mss-max <N> <ADDR>             ADDR から出た SYN の MSS がすべて N 以下
   tclass <HEX> <SPORT>           送信元ポート SPORT の IPv6 UDP の Traffic Class がすべて HEX
-  addr-is <ADDR/LEN>             ip -6 addr show に ADDR/LEN がある（DAD に失敗したものは数えない）
+  addr-is <ADDR/LEN>             ip -6 addr show に ADDR/LEN がある（DAD の途中・失敗したものは数えない）
   addr-in <PREFIX>               ip -6 addr show に PREFIX の中のグローバルなアドレスがある。
                                  OK の直後に、見つけた最初のアドレスを ADDR/LEN で出す
 
@@ -337,11 +337,11 @@ INET6 = re.compile(r"^\s*inet6 (?P<addr>\S+) scope (?P<scope>\S+)(?P<flags>.*)$"
 
 
 def inet6_addrs(text: str) -> list[tuple[ipaddress.IPv6Interface, str]]:
-    """(アドレス, scope) の並び。DAD に失敗したものは除く。"""
+    """(アドレス, scope) の並び。DAD の途中（tentative）と失敗したもの（dadfailed）は、まだ使えないので除く。"""
     out = []
     for line in text.splitlines():
         m = INET6.match(line)
-        if not m or "dadfailed" in m.group("flags").split():
+        if not m or {"tentative", "dadfailed"} & set(m.group("flags").split()):
             continue
         try:
             out.append((ipaddress.IPv6Interface(m.group("addr")), m.group("scope")))
