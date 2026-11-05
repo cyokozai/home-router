@@ -15,14 +15,21 @@ set interfaces ethernet {{ i.lan }} address '{{ lan.ula_prefix }}::1/64'
 {{ net }} static-mapping {{ m.name }} mac '{{ m.mac }}'
 {% endfor %}
 
-# DNS の転送は LAN のアドレスだけで待ち受ける。上流は WAN の DHCP で受けた DNS
+# DNS の転送は LAN のアドレスだけで待ち受ける。上流は WAN の DHCP で受けた DNS と、site の dns.upstream
+# （VyOS の DHCPv6 のクライアントは、WAN に address dhcpv6 が無いと DNS を求めない。型A・B は PD だけなので
+#   DHCP からは届かない見込みで、そのときは dns.upstream が無ければルートから自分で引く）
 set service dns forwarding listen-address '{{ lan.ip }}'
 set service dns forwarding listen-address '{{ lan.ula_prefix }}::1'
 set service dns forwarding allow-from '{{ lan.network }}'
 set service dns forwarding allow-from '{{ lan.ula_prefix }}::/64'
 set service dns forwarding allow-from '::/0'
 set service dns forwarding dhcp '{{ i.wan }}'
+{% for server in dns.upstream %}
+set service dns forwarding name-server '{{ server }}'
+{% endfor %}
 
 # RA: LAN の IF に付いた /64（ULA と、委任プレフィックスから付いた分）をすべて配る
-set service router-advert interface {{ i.lan }} prefix '::/64'
+# deprecate-prefix: radvd を止めるとき（委任プレフィックスが変わって出し直すときを含む）に、配っていた /64 を廃止として知らせる。
+# decrement-lifetime は付けない: ::/64 は同じ IF の ULA も含むので、ULA の寿命まで減って失効する
+set service router-advert interface {{ i.lan }} prefix '::/64' deprecate-prefix
 set service router-advert interface {{ i.lan }} name-server '{{ lan.ula_prefix }}::1'

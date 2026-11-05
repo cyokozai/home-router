@@ -191,7 +191,7 @@ LAN = [
     "set service dns forwarding allow-from '@ULA_PREFIX@::/64'",
     "set service dns forwarding allow-from '::/0'",
     "set service dns forwarding dhcp 'eth2'",
-    "set service router-advert interface eth1 prefix '::/64'",
+    "set service router-advert interface eth1 prefix '::/64' deprecate-prefix",
     "set service router-advert interface eth1 name-server '@ULA_PREFIX@::1'",
 ]
 WAN_COMMON = [
@@ -310,6 +310,8 @@ def test_lab_dscp_rule_is_renumbered_to_5():
     # flowtable の offload（rule 10）と同じ番号だと、組み合わせたときに 1 本の規則に混ざる
     lines = file_commands(VYOS / "dscp-firewall.cmds")
     assert lines and all(" rule 5 " in line for line in lines)
+    # 本番と同じく WAN へ出る分だけ（WAN から来た送信元ポート 51820 を判定の前に通さない）
+    assert "set firewall ipv6 forward filter rule 5 outbound-interface name 'eth2'" in lines
 
 
 # ---- 秘密の値とアドレス ----------------------------------------------------------------
@@ -443,6 +445,54 @@ def test_cli_mape_writes_40_mape(tmp_path):
     assert (tmp_path / "out" / "40-mape.cmds").exists()
 
 
+def test_cli_warns_about_stale_cmds_in_the_output_dir(tmp_path):
+    # 型を変えて描き直したとき、前の型の 20-wan-*.cmds が残っていると、まとめて投入してしまう
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    (out_dir / "20-wan-ra64.cmds").write_text("set system host-name 'old'\n", encoding="utf-8")
+    (out_dir / "notes.txt").write_text("x\n", encoding="utf-8")
+    out = run(str(EXAMPLE_SITE), "-o", str(out_dir))
+    assert out.returncode == 0, out.stderr
+    assert "20-wan-ra64.cmds" in out.stderr
+    assert "notes.txt" not in out.stderr
+    again = run(str(EXAMPLE_SITE), "-o", str(tmp_path / "fresh"))
+    assert "警告" not in again.stderr
+
+
+def test_cli_warns_that_type_c_is_unverified(tmp_path):
+    site = tmp_path / "c.local.yaml"
+    site.write_text(EXAMPLE_SITE.read_text(encoding="utf-8").replace("type: pd56", "type: ra64"), encoding="utf-8")
+    out = run(str(site), "-o", str(tmp_path / "c"))
+    assert out.returncode == 0, out.stderr
+    assert "ra64" in out.stderr and "実機で未確認" in out.stderr
+    a = run(str(EXAMPLE_SITE), "-o", str(tmp_path / "a"))
+    assert "実機で未確認" not in a.stderr
+
+
+# ---- RA と DNS の上流 ----------------------------------------------------------------------
+
+
+def test_ra_deprecates_the_prefix_on_shutdown():
+    # 委任プレフィックスが変わって RA を出し直すとき、前のプレフィックスを廃止として知らせる（radvd の DeprecatePrefix）
+    lan = commands(parts()["10-lan.cmds"])
+    assert "set service router-advert interface eth1 prefix '::/64' deprecate-prefix" in lan
+    # decrement-lifetime は ::/64 に付けない（同じ IF の ULA まで寿命が減って失効する）
+    assert not [line for line in lan if "decrement-lifetime" in line]
+
+
+def test_dns_upstream_is_optional():
+    assert not [line for line in commands(parts()["10-lan.cmds"]) if "forwarding name-server" in line]
+    lan = commands(parts(site_with(**{"dns.upstream": ["192.0.2.53", "2001:db8::53"]}))["10-lan.cmds"])
+    assert "set service dns forwarding name-server '192.0.2.53'" in lan
+    assert "set service dns forwarding name-server '2001:db8::53'" in lan
+
+
+@pytest.mark.parametrize("bad", ["dns.example", ["not-an-ip"], ["192.0.2.53/32"]])
+def test_bad_dns_upstream_is_rejected(bad):
+    with pytest.raises(rc.SiteError, match="dns.upstream"):
+        rc.validate(site_with(**{"dns.upstream": bad}))
+
+
 # ---- 置き場所と CI ------------------------------------------------------------------------
 
 
@@ -463,11 +513,64 @@ def test_container_unsupported_entries_for_prod_point_to_real_lines():
         assert reason.strip()
 
 
-def test_workflow_renders_and_checks_every_wan_type():
-    text = WORKFLOW.read_text(encoding="utf-8")
-    assert "scripts/render_config.py" in text
-    assert "scripts/fill-placeholders.sh" in text
-    assert PROD_EXAMPLE in text
+def workflow_steps() -> list[dict]:
+    import yaml
+
+    jobs = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    return [step for job in jobs.values() for step in job.get("steps", [])]
+
+
+def run_commands(step: dict) -> list[list[str]]:
+    """step の run を、コメントを除き、行末の \\ でつないだ 1 コマンドずつの語の並びにする。"""
+    import shlex
+
+    logical, buf = [], ""
+    for line in step.get("run", "").splitlines():
+        line = line.strip()
+        if not buf and (not line or line.startswith("#")):
+            continue
+        if line.endswith("\\"):
+            buf += line[:-1] + " "
+            continue
+        logical.append(buf + line)
+        buf = ""
+    return [shlex.split(cmd, comments=True) for cmd in logical]
+
+
+def find_command(prefix: list[str], first_arg: str | None = None) -> tuple[dict, list[str]]:
+    """run の中で prefix から始まるコマンド（first_arg を渡すと、続く最初の引数の名前がそれのもの）。"""
+    for step in workflow_steps():
+        for words in run_commands(step):
+            rest = words[len(prefix):]
+            if words[:len(prefix)] == prefix and (first_arg is None or (rest and Path(rest[0]).name == first_arg)):
+                return step, words
+    raise AssertionError(f"ワークフローの run に {' '.join(prefix)} {first_arg or ''} が無い")
+
+
+def test_workflow_compares_the_rendered_example():
+    _, words = find_command(["python3", "-I", "scripts/render_config.py"])
+    assert words[3:] == ["site/example.yaml", "--check", "vyos/prod/example", "--all-wan-types"]
+
+
+def test_workflow_commits_every_wan_type_and_mape_in_the_container():
+    step, words = find_command(["bash", "scripts/vyos-config-check.sh"], first_arg=PROD_EXAMPLE)
+    args = [Path(w).name for w in words[2:]]
+    # 基準は型によらない部分をつないだもの、差分は型 A・B・C と MAP-E の段
+    assert args[0] == PROD_EXAMPLE
+    assert sorted(args[1:]) == sorted([f"20-wan-{t}.cmds" for t in WAN_TYPES] + ["40-mape.cmds"])
+    assert "VYOS_IMAGE" in step.get("env", {})
+    # 印に入れる値をすべて与えている（SSH_PUBKEY は run の中で作る）
+    assert KNOWN_PLACEHOLDERS - {"SSH_PUBKEY"} <= set(step["env"])
+    assert any(w[:1] == ["export"] and "SSH_PUBKEY" in w for w in run_commands(step))
+
+    # それぞれのファイルを、vyos/prod/example/ から印を置き換えて作っている
+    made = {}
+    for words in run_commands(step):
+        if words[:2] == ["bash", "scripts/fill-placeholders.sh"] and ">" in words:
+            i = words.index(">")
+            made[Path(words[i + 1]).name] = [Path(w).name for w in words[2:i]]
+    assert made[PROD_EXAMPLE] == COMMON
     for t in WAN_TYPES:
-        assert f"20-wan-{t}.cmds" in text
-    assert "40-mape.cmds" in text
+        assert made[f"20-wan-{t}.cmds"] == [f"20-wan-{t}.cmds"]
+    assert any(w[:3] == ["python3", "-I", "scripts/render_config.py"] and "--mape" in w
+               for w in run_commands(step))

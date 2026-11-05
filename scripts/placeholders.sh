@@ -34,6 +34,15 @@ fill_placeholders() {
   FILLED=""
   # shellcheck disable=SC2034  # 読む側が使う
   FILLED_SECRETS=()
+  # 形の崩れた印（@snmp_community@ など）を、置き換える前の文字列で探す。置き換えた後に探すと、
+  # community の値に使える @ を印と読んでしまう
+  local token
+  for token in $(grep -oE '@[A-Za-z0-9_-]+@' <<<"${text}" | sort -u || true); do
+    if ! [[ ${token} =~ ^@[A-Z][A-Z0-9_]*@$ ]]; then
+      echo "印 ${token} は形が合わない（@大文字・数字・_@ の形にする）" >&2
+      return 1
+    fi
+  done
   names=$(grep -oE '@[A-Z][A-Z0-9_]*@' <<<"${text}" | tr -d @ | sort -u) || true
   # 先に全部を確かめる（途中まで置き換えた状態を残さない）
   for name in ${names}; do
@@ -51,11 +60,17 @@ fill_placeholders() {
       return 1
     fi
   done
+  # 秘密でない値は @ を含まない形に限ってあるので先に置き換え、@ を含みうる秘密の値（community）は最後に置き換える
+  # （先に置き換えると、値の中の「@SSH_PUBKEY@」のような並びまで次の置き換えにかかる）
   for name in ${names}; do
+    placeholder_is_secret "${name}" && continue
     value=${!name}
-    if placeholder_is_secret "${name}"; then
-      FILLED_SECRETS+=("${value}")
-    fi
+    text=${text//"@${name}@"/"${value}"}
+  done
+  for name in ${names}; do
+    placeholder_is_secret "${name}" || continue
+    value=${!name}
+    FILLED_SECRETS+=("${value}")
     text=${text//"@${name}@"/"${value}"}
   done
   # shellcheck disable=SC2034  # 読む側（pc02-commit.sh・fill-placeholders.sh）が使う

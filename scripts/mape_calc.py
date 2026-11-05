@@ -179,13 +179,18 @@ def cmds_lines(ipv4: str, psid: int, ce: str, br: str, wan_if: str, lan: str = L
 
 
 def result_cmds(r: Result, wan_if: str, lan: str = LAB_LAN, old: Result | None = None,
-                ce_plen: int = CE_PREFIX_LEN) -> list[str]:
-    """入れ直す行。old（前のプレフィックスの結果）を渡すと、前の CE と IPv4 のアドレスを先に消す。"""
+                ce_plen: int = CE_PREFIX_LEN, old_ce_plen: int | None = None) -> list[str]:
+    """入れ直す行。old（前のプレフィックスの結果）を渡すと、前の CE と IPv4 のアドレスを先に消す。
+
+    old_ce_plen は前の CE を付けていた長さ（既定は ce_plen と同じ。WAN の型を変えたときに別にする）。
+    CE はアドレスと長さの両方で比べ、どちらかが違えば前の行を消す。
+    """
     check_ce_plen(ce_plen)
+    old_ce_plen = check_ce_plen(ce_plen if old_ce_plen is None else old_ce_plen)
     lines = []
     if old is not None:
-        if old.ce != r.ce:
-            lines.append(f"delete interfaces ethernet {wan_if} address '{old.ce}/{ce_plen}'")
+        if (old.ce, old_ce_plen) != (r.ce, ce_plen):
+            lines.append(f"delete interfaces ethernet {wan_if} address '{old.ce}/{old_ce_plen}'")
         if old.ipv4 != r.ipv4:
             lines.append(f"delete interfaces tunnel tun0 address '{old.ipv4}/32'")
     return lines + cmds_lines(str(r.ipv4), r.psid, str(r.ce), str(r.br), wan_if, lan, ports=r.ports,
@@ -220,6 +225,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ce-plen", type=int, choices=CE_PREFIX_LENS, default=CE_PREFIX_LEN,
                    help="WAN に置く CE のアドレスの長さ（既定 64。型C は 128）")
     p.add_argument("--old-prefix", help="前のプレフィックス。前の CE と IPv4 のアドレスを消す delete を先頭に出す")
+    p.add_argument("--old-ce-plen", type=int, choices=CE_PREFIX_LENS,
+                   help="前の CE を付けていた長さ（既定は --ce-plen と同じ。WAN の型を変えたときに指定する）")
     args = p.parse_args(argv)
     if args.cmds and not args.wan_if:
         p.error("--cmds には --wan-if が要る")
@@ -232,7 +239,8 @@ def main(argv: list[str] | None = None) -> int:
     for w in r.warnings:
         print(f"mape_calc: 警告: {w}", file=sys.stderr)
     if args.cmds:
-        print("\n".join(result_cmds(r, wan_if=args.wan_if, lan=args.lan, old=old, ce_plen=args.ce_plen)))
+        print("\n".join(result_cmds(r, wan_if=args.wan_if, lan=args.lan, old=old, ce_plen=args.ce_plen,
+                                    old_ce_plen=args.old_ce_plen)))
     else:
         print(summary(r))
     return 0

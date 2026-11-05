@@ -77,6 +77,7 @@ DEFAULTS: dict = {
     "wan": {"type": None, "prefix": None, "prefix64": WAN_PREFIX64_PLACEHOLDER, "ngn_gw_lla": NGN_GW_LLA_PLACEHOLDER},
     "tuning": {"ring_buffer": 4096, "conntrack_table_size": 1048576, "conntrack_hash_size": 262144,
                "performance": "network-throughput"},
+    "dns": {"upstream": []},
     "firewall": {"dscp_udp_port": 51820, "router_wireguard": False},
     "monitor": {"snmp": {"enabled": True, "network": "192.168.2.50/32"}, "node_exporter": True},
 }
@@ -269,6 +270,16 @@ def validate(raw: dict) -> dict:
     if tuning["performance"] is not None and tuning["performance"] not in PERFORMANCE:
         raise SiteError(f"tuning.performance: {' / '.join(PERFORMANCE)} か null: {tuning['performance']!r}")
 
+    upstream = s["dns"]["upstream"]
+    if not isinstance(upstream, list):
+        raise SiteError(f"dns.upstream: IP アドレスの一覧にする: {upstream!r}")
+    dns = {"upstream": []}
+    for n, v in enumerate(upstream):
+        try:
+            dns["upstream"].append(str(ipaddress.ip_address(v)))
+        except (TypeError, ValueError) as e:
+            raise SiteError(f"dns.upstream[{n}]: IP アドレスとして読めない: {v!r}") from e
+
     fw = {
         "dscp_udp_port": integer(s["firewall"]["dscp_udp_port"], "firewall.dscp_udp_port", 1, 65535),
         "router_wireguard": boolean(s["firewall"]["router_wireguard"], "firewall.router_wireguard"),
@@ -295,6 +306,7 @@ def validate(raw: dict) -> dict:
                          "static_mappings": mappings}},
         "wan": {"type": wan_type, "prefix": prefix, "prefix64": prefix64, "ngn_gw_lla": gw},
         "tuning": tuning,
+        "dns": dns,
         "firewall": fw,
         "monitor": monitor,
         "br": mape_calc.V6PLUS_BR,
@@ -402,6 +414,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"render_config: {args.site}: {e}", file=sys.stderr)
         return 2
     files = dict(sorted(files.items()))
+    if ctx["wan"]["type"] == "ra64":
+        print("render_config: 警告: wan.type が ra64（型C）。RA の /64 を LAN に置き ND proxy で答える形は仮説で、"
+              "実機で未確認（VyOS のコンテナで commit が通ることだけを確かめてある）", file=sys.stderr)
 
     if args.check:
         d = Path(args.check)
@@ -419,6 +434,11 @@ def main(argv: list[str] | None = None) -> int:
     for name, body in files.items():
         (d / name).write_text(body, encoding="utf-8")
         print(d / name)
+    # 前に描いた別の型の 20-wan-*.cmds などが残っていると、*.cmds をまとめて投入したときに混ざる
+    stale = sorted(f.name for f in d.glob("*.cmds") if f.name not in files)
+    if stale:
+        print(f"render_config: 警告: {d} に今回描いていない .cmds が残っている: {', '.join(stale)}"
+              "（投入する前に消すか、別のディレクトリに描く）", file=sys.stderr)
     return 0
 
 

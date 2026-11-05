@@ -220,6 +220,30 @@ def test_fill_placeholders_prints_the_filled_lines(tmp_path):
     assert "@SSH_PUBKEY@" not in out.stdout and "fd12:3456:789a:1::1/64" in out.stdout
 
 
+@pytest.mark.parametrize("token", ["@snmp_community@", "@Ula_Prefix@", "@_X@", "@NGN-GW@", "@9X@"])
+def test_malformed_placeholder_stops(tmp_path, token):
+    # 決まった形（@大文字_数字@）に合わない印も、置き換えずに残さない
+    out = run_env(tmp_path, f"set service snmp community '{token}' authorization 'ro'\n",
+                  {"SNMP_COMMUNITY": "Ab9-x_y!z*"})
+    assert out.returncode != 0
+    assert token in out.stderr
+    assert not (tmp_path / "calls").exists()
+    assert run_fill(tmp_path, f"set system host-name '{token}'\n", {}).returncode != 0
+
+
+@pytest.mark.parametrize("community", ["a@B@c", "@x@", "x@SSH_PUBKEY@y"])
+def test_at_signs_in_the_community_value_are_not_placeholders(tmp_path, community):
+    # community には @ が使える。置き換えた値の中の @ を印と読まない
+    # 同じ投入に別の印があっても、community の値の中を置き換えない
+    text = ("set service snmp community '@SNMP_COMMUNITY@' authorization 'ro'\n"
+            "set system login user vyos authentication public-keys admin key '@SSH_PUBKEY@'\n")
+    out = run_env(tmp_path, text, {"SNMP_COMMUNITY": community, "SSH_PUBKEY": PUBKEY})
+    assert out.returncode == 0, out.stderr
+    sent = (tmp_path / "stdin").read_text()
+    assert f"community '{community}' authorization" in sent
+    assert f"key '{PUBKEY}'" in sent
+
+
 def test_fill_placeholders_stops_on_unknown_or_missing(tmp_path):
     assert run_fill(tmp_path, "set system host-name '@NOPE@'\n", {}).returncode != 0
     out = run_fill(tmp_path, PROD_LINES, {})

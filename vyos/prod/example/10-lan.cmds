@@ -13,7 +13,9 @@ set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 range 0 st
 set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 static-mapping monitor ip-address '192.168.2.50'
 set service dhcp-server shared-network-name LAN subnet 192.168.2.0/24 static-mapping monitor mac '02:00:00:00:00:50'
 
-# DNS の転送は LAN のアドレスだけで待ち受ける。上流は WAN の DHCP で受けた DNS
+# DNS の転送は LAN のアドレスだけで待ち受ける。上流は WAN の DHCP で受けた DNS と、site の dns.upstream
+# （VyOS の DHCPv6 のクライアントは、WAN に address dhcpv6 が無いと DNS を求めない。型A・B は PD だけなので
+#   DHCP からは届かない見込みで、そのときは dns.upstream が無ければルートから自分で引く）
 set service dns forwarding listen-address '192.168.2.1'
 set service dns forwarding listen-address '@ULA_PREFIX@::1'
 set service dns forwarding allow-from '192.168.2.0/24'
@@ -22,5 +24,7 @@ set service dns forwarding allow-from '::/0'
 set service dns forwarding dhcp 'eth2'
 
 # RA: LAN の IF に付いた /64（ULA と、委任プレフィックスから付いた分）をすべて配る
-set service router-advert interface eth1 prefix '::/64'
+# deprecate-prefix: radvd を止めるとき（委任プレフィックスが変わって出し直すときを含む）に、配っていた /64 を廃止として知らせる。
+# decrement-lifetime は付けない: ::/64 は同じ IF の ULA も含むので、ULA の寿命まで減って失効する
+set service router-advert interface eth1 prefix '::/64' deprecate-prefix
 set service router-advert interface eth1 name-server '@ULA_PREFIX@::1'
