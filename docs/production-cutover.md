@@ -4,6 +4,7 @@
 -	作成: 2026-11-05
 -	前提: PC02（HP ProDesk 400 G7 SFF、Intel X710、VyOS `2026.10.16-0024-rolling`）を、自宅のRTX830の代わりにフレッツへ直接つなぐ本番ルータにする。
 -	この文書の扱い: 設計と手順。設定は `vyos/prod/` のテンプレートから `scripts/render_config.py` で生成する。
+-	実行できる時期: §4 は §6 の I1 と I5、§5 は I1〜I4 ができてから。それまでは設計として読む。
 
 ---
 
@@ -41,7 +42,9 @@
 | 段 | 中身 | 値の出どころ |
 |---|---|---|
 | **固定の段** | 基本設定、LAN、WAN（回線の種別ごとに3通り）、ファイアウォール、DSCP、監視 | `vyos/prod/` のテンプレートとsiteのyaml。秘密の値は `@...@` の印にして、投入時に環境変数で置き換える |
-| **実値の段** | MAP-E（CEのIPv6アドレス、トンネル、NAT44の15ルール）、型CのNDプロキシ | 接続後に観測したプレフィックスから `scripts/mape_calc.py` が作る。**グローバルアドレスなのでgitには入れない**（`CLAUDE.md` §1 ルール3） |
+| **実値の段** | MAP-E（CEのIPv6アドレス、トンネル、NAT44の15ルール） | 接続後に観測したプレフィックスから `scripts/mape_calc.py --cmds` が作る。**グローバルアドレスなのでgitには入れない**（`CLAUDE.md` §1 ルール3） |
+
+型CのNDプロキシとLANの/64は固定の段（`20-wan-ra64`）に入れ、RAで受けた/64とNGNのルータのリンクローカルを `@WAN_PREFIX64@`・`@NGN_GW_LLA@` の印で渡す。`mape_calc.py` はNDプロキシの設定を作らない。
 
 ### 1-2. 守るルール（`CLAUDE.md` から）
 
@@ -231,6 +234,8 @@ set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
 §4 閉域網での予行演習（フレッツにつなぐ前）
 -----------------------------------------
 
+**この節は、§6 の I1（テンプレートと生成器）と I5（PC03のNGN役）が揃ってから行う。** 今の `lab/pc03-br.sh` はMAP-EのBRだけで、PDサーバとRAの役は持たない。
+
 今の検証環境（PC01 ⇄ PC02 ⇄ PC03）で、PC03に「NGN役」をさせて、テンプレートを先に通しておく。これで、当日の作業を「値を入れてcommitするだけ」にできる。本番は型Aなので、R-A・R-M・R-F・R-Dを優先する。
 
 | 演習 | PC03（NGN役）でやること | PC02で確かめること |
@@ -326,7 +331,7 @@ set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
 | I2 | `vyos/dscp-firewall.cmds` のルール番号を5に振り直し、flowtableのrule 10との衝突をなくす（§3-3） |
 | I3 | `scripts/mape_calc.py` に、型C用の `--ce-plen 128` を足す。型B用に、WANの/64をそのまま渡す使い方を `--help` に書く |
 | I4 | CI（`vyos-config.yaml`）に、型A・B・Cごとに生成した設定がcommitできるかの検査を足す。印には文書用のアドレスを入れて検査する |
-| I5 | `lab/` に、PC03（NGN役）のPDサーバとRAを足し、R-A〜R-Cを再現する。`lab-e2e.yaml` で疎通を確かめる |
+| I5 | `lab/` に、PC03（NGN役）のPDサーバとRAを足し、R-A〜R-Cを再現する。`scripts/lab-e2e.sh`（CIは `.github/workflows/lab-e2e.yaml`）で疎通を確かめる |
 | I6 | 実機の閉域網で、§4の予行演習を通す。結果は `results/prod-rehearsal/` に |
 
 ---
