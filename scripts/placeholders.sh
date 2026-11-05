@@ -30,7 +30,9 @@ placeholder_is_secret() {
 
 fill_placeholders() {
   local text=$1 names name re value
+  # shellcheck disable=SC2034  # 読む側が使う
   FILLED=""
+  # shellcheck disable=SC2034  # 読む側が使う
   FILLED_SECRETS=()
   names=$(grep -oE '@[A-Z][A-Z0-9_]*@' <<<"${text}" | tr -d @ | sort -u) || true
   # 先に全部を確かめる（途中まで置き換えた状態を残さない）
@@ -56,5 +58,6 @@ fill_placeholders() {
     fi
     text=${text//"@${name}@"/"${value}"}
   done
+  # shellcheck disable=SC2034  # 読む側（pc02-commit.sh・fill-placeholders.sh）が使う
   FILLED=${text}
 }
