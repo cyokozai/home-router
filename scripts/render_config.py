@@ -3,6 +3,11 @@
 テンプレートは vyos/prod/*.cmds.j2。出力は部分ごとの .cmds（set の行だけ。CLAUDE.md §1 ルール 10）:
 
   00-base.cmds          ホスト名・時刻・NTP・ログイン鍵・SSH・救出用の eth0・オフロードとリング・conntrack
+  01-migrate-from-lab.cmds
+                        --from-lab のときだけ。検証環境の状態（configs/pc02/baseline.cmds: フェーズ1 と VRF MGMT）
+                        から本番へ移る最初の commit で、VRF MGMT・検証用のアドレスと経路・前の NTP サーバを消す
+                        delete の行。同じ commit の他の部分が set する所は消さないので、つなぐ順によらない。
+                        2 回目からは描かない（無い所の delete は VyOS が拒否する）
   10-lan.cmds           LAN のアドレス（IPv4 と ULA）・DHCPv4 サーバ・DNS の転送・RA
   20-wan-common.cmds    WAN の説明と RA の受け入れ
   20-wan-<型>.cmds      site の wan.type で選ぶ。pd56（型A、ONU 直結）/ pd60（型B、HGW 配下）/ ra64（型C、RA の /64）
@@ -17,6 +22,8 @@ scripts/pc02-commit.sh が環境変数で置き換える（scripts/placeholders.
   python3 -I scripts/render_config.py site/example.yaml -o <出力先>          site の型の部分を描く
   python3 -I scripts/render_config.py site/example.yaml -o <出力先> --all-wan-types   3 つの型の WAN の部分を全部描く
   python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --mape  MAP-E の段も描く
+  python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --from-lab
+                                                                          検証環境から移る最初の commit 用
   python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example --all-wan-types
                                                                           描いた結果と置いてあるものが一致するか
 
@@ -29,6 +36,7 @@ import argparse
 import copy
 import ipaddress
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -84,6 +92,63 @@ DEFAULTS: dict = {
 
 PARTS_BEFORE_WAN = ("00-base", "10-lan", "20-wan-common")
 PARTS_AFTER_WAN = ("30-firewall", "50-monitor")
+
+# ---- 検証環境から移る段（--from-lab） ------------------------------------------------------------
+# 実機の PC02 は configs/pc02/baseline.cmds（フェーズ1 と VRF MGMT）で動いている。本番の部分は set だけなので、
+# そのまま重ねると SSH が VRF MGMT に残り、検証用の既定経路やアドレスも残る。最初の commit だけ、これを消す段を足す。
+# baseline.cmds の行は、すべて次の 3 つのどれかに分けてある（tests/test_render_config.py が確かめる）。
+MIGRATE_PART = "01-migrate-from-lab.cmds"
+LAB_BASELINE = "configs/pc02/baseline.cmds"
+# 消す。候補は広い順に並べ、同じ commit の他の部分が候補の所かその下を set していれば、次の狭い候補に移る
+# （順番によらず同じ結果にするため）。どの候補も当たれば消さない
+MIGRATE_DELETE = (
+    ("interfaces ethernet eth0 address 'dhcp'",),
+    ("interfaces ethernet eth0 vrf 'MGMT'",),
+    ("interfaces ethernet eth1 address '192.168.10.1/24'",),
+    ("interfaces ethernet eth1 address '2001:db8:10::1/64'",),
+    ("interfaces ethernet eth2 address '192.168.20.1/30'",),
+    ("interfaces ethernet eth2 address '2001:db8:20::1/64'",),
+    # 経路ごと消すと、MAP-E の段（route 0.0.0.0/0 interface tun0）や型C（route6 ::/0 next-hop <NGN>）が消えうる
+    ("protocols static route 0.0.0.0/0", "protocols static route 0.0.0.0/0 next-hop '192.168.20.2'"),
+    ("protocols static route6 ::/0", "protocols static route6 ::/0 next-hop '2001:db8:20::2'"),
+    # node-exporter を使わない site で vrf だけを消すと、全部の IF で待ち受ける node-exporter が残る
+    ("service monitoring prometheus node-exporter", "service monitoring prometheus node-exporter vrf 'MGMT'"),
+    ("service ntp server '192.168.2.13'",),
+    ("service ntp vrf 'MGMT'",),
+    ("service ssh vrf 'MGMT'",),
+    ("vrf name MGMT",),
+)
+# 1 つの値だけを持つ葉。他の部分が同じ葉を set すれば上書きされるので消さない。誰も set しなければ消す
+MIGRATE_LEAVES = (
+    "interfaces ethernet eth0 description 'MGMT-1G'",
+    "interfaces ethernet eth1 description 'LAN-10G-to-PC01'",
+    "interfaces ethernet eth2 description 'WAN-10G-to-PC03'",
+    "system host-name 'pc02-vyos'",
+)
+# 残す（行の頭）。本番でもそのまま使うもの、インストール時の既定、ログインと秘密の値（触らない）
+MIGRATE_KEEP = (
+    "interfaces ethernet eth0 hw-id", "interfaces ethernet eth0 offload",
+    "interfaces ethernet eth1 hw-id", "interfaces ethernet eth1 offload",
+    "interfaces ethernet eth2 hw-id", "interfaces ethernet eth2 offload",
+    "interfaces loopback lo",
+    "service ntp allow-client",
+    # VyOS の既定の NTP サーバ。インストールし直した本番機にも入るので、ここでも消さない
+    "service ntp server time1.vyos.net", "service ntp server time2.vyos.net", "service ntp server time3.vyos.net",
+    "service ssh disable-password-authentication",
+    "system config-management", "system console", "system option reboot-on-upgrade-failure", "system syslog",
+    # 今の鍵（claude-lab）も残す。消すかどうかは、本番の鍵で入れることを確かめてから別に決める
+    "system login",
+)
+
+
+def config_words(line: str) -> list[str]:
+    """設定の行を語の並びにする（引用符を外す。'x' と x を同じに扱う）。"""
+    return shlex.split(line)
+
+
+MIGRATE_DELETE_WORDS = [[config_words(c) for c in cands] for cands in MIGRATE_DELETE]
+MIGRATE_LEAVES_WORDS = [config_words(c) for c in MIGRATE_LEAVES]
+MIGRATE_KEEP_WORDS = [config_words(c) for c in MIGRATE_KEEP]
 
 
 class SiteError(ValueError):
@@ -341,7 +406,7 @@ def tidy(name: str, body: str) -> str:
         if not line and (not out or not out[-1]):
             continue
         if line and not line.startswith("#"):
-            allowed = ("set ", "delete ") if name == "20-wan-ra64.cmds" else ("set ",)
+            allowed = {"20-wan-ra64.cmds": ("set ", "delete "), MIGRATE_PART: ("delete ",)}.get(name, ("set ",))
             if not line.startswith(allowed) or line.count("'") % 2 or "#" in line:
                 raise RuntimeError(f"{name}: テンプレートが set の行でないものを出した: {line}")
         out.append(line)
@@ -388,6 +453,35 @@ def render_mape(ctx: dict, source: str) -> str:
         + tidy("40-mape.cmds", body)
 
 
+def render_migrate(others: dict[str, str], source: str) -> str:
+    """01-migrate-from-lab.cmds。others（同じ commit で入れる部分）が set する所は消さない。"""
+    sets = [config_words(line)[1:] for text_ in others.values() for line in text_.splitlines()
+            if line.startswith("set ")]
+
+    def under(path: list[str]) -> bool:
+        return any(s[:len(path)] == path for s in sets)
+
+    deletes, kept = [], []
+    for raw, cands in zip(MIGRATE_DELETE, MIGRATE_DELETE_WORDS):
+        line = next((line for line, c in zip(raw, cands) if not under(c)), None)
+        if line is None:
+            kept.append(f"# 消さない（他の部分が set する）: {raw[-1]}")
+        else:
+            deletes.append(f"delete {line}")
+    for raw, leaf in zip(MIGRATE_LEAVES, MIGRATE_LEAVES_WORDS):
+        if not any(s[:-1] == leaf[:-1] for s in sets):
+            deletes.append(f"delete {raw}")
+    body = ("# 検証環境の状態（configs/pc02/baseline.cmds: フェーズ1 と VRF MGMT）から本番へ移る最初の commit だけで、\n"
+            "# 本番の部分と同じ commit で入れる。2 回目からは描かない（--from-lab を付けない）: 無い所を delete すると\n"
+            "# VyOS が拒否し、scripts/pc02-commit.sh が失敗する。\n"
+            "# 他の部分が set する所とその上は消さない（部分をつなぐ順によらず同じ結果になる）。\n"
+            "# 1 つの値の葉（説明・ホスト名）は、他の部分が set して上書きするなら消さない\n"
+            + "\n".join(deletes + kept) + "\n")
+    return (f"# 生成: scripts/render_config.py（site: {source}、VyOS {vyos_version()}）。"
+            f"手で直さず、scripts/render_config.py の MIGRATE_* か site を直して描き直す。"
+            f"消す元は {LAB_BASELINE}\n") + tidy(MIGRATE_PART, body)
+
+
 # ---- コマンドライン ------------------------------------------------------------------------
 
 
@@ -399,6 +493,8 @@ def main(argv: list[str] | None = None) -> int:
     out.add_argument("--check", help="描いた結果が、このディレクトリの .cmds と一致するかだけを見る")
     p.add_argument("--all-wan-types", action="store_true", help="WAN の部分を 3 つの型すべて描く（例の置き場所用）")
     p.add_argument("--mape", action="store_true", help="wan.prefix から MAP-E の段（40-mape.cmds）も描く")
+    p.add_argument("--from-lab", action="store_true",
+                   help=f"検証環境の状態（{LAB_BASELINE}）から移る最初の commit 用に、{MIGRATE_PART} も描く")
     args = p.parse_args(argv)
 
     source = Path(args.site).name
@@ -410,6 +506,9 @@ def main(argv: list[str] | None = None) -> int:
             for w in r.warnings:
                 print(f"render_config: 警告: {w}", file=sys.stderr)
             files["40-mape.cmds"] = render_mape(ctx, source=source)
+        if args.from_lab:
+            # 同じ commit で入れる部分（MAP-E の段を含む）がそろってから描く
+            files[MIGRATE_PART] = render_migrate(files, source=source)
     except SiteError as e:
         print(f"render_config: {args.site}: {e}", file=sys.stderr)
         return 2

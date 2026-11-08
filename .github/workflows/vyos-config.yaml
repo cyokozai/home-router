@@ -14,6 +14,9 @@
 #     一致することを確かめ、印（@…@）に文書用の値を入れて、別のコンテナで検査する。型によらない部分をつないだ
 #     prod-example.cmds を基準にし、WAN の型 A・B・C（20-wan-pd56 / pd60 / ra64）と MAP-E の段（40-mape、
 #     例の委任プレフィックスから描く）を 1 本ずつ入れる
+#   - 検証環境から本番へ移る段（--from-lab の 01-migrate-from-lab）: 実機の PC02 と同じ形の基準（フェーズ1 と VRF MGMT）に、
+#     移行の段と本番の部分（型A、MAP-E の段の有無の 2 通り）を 1 回で commit し、VRF MGMT・SSH の vrf・検証用のアドレスと
+#     経路が残っていないこと、SSH が既定の VRF で 192.168.2.1 を待ち受けることを確かめる
 #   - あわせてシェルスクリプトを shellcheck にかける
 # 何を検査しないか: 性能（10G の転送性能は実機の試験 T0〜T8 で測る）、本番の回線での動作（NGN に実際につないで確かめる）。
 name: VyOS config
@@ -106,3 +109,42 @@ jobs:
           cp "${work}/mape/40-mape.cmds" "${work}/40-mape.cmds"
           bash scripts/vyos-config-check.sh "${work}/prod-example.cmds" \
             "${work}/20-wan-pd56.cmds" "${work}/20-wan-pd60.cmds" "${work}/20-wan-ra64.cmds" "${work}/40-mape.cmds"
+
+      - name: Check migration from the lab state in VyOS container
+        # 実機の PC02 は configs/pc02/baseline.cmds（フェーズ1 と VRF MGMT）で動いている。同じ形の基準に、移行の段
+        # （01-migrate-from-lab、--from-lab）と本番の部分を 1 本につないで 1 回で commit し、名残が消えたことを確かめる
+        if: ${{ !cancelled() && steps.vyos.outcome == 'success' }}
+        env:
+          VYOS_IMAGE: ${{ steps.vyos.outputs.image }}
+          VYOS_CONTAINER: vyos-from-lab-check
+          # 印に入れる文書用の値（本物の値ではない）。@SSH_PUBKEY@ はこの場で作った使い捨ての鍵
+          SNMP_COMMUNITY: ci-community
+          ULA_PREFIX: fd00:db8:0:1
+          WAN_PREFIX64: 2001:db8:0:1
+          NGN_GW_LLA: fe80::1
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/from-lab"
+          mkdir -p "${work}"
+          ssh-keygen -q -t ed25519 -N '' -C ci -f "${work}/ci-key"
+          SSH_PUBKEY="$(cut -d' ' -f2 "${work}/ci-key.pub")"
+          export SSH_PUBKEY
+          # 実機と同じ形の基準: フェーズ1 と VRF MGMT を同じ commit で入れる（実機でも 2026-10-25 にこの形で入れた）。
+          # eth0 の address dhcp は、コンテナでは DHCP サーバが無くアドレスを受けないが、commit は通る（VRF MGMT の
+          # 検査と同じ）。名残として消えることを確かめたいのは設定の行なので、それで足りる
+          cat vyos/phase1.cmds vyos/mgmt-home.cmds > "${work}/lab-pc02.cmds"
+          # 段A: 型A（pd56）の本番の部分と移行の段
+          python3 -I scripts/render_config.py site/example.yaml -o "${work}/a" --from-lab
+          a="${work}/a"
+          bash scripts/fill-placeholders.sh "${a}/00-base.cmds" "${a}/01-migrate-from-lab.cmds" "${a}/10-lan.cmds" \
+            "${a}/20-wan-common.cmds" "${a}/20-wan-pd56.cmds" "${a}/30-firewall.cmds" "${a}/50-monitor.cmds" \
+            > "${work}/prod-from-lab.cmds"
+          # MAP-E の段まで一度に入れる場合（移行の段は route 0.0.0.0/0 の next-hop だけを消す）
+          printf 'host_name: home-router\nwan: {type: pd56, prefix: "240b:10:aabb:cc00::/56"}\n' > "${work}/mape.local.yaml"
+          python3 -I scripts/render_config.py "${work}/mape.local.yaml" -o "${work}/m" --mape --from-lab
+          m="${work}/m"
+          bash scripts/fill-placeholders.sh "${m}/00-base.cmds" "${m}/01-migrate-from-lab.cmds" "${m}/10-lan.cmds" \
+            "${m}/20-wan-common.cmds" "${m}/20-wan-pd56.cmds" "${m}/30-firewall.cmds" "${m}/40-mape.cmds" \
+            "${m}/50-monitor.cmds" > "${work}/prod-from-lab-mape.cmds"
+          bash scripts/vyos-config-check.sh "${work}/lab-pc02.cmds" \
+            "${work}/prod-from-lab.cmds" "${work}/prod-from-lab-mape.cmds"

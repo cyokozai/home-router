@@ -574,3 +574,235 @@ def test_workflow_commits_every_wan_type_and_mape_in_the_container():
         assert made[f"20-wan-{t}.cmds"] == [f"20-wan-{t}.cmds"]
     assert any(w[:3] == ["python3", "-I", "scripts/render_config.py"] and "--mape" in w
                for w in run_commands(step))
+
+
+# ---- 検証環境（configs/pc02/baseline.cmds）から移る段（--from-lab） ------------------------------
+#
+# 実機の PC02 は、フェーズ1 と VRF MGMT の状態（configs/pc02/baseline.cmds）で動いている。生成器の部分は set だけなので、
+# そのまま重ねると SSH が VRF MGMT に残り、検証用の既定経路やアドレスも残る。最初の commit だけ、それを消す段を足す。
+
+LAB_BASELINE = ROOT / "configs" / "pc02" / "baseline.cmds"
+MIGRATE = "01-migrate-from-lab.cmds"
+
+
+def split_words(line: str) -> list[str]:
+    import shlex
+
+    return shlex.split(line)
+
+
+def lab_lines() -> list[list[str]]:
+    return [split_words(line)[1:] for line in file_commands(LAB_BASELINE)]
+
+
+def migrate_text(p: dict[str, str]) -> str:
+    return rc.render_migrate(p, source="example.yaml")
+
+
+def migrate_for(p: dict[str, str]) -> list[list[str]]:
+    """p に足す移行の段の delete の行（先頭の delete を除いた語の並び）。"""
+    lines = commands(migrate_text(p))
+    assert lines and all(line.startswith("delete ") for line in lines), lines
+    return [split_words(line)[1:] for line in lines]
+
+
+def deleted_for(p: dict[str, str]) -> list[str]:
+    return [" ".join(d) for d in migrate_for(p)]
+
+
+def other_sets(p: dict[str, str]) -> list[list[str]]:
+    return [split_words(line)[1:] for line in all_commands(p) if line.startswith("set ")]
+
+
+def mape_parts(site: dict) -> dict[str, str]:
+    ctx = rc.validate(site)
+    p = rc.render(ctx, source="example.yaml")
+    p["40-mape.cmds"] = rc.render_mape(ctx, source="example.yaml")
+    return p
+
+
+SITES_FOR_MIGRATE = {
+    "example": lambda: parts(),
+    "all-wan-types": lambda: parts(all_wan_types=True),
+    "ra64": lambda: parts(site_with(**{"wan.type": "ra64"})),
+    "mape": lambda: mape_parts(site_with(**{"wan.prefix": MAPE_PREFIX})),
+    "no-monitor": lambda: parts(site_with(**{"monitor.snmp.enabled": False, "monitor.node_exporter": False})),
+    # 予行の site: 検証環境と同じ LAN のアドレスと NTP サーバを、本番の部分が set する
+    "rehearsal": lambda: parts(site_with(**{
+        "lan.address": "192.168.10.1/24", "lan.dhcp.range.start": "192.168.10.100",
+        "lan.dhcp.range.stop": "192.168.10.199", "lan.dhcp.static_mappings": [],
+        "monitor.snmp.network": "192.168.10.50/32", "ntp_servers": ["192.168.2.13"]})),
+    "renamed-ifs": lambda: parts(site_with(**{"interfaces.rescue": "eth7", "interfaces.lan": "eth5",
+                                               "interfaces.wan": "eth6"})),
+}
+
+
+@pytest.mark.parametrize("site", list(SITES_FOR_MIGRATE))
+def test_migrate_deletes_only_what_the_lab_baseline_has(site):
+    # 消す所はすべて configs/pc02/baseline.cmds にある（無い所を delete すると VyOS が拒否する）
+    lab = lab_lines()
+    for d in migrate_for(SITES_FOR_MIGRATE[site]()):
+        assert any(b[:len(d)] == d for b in lab), f"baseline.cmds に無い所を消す: {' '.join(d)}"
+
+
+@pytest.mark.parametrize("site", list(SITES_FOR_MIGRATE))
+def test_migrate_does_not_depend_on_the_order_of_parts(site):
+    # 同じ commit の他の部分が set する所（またはその下）は消さない。1 つの値の葉は、他の部分が同じ葉を set していれば消さない。
+    # こうしておけば、scripts/pc02-commit.sh がファイルをどの順でつないでも結果が同じになる
+    p = SITES_FOR_MIGRATE[site]()
+    sets = other_sets(p)
+    for d in migrate_for(p):
+        hit = [s for s in sets if s[:len(d)] == d]
+        assert not hit, f"delete {' '.join(d)} が他の部分の set を消しうる: {hit}"
+        if d in rc.MIGRATE_LEAVES_WORDS:
+            same_leaf = [s for s in sets if s[:-1] == d[:-1]]
+            assert not same_leaf, f"delete {' '.join(d)} は他の部分が上書きする葉: {same_leaf}"
+
+
+def test_migrate_keeps_lab_addresses_that_the_site_sets():
+    p = SITES_FOR_MIGRATE["rehearsal"]()
+    deleted = deleted_for(p)
+    assert "interfaces ethernet eth1 address 192.168.10.1/24" not in deleted
+    assert "service ntp server 192.168.2.13" not in deleted
+    # 予行でも set しないものは消す
+    assert "interfaces ethernet eth1 address 2001:db8:10::1/64" in deleted
+    # 消さなかったものはコメントに残す
+    assert [line for line in migrate_text(p).splitlines() if line.startswith("#") and "192.168.10.1/24" in line]
+
+
+def test_migrate_for_the_example_site():
+    assert sorted(deleted_for(parts())) == sorted([
+        "interfaces ethernet eth0 address dhcp",
+        "interfaces ethernet eth0 vrf MGMT",
+        "interfaces ethernet eth1 address 192.168.10.1/24",
+        "interfaces ethernet eth1 address 2001:db8:10::1/64",
+        "interfaces ethernet eth2 address 192.168.20.1/30",
+        "interfaces ethernet eth2 address 2001:db8:20::1/64",
+        "protocols static route 0.0.0.0/0",
+        "protocols static route6 ::/0",
+        "service monitoring prometheus node-exporter vrf MGMT",
+        "service ntp server 192.168.2.13",
+        "service ntp vrf MGMT",
+        "service ssh vrf MGMT",
+        "vrf name MGMT",
+    ])
+
+
+def test_migrate_narrows_the_default_route_delete_when_mape_or_type_c_sets_it():
+    # MAP-E の段は route 0.0.0.0/0 interface tun0、型C は route6 ::/0 next-hop <NGN> を set する。経路ごと消すと、
+    # 順番しだいでそれも消えるので、検証用の next-hop だけを消す
+    mape = deleted_for(SITES_FOR_MIGRATE["mape"]())
+    assert "protocols static route 0.0.0.0/0 next-hop 192.168.20.2" in mape
+    assert "protocols static route 0.0.0.0/0" not in mape
+    c = deleted_for(SITES_FOR_MIGRATE["ra64"]())
+    assert "protocols static route6 ::/0 next-hop 2001:db8:20::2" in c
+    assert "protocols static route6 ::/0" not in c
+
+
+def test_migrate_removes_node_exporter_when_the_site_does_not_use_it():
+    # node-exporter を使わない site で vrf だけを消すと、全部の IF で待ち受ける node-exporter が残る
+    assert "service monitoring prometheus node-exporter" in deleted_for(SITES_FOR_MIGRATE["no-monitor"]())
+
+
+def test_migrate_deletes_leaves_that_nobody_overwrites():
+    # 救出用の IF の名前を変えた site では、eth0 の説明を上書きする部分が無いので消す
+    deleted = deleted_for(SITES_FOR_MIGRATE["renamed-ifs"]())
+    assert "interfaces ethernet eth0 description MGMT-1G" in deleted
+    assert not [d for d in deleted if d.startswith("system host-name")]
+
+
+def test_every_lab_baseline_line_is_classified():
+    # baseline.cmds の行ごとに「残す・上書きされる・消す」のどれかを決めてある。baseline.cmds が変わったら、ここで気づく
+    for b in lab_lines():
+        kinds = [kind for kind, hit in (
+            ("keep", any(b[:len(k)] == k for k in rc.MIGRATE_KEEP_WORDS)),
+            ("leaf", b in rc.MIGRATE_LEAVES_WORDS),
+            ("delete", any(b[:len(c)] == c for cands in rc.MIGRATE_DELETE_WORDS for c in cands)),
+        ) if hit]
+        assert len(kinds) == 1, f"{' '.join(b)}: {kinds or '分類なし'}"
+
+
+def test_migrate_table_points_to_real_lines():
+    lab = lab_lines()
+    for cands in rc.MIGRATE_DELETE_WORDS:
+        # 候補は広い順で、後の候補は前の候補の下
+        for wide, narrow in zip(cands, cands[1:]):
+            assert narrow[:len(wide)] == wide and len(narrow) > len(wide), cands
+        for c in cands:
+            assert any(b[:len(c)] == c for b in lab), " ".join(c)
+    for leaf in rc.MIGRATE_LEAVES_WORDS:
+        assert leaf in lab, " ".join(leaf)
+    for k in rc.MIGRATE_KEEP_WORDS:
+        assert any(b[:len(k)] == k for b in lab), " ".join(k)
+
+
+def test_migrate_never_touches_login():
+    for cands in rc.MIGRATE_DELETE_WORDS:
+        for c in cands:
+            assert c[:2] != ["system", "login"], c
+    for leaf in rc.MIGRATE_LEAVES_WORDS:
+        assert leaf[:2] != ["system", "login"], leaf
+
+
+def test_migrate_output_passes_the_sensitive_data_check():
+    for site in SITES_FOR_MIGRATE.values():
+        assert sens.find_sensitive(migrate_text(site())) == []
+
+
+def test_migrate_header_names_its_source():
+    head = migrate_text(parts()).splitlines()[0]
+    assert head.startswith("#") and "configs/pc02/baseline.cmds" in head and ".j2" not in head
+
+
+def test_cli_from_lab_writes_the_migrate_part(tmp_path):
+    out = run(str(EXAMPLE_SITE), "-o", str(tmp_path / "a"), "--from-lab")
+    assert out.returncode == 0, out.stderr
+    assert (tmp_path / "a" / MIGRATE).read_text(encoding="utf-8") == migrate_text(parts())
+    plain = run(str(EXAMPLE_SITE), "-o", str(tmp_path / "b"))
+    assert plain.returncode == 0, plain.stderr
+    assert not (tmp_path / "b" / MIGRATE).exists()
+
+
+def test_cli_from_lab_with_mape_narrows_the_route(tmp_path):
+    site = tmp_path / "home.local.yaml"
+    site.write_text(EXAMPLE_SITE.read_text(encoding="utf-8").replace("type: pd56", "type: pd56\n  prefix: "
+                                                                      + MAPE_PREFIX), encoding="utf-8")
+    out = run(str(site), "-o", str(tmp_path / "out"), "--mape", "--from-lab")
+    assert out.returncode == 0, out.stderr
+    text = (tmp_path / "out" / MIGRATE).read_text(encoding="utf-8")
+    assert "delete protocols static route 0.0.0.0/0 next-hop '192.168.20.2'" in commands(text)
+
+
+def test_workflow_commits_the_migrate_part_on_a_lab_like_baseline():
+    step, cmd = find_command(["bash", "scripts/vyos-config-check.sh"], first_arg="lab-pc02.cmds")
+    args = [Path(w).name for w in cmd[2:]]
+    assert args == ["lab-pc02.cmds", "prod-from-lab.cmds", "prod-from-lab-mape.cmds"]
+    made = {}
+    for w in run_commands(step):
+        if ">" in w:
+            i = w.index(">")
+            made[Path(w[i + 1]).name] = [Path(x).name for x in w[:i] if x.endswith(".cmds")]
+    # 実機の PC02 と同じ形の基準: フェーズ1 と VRF MGMT を 1 本につないだもの（実機でも同じ commit で入れた）
+    assert made["lab-pc02.cmds"] == ["phase1.cmds", "mgmt-home.cmds"]
+    # 移行の段と本番の部分を 1 本につなぎ、1 回の commit で入れる（並びは pc02-commit.sh に渡すときの glob の順）
+    stage_a = sorted([MIGRATE, *COMMON, "20-wan-pd56.cmds"])
+    assert made["prod-from-lab.cmds"] == stage_a
+    assert made["prod-from-lab-mape.cmds"] == sorted([*stage_a, "40-mape.cmds"])
+    rendered = [w for w in run_commands(step) if w[:3] == ["python3", "-I", "scripts/render_config.py"]]
+    assert rendered and all("--from-lab" in w for w in rendered)
+
+
+@pytest.mark.parametrize("name", ["prod-from-lab.cmds", "prod-from-lab-mape.cmds"])
+def test_container_unsupported_entries_for_from_lab_point_to_real_lines(name):
+    # 本番の部分の行で、コンテナでは通らないもの（prod-example.cmds と同じ 5 行）
+    def entries_for(file_name: str) -> list[list[str]]:
+        return [e for e in (raw.split(" | ") for raw in (VYOS / "container-unsupported.txt")
+                            .read_text(encoding="utf-8").splitlines() if raw.strip() and not raw.startswith("#"))
+                if e[0].strip() == file_name]
+
+    lines = [line for part in COMMON for line in file_commands(EXAMPLE_DIR / part)]
+    entries = entries_for(name)
+    assert sorted(e[1] for e in entries) == sorted(e[1] for e in entries_for(PROD_EXAMPLE))
+    for _, line, reason in entries:
+        assert line.strip() in lines, line
+        assert reason.strip()

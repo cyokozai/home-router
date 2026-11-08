@@ -36,3 +36,17 @@ prod-example.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | veth �
 prod-example.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
 prod-example.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
 prod-example.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
+
+# 検証環境から本番へ移る検査（prod-from-lab.cmds・prod-from-lab-mape.cmds）: 実機の PC02 と同じ形の基準（フェーズ1 と VRF MGMT を
+#    つないだ lab-pc02.cmds）に、移行の段（01-migrate-from-lab）と本番の部分を 1 本につないで 1 回で commit する
+#    （.github/workflows/vyos-config.yaml）。本番の部分を含むので、上の prod-example.cmds と同じ 5 行がコンテナでは通らない
+prod-from-lab.cmds | set interfaces ethernet eth1 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
+prod-from-lab-mape.cmds | set interfaces ethernet eth1 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab-mape.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab-mape.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab-mape.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-from-lab-mape.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid

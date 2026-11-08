@@ -18,6 +18,7 @@ python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example 
 | ファイル | 中身 |
 |---|---|
 | `00-base` | ホスト名・時刻・NTP・鍵のログイン・SSH・救出用の `eth0`・オフロードとリング・性能プロファイル・conntrack |
+| `01-migrate-from-lab` | `--from-lab` のときだけ。検証環境の状態（`configs/pc02/baseline.cmds`）から移る最初の commit で、VRF MGMT・検証用のアドレスと経路・前の NTP サーバを消す `delete` の行 |
 | `10-lan` | LAN の IPv4 と ULA、DHCPv4 サーバ、DNS の転送、RA（`deprecate-prefix` 付き） |
 | `20-wan-common` | WAN の説明と RA の受け入れ |
 | `20-wan-pd56` / `pd60` / `ra64` | `wan.type` で 1 つ選ぶ。型A（ONU 直結、/56）・型B（HGW 配下、/60）・型C（RA の /64 と ND proxy） |
@@ -25,10 +26,24 @@ python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example 
 | `40-mape` | `--mape` のときだけ。`wan.prefix` から `scripts/mape_calc.py` で計算した MAP-E と、tun0 の flowtable |
 | `50-monitor` | SNMP（読み取り専用）と node-exporter |
 
-投入する順は番号の順。型によらない部分と、選んだ型の WAN の部分を同じ commit で入れる。
+投入する順は番号の順。型によらない部分と、選んだ型の WAN の部分を同じ commit で入れる。今の PC02（検証環境の状態）に最初に入れるときだけ、`--from-lab` で描いた `01-migrate-from-lab` も同じ commit に入れる（下の「検証環境から移る」）。
 
 - `-o` の出力先に、今回描かなかった `*.cmds`（前に描いた別の型や古い `40-mape`）が残っていると警告が出る。消してから投入する。
 - 型C（`ra64`）を描くと、実機で未確認の仮説である旨の警告が出る。
+
+## 検証環境から移る（`--from-lab`）
+
+今の PC02 は `configs/pc02/baseline.cmds`（フェーズ1 と VRF MGMT）で動いている。部分は `set` だけなので、そのまま重ねると、SSH が VRF MGMT に残ったまま `00-base` の `listen-address` が足され、検証用の既定経路（`route6 ::/0 next-hop 2001:db8:20::2` など）も RA の既定経路より優先されて残る。
+
+```
+python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --from-lab
+```
+
+- `01-migrate-from-lab.cmds` は、`baseline.cmds` にある次のものを消す: `eth0` の DHCP と `vrf`、`eth1`・`eth2` の検証用のアドレス、検証用の既定経路（IPv4・IPv6）、SSH・NTP・node-exporter の `vrf`、NTP サーバ 192.168.2.13、`vrf name MGMT`。
+- **最初の commit だけ**で使う。2 回目からは `--from-lab` を付けずに描く。無い所を `delete` すると VyOS が拒否し、`scripts/pc02-commit.sh` が失敗する。
+- つなぐ順によらない。同じ commit で入れる部分が `set` する所とその上は消さない（例: 予行の site が LAN に 192.168.10.1/24 を使うなら、その行は消さずにコメントに残す。MAP-E の段や型C が既定経路を `set` するなら、経路ごとではなく検証用の `next-hop` だけを消す）。説明とホスト名は、部分が上書きするので消さない。
+- 残すもの: `hw-id`・`offload`・`loopback`・NTP の `allow-client` と VyOS の既定の NTP サーバ・`disable-password-authentication`・ログイン（今の鍵 `claude-lab` を含む）・コンソール・syslog など。
+- 分け方は `scripts/render_config.py` の `MIGRATE_DELETE`・`MIGRATE_LEAVES`・`MIGRATE_KEEP`。`baseline.cmds` の行がどれにも入っていない、または消す所が `baseline.cmds` に無いと、`tests/test_render_config.py` が落ちる。
 
 ## DNS の上流
 
@@ -62,3 +77,4 @@ SSH_PUBKEY=... ULA_PREFIX=... SNMP_COMMUNITY=... scripts/pc02-commit.sh site/hom
 
 - `tests/test_render_config.py`: 例と描いた結果の一致、検証済みの `vyos/*.cmds` の行を使っていること、RPS・QoS の shaper・VRF を使わないこと、出力が `tests/test_no_sensitive_data.py` の検査を通ること、site の誤りで止まること。
 - `.github/workflows/vyos-config.yaml`: 印に文書用の値を入れ、型によらない部分（`prod-example.cmds`）を基準にして、型 A・B・C と MAP-E の段を 1 本ずつ VyOS のコンテナで commit する。
+- 同じワークフローで、`vyos/phase1.cmds` と `vyos/mgmt-home.cmds` をつないだ基準（実機の PC02 と同じ形）に、`01-migrate-from-lab` と型A の部分（MAP-E の段の有無の 2 通り）を 1 回で commit し、VRF MGMT・SSH の `vrf`・検証用のアドレスと経路が残っていないこと、SSH が既定の VRF で 192.168.2.1 を待ち受けることを確かめる（`scripts/vyos-config-check.sh`）。コンテナの `eth0` は DHCP でアドレスを受けないので、DHCP で受けたアドレスが消えることまでは見ていない。
