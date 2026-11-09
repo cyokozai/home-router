@@ -37,7 +37,8 @@ reviews:
     - "!**/*.jsonl"
 
   path_instructions:
-    - path: "vyos/**/*.cmds"
+    # *.cmds と、vyos/prod/ のテンプレート *.cmds.j2 の両方に当てる
+    - path: "vyos/**/*.cmds*"
       instructions: |
         VyOS へ投入する設定の差分。次を確かめる。
         - 本番で使う機能は VyOS の `set` だけで書けているか（CLAUDE.md §1 ルール 10）。シェル・生の nftables・起動スクリプト（vyos-postconfig-bootup.script など）で補っていないか。

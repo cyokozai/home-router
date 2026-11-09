@@ -1,6 +1,7 @@
 """本番の PC02（光クロス 10G・ひかり電話なし・v6プラス）の VyOS の設定を、site の yaml とテンプレートから作る。
 
-テンプレートは vyos/prod/*.cmds.j2。出力は部分ごとの .cmds（set の行だけ。CLAUDE.md §1 ルール 10）:
+テンプレートは vyos/prod/*.cmds.j2。出力は部分ごとの .cmds（set と delete の行だけ。CLAUDE.md §1 ルール 10。
+delete は 20-wan-ra64 の 1 行と 01-migrate-from-lab だけ）:
 
   00-base.cmds          ホスト名・時刻・NTP・ログイン鍵・SSH・救出用の eth0・オフロードとリング・conntrack
   01-migrate-from-lab.cmds

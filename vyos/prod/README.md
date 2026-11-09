@@ -1,8 +1,17 @@
 # 本番の PC02 の設定（vyos/prod/）
 
-光クロス 10G・ひかり電話なし・enひかり（v6プラス）につなぐ PC02 の VyOS の設定を、site の yaml とこのディレクトリのテンプレートから描く。出力は `set` の行だけの部分ごとの `.cmds`（CLAUDE.md §1 ルール 10）。
+光クロス 10G・ひかり電話なし・enひかり（v6プラス）につなぐ PC02 の VyOS の設定を、site の yaml とこのディレクトリのテンプレートから描く。出力は部分ごとの `.cmds` で、VyOS の `set` と `delete` の行だけからなる（CLAUDE.md §1 ルール 10）。`delete` を出すのは、型C（`20-wan-ra64`）が共通の部分の `autoconf` を消す 1 行と、`--from-lab` の `01-migrate-from-lab` だけ。
 
 ## 描く
+
+`scripts/render_config.py` は Jinja2 と PyYAML を使う（`requirements-dev.txt`）。作業用の Mac には入れず、コンテナの中で動かす。
+
+```
+docker run --rm -v "$PWD":/w -w /w python:3.12-slim sh -c \
+  'pip install -q -r requirements-dev.txt && python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local'
+```
+
+下の例は、そのコンテナの中で打つコマンド。
 
 ```
 python3 -I scripts/render_config.py site/example.yaml -o <出力先>
@@ -47,8 +56,8 @@ python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --fr
 
 ## DNS の上流
 
-- 型A・B の WAN は PD だけを求めるので、VyOS の DHCPv6 クライアントは DNS サーバを求めない（vyos-1x `data/templates/dhcp-client/ipv6.j2` で、`request domain-name-servers` は `address dhcpv6` のときだけ）。`dns forwarding dhcp 'eth2'` には何も届かない見込み。
-- 上流を決めるときは、site の `dns.upstream` に IP アドレスを並べる。`service dns forwarding name-server` が描かれる。空なら上流なし（今の既定）。
+- 型A・B の WAN は PD だけを求めるので、VyOS の DHCPv6 クライアントは DNS サーバを求めない（vyos-1x `data/templates/dhcp-client/ipv6.j2` で、`request domain-name-servers` は `address dhcpv6` のときだけ）。`service dns forwarding dhcp '<WAN の IF>'`（site の `interfaces.wan`。例では `eth2`）には何も届かない見込み。
+- 上流を決めるときは、site の `dns.upstream` に IP アドレスを並べる。`service dns forwarding name-server` が描かれる。空なら `name-server` の行を描かない（今の既定）。そのときも `dns forwarding dhcp` の行は残るので、WAN の DHCP で DNS が届けばそれを使い、届かなければルートから自分で引く。
 - 上流なしで名前を引けるか、光クロスで DHCPv6 の DNS がどう来るかは、実回線で確かめる。
 
 ## 委任プレフィックスが変わったとき
@@ -71,7 +80,11 @@ python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --fr
 
 ```
 SSH_PUBKEY=... ULA_PREFIX=... SNMP_COMMUNITY=... scripts/pc02-commit.sh site/home.local/*.cmds
+# 型C（ra64）で wan.prefix64・wan.ngn_gw_lla を印のままにしたときは、この 2 つも要る
+SSH_PUBKEY=... ULA_PREFIX=... SNMP_COMMUNITY=... WAN_PREFIX64=... NGN_GW_LLA=... scripts/pc02-commit.sh site/home.local/*.cmds
 ```
+
+site に値を書いた印は描いた時点で置き換わっているので、その環境変数は要らない（渡しても使われない）。
 
 ## 検査
 
