@@ -468,14 +468,14 @@ set qos interface eth2 egress 'NGN-OUT'    # 検証環境ではWAN役のeth2。�
 本番の回線は光クロス 10G・ひかり電話なし・enひかり（v6プラス）に決まった（2026-11-05）。設計と当日の切り替え手順は `docs/production-cutover.md`。
 
 ```
-set interfaces ethernet eth0 ipv6 address autoconf
-set interfaces ethernet eth0 dhcpv6-options pd 0 length '56'      # HGWの配下なら60
-set interfaces ethernet eth0 dhcpv6-options pd 0 interface eth1 sla-id '1'
-set interfaces ethernet eth0 dhcpv6-options pd 0 interface eth1 address '1'
+set interfaces ethernet eth2 ipv6 address autoconf
+set interfaces ethernet eth2 dhcpv6-options pd 0 length '56'      # HGWの配下なら60
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 sla-id '1'
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 address '1'
 set service router-advert interface eth1 prefix ::/64
 ```
 
--	上の `eth0` は本番でのWAN側IFの例。検証環境の `eth0`（管理系）にはこの設定を入れない。
+-	本番のWANはONUにつなぐ `eth2`、LANは `eth1`。`eth0` は救出用の口で、WANの設定を入れない（`docs/production-cutover.md` の「決まったこと」の表と D2）。
 -	WAN側の入力フィルタで、UDP 546番とICMPv6を許可すること。
 -	ひかり電話ありでは、DHCPv6-PDで/56が来る。ひかり電話なしのネクストはRAで/64のみで、NDプロキシが必要になる。光クロスはPDで/56と言われているが、実機で要確認。
 -	プレフィックスは半固定なので変わりうる。MAP-EのCE値やIPIPトンネルを作り直す仕組みは自作が必要。
@@ -485,7 +485,7 @@ set service router-advert interface eth1 prefix ::/64
 -	v6プラスのMAPルールは 240b:10::/31、240b:12::/31、240b:250::/31、240b:252::/31 の4件（EA 25ビット、PSIDの長さ8、オフセット4、BR 2404:9200:225:100::64）。どれにも入らないプレフィックス（BIGLOBE・OCNなど）はエラーになる。
 -	CEのインターフェースIDは、v6プラスが採用する draft-ietf-softwire-map-03 の形が既定（`--iid-format rfc7597` でRFC 7597の形）。
 -	ひかり電話なしの/64で、第4 hextetの下位8ビットが0でないと、CEアドレスが自分の/64の外になる。このときは警告が出る。
--	家の監視（thin-k8s）は、PC02のSNMP（`vyos/snmp-mgmt.cmds`。読み取り専用のv2c、VRF MGMTの中、問い合わせは 192.168.2.50 だけ）でプレフィックスを見張り、変わったらDiscordに通知する。communityの値は秘密なので、ファイルには `@SNMP_COMMUNITY@` だけを書き、`scripts/pc02-commit.sh` が環境変数 `SNMP_COMMUNITY` で置き換える（未設定なら止まる）。
+-	家の監視（thin-k8s）は、PC02のSNMP（`vyos/snmp-mgmt.cmds`。読み取り専用のv2c、問い合わせは 192.168.2.50 だけ。検証環境の今の形はVRF MGMTの中。本番ではVRF MGMTをやめ、`vrf` を外してLANの 192.168.2.1 で読む。`docs/production-cutover.md` の「3-4. 監視」）でプレフィックスを見張り、変わったらDiscordに通知する。communityの値は秘密なので、ファイルには `@SNMP_COMMUNITY@` だけを書き、`scripts/pc02-commit.sh` が環境変数 `SNMP_COMMUNITY` で置き換える（未設定なら止まる）。
 	-	communityを替えるときは、旧値の `delete service snmp community '<旧値>'` を、新しい値のsetと**同じcommit**で `scripts/pc02-commit.sh` から入れる（VyOSはcommunityを名前ごとに持つので、新しい値をsetするだけでは旧値が残り、旧値でも読める）。旧値を書いたcmdsはリポジトリに置かない。
 
 **プレフィックスが変わったとき（Discordに通知が来たとき）の手順**: プレフィックスが変わると、IPv6は通るままIPv4だけが止まる。
