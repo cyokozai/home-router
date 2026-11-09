@@ -25,7 +25,7 @@
 | # | 決めること | 推奨 |
 |---|---|---|
 | D1 | 家のLANのアドレス | **192.168.2.0/24 のまま、VyOSを 192.168.2.1 にする**。PC01・PC03・thin-k8s（.50）の固定割り当てと、`~/.ssh/config`・Prometheus・SNMPの許可先をそのまま使える。RTX830が .1 なら、RTX830を外してから入れる |
-| D2 | 管理系（VRF MGMT）の扱い | **本番ではVRF MGMTをやめる**。管理はLANの 192.168.2.1 から行い、入力フィルタでLANからだけ許す。`eth0`（オンボード1G）は**救出用の口**として残し、固定の `192.168.255.1/24` を持たせる（ゲートウェイなし。ノートPCを直結して入る） |
+| D2 | 管理系（VRF MGMT）の扱い | **本番ではVRF MGMTをやめる**。管理はLANの 192.168.2.1 から行い、入力フィルタでLANからだけ許す。`eth0`（オンボード1G）は**救出用の口**として残し、固定の `192.168.255.1/24` を持たせる（ゲートウェイなし。ノートPCを直結して入る）。切り替えの段階A・Bのあいだは、`eth0` を今のままArubaにつないでおき、作業用のMacに 192.168.255.x/24 の別名を足してこの口から入る（§5） |
 | D3 | LANの物理配線 | `eth1`（SFP+）からAruba 1930のSFP+の口へ、10GのDACでつなぐ。Arubaの型番が「24G 4SFP/SFP+」（JL682A）であることを確かめる。1G専用の型ならSFP（1G）になる |
 | D4 | WANのモジュール | §2-1 の表のとおり。光クロスは10GBASE-TのSFP+（Intel互換） |
 | D5 | ULA（LAN内で固定のIPv6） | RFC 4193のランダムな /48 を1つ決める。DNSとRDNSSを、委任プレフィックスが変わっても変わらないアドレスで配るため（§3-2） |
@@ -42,7 +42,7 @@
 | 段 | 中身 | 値の出どころ |
 |---|---|---|
 | **固定の段** | 基本設定、LAN、WAN（回線の種別ごとに3通り）、ファイアウォール、DSCP、監視 | `vyos/prod/` のテンプレートとsiteのyaml。秘密の値は `@...@` の印にして、投入時に環境変数で置き換える |
-| **実値の段** | MAP-E（CEのIPv6アドレス、トンネル、NAT44の15ルール） | 接続後に観測したプレフィックスから `scripts/mape_calc.py --cmds` が作る。**グローバルアドレスなのでgitには入れない**（`CLAUDE.md` §1 ルール3） |
+| **実値の段** | MAP-E（CEのIPv6アドレス、トンネル、NAT44の15ルール） | 接続後に観測したプレフィックスをsiteの `wan.prefix` に書き、`scripts/render_config.py --mape` が `40-mape` に描く（計算は `scripts/mape_calc.py`）。**グローバルアドレスなのでgitには入れない**（`CLAUDE.md` §1 ルール3） |
 
 型CのNDプロキシとLANの/64は固定の段（`20-wan-ra64`）に入れ、RAで受けた/64とNGNのルータのリンクローカルを `@WAN_PREFIX64@`・`@NGN_GW_LLA@` の印で渡す。`mape_calc.py` はNDプロキシの設定を作らない。
 
@@ -243,10 +243,11 @@ set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
 | R-A | DHCPv6のPDサーバで、v6プラスのルールに入る/56を委任する。RAも流す | 型Aの設定で、PDを受けて `eth1` に/64が付き、LANにRAが流れる |
 | R-B | PDで/60を委任する。RAで/56の先頭の/64を流す（HGWを模擬） | 型Bの設定で、`mape_calc.py` に渡す値がWANの/64から決まる |
 | R-C | PDは止めて、RAで/64だけを流す | 型Cの設定で、NDプロキシが答え、LANの端末がPC03までIPv6で届く |
-| R-M | `lab/pc03-br.sh` のBR役を、R-Aで委任したプレフィックスから計算した値で動かす | `mape_calc.py --cmds` の出力をそのまま入れて、IPv4がPC03まで届く。ポートが割当範囲に収まる |
+| R-M | `lab/pc03-br.sh` のBR役を、R-Aで委任したプレフィックスから計算した値で動かす | `render_config.py --mape` で描いた `40-mape` を入れて、IPv4がPC03まで届く。ポートが割当範囲に収まる |
 | R-F | WAN側から、TCP 22、UDP 161、9100番に新しい接続を試みる | すべて落ちる。LANからは届く |
 | R-D | LAN側の端末からDSCP 0x88でUDP 51820を送り続け、途中で鍵の更新に相当するパケットを混ぜる | flowtableを有効にした状態でも、WANに出るパケットがすべてDSCP 0になっている（§3-3の順番の確認） |
 
+-	PC02は `configs/pc02/baseline.cmds` の状態から始め、§5と同じ順で入れる: 段階Aの前段（`eth0` に 192.168.255.1/24）→ 段階Aの本体（`--from-lab` で描いた `40-mape` 以外の全部を1回のcommit）→ 段階B（`--mape`）。SSHが切れる所と、`pc02-commit.sh` が途中で切れたときの確かめ方も、ここで先に通しておく。予行の後は `scripts/pc02-commit.sh --restore-saved` で基準に戻す。
 -	containerlab（`lab/`）とCIにR-A〜R-Cの「NGN役」を足すと、テンプレートが壊れていないかを毎回自動で確かめられる。
 -	使う委任プレフィックスはv6プラスのルール（240b:10::/31 など）に入る値にする。gitに残すのは、`tests/test_no_sensitive_data.py` が例として許している値だけにする。
 
@@ -262,46 +263,98 @@ set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
 -	[ ] v6プラスの契約が有効であることを確かめる（RTX830で今IPv4がMAP-Eで出ているなら有効）
 -	[ ] RTX830の設定を書き出す（DHCPの固定割り当て、ポート開放、静的経路、DNSの設定）。siteのyamlのstatic-mappingに移す
 -	[ ] WAN用の10GBASE-TのSFP+モジュールを用意する（§2-1）。`eth2` に挿して `ethtool -m eth2` でモジュールが読めることを確かめる
--	[ ] 救出用の口（`eth0`、192.168.255.1）に、ノートPCを直結して入れることを確かめる
 -	[ ] §4の予行演習が通っている
+-	[ ] 印の値を決めておく（Yusukeの作業）。段階A・Bで `pc02-commit.sh` を流すシェルで、次を設定する。値はリポジトリにもこの文書にも書かない。不明な印・未設定・形の合わない値があれば、`pc02-commit.sh` はPC02に何も送らずに止まる（`scripts/placeholders.sh`）
+
+```
+export SSH_PUBKEY='<本番で使う鍵の公開鍵の本体（.pub の2つ目の欄）>'
+export ULA_PREFIX='<D5で決めたULAの /64 の上位4組>'   # siteの lan.ula_prefix に書いたなら要らない
+export SNMP_COMMUNITY='<SNMPのcommunity>'             # siteで snmp を有効にしたとき
+```
+
+### 段階Aの前段: 救出用のアドレスを先に足す（今の経路のまま）
+
+段階Aの本体のcommitで、`eth0` のDHCPのアドレス（192.168.2.14）が消え、`eth0` はVRF MGMTから既定のVRFに移る。`scripts/pc02-commit.sh` はconfirmの前に `ssh pc02` で入り直せるかを確かめるので、`~/.ssh/config` の `pc02` が 192.168.2.14 のままだと通らない。そこで、先に救出用のアドレスを今の経路で足し、Macからそのアドレスで入れるようにしておく。
+
+1.	`set interfaces ethernet eth0 address '192.168.255.1/24'` の1行だけのcmdsを作り、`scripts/pc02-commit.sh --save <そのファイル>` で入れる。confirmの確認は今の経路（`ssh pc02` = 192.168.2.14、VRF MGMT）で通る。
+	-	`--save` を付ける。付けないと、段階Aの本体がconfirmされずに戻ったとき（`commit-confirm` の時間切れ）や `--restore-saved` で、このアドレスも消え、Macから入れなくなる。
+	-	保存した後、`show configuration commands` を `configs/pc02/` に保存する（`CLAUDE.md` §1 ルール3）。
+	-	今のSSHはVRF MGMTの中で `listen-address` を持たない（`configs/pc02/baseline.cmds` は `set service ssh vrf 'MGMT'` と `disable-password-authentication` だけ）。MGMTの中のアドレスすべてで待ち受けるので、MGMTにいる `eth0` に足した 192.168.255.1 でも待ち受ける見込み。
+2.	Macから 192.168.255.1 に届くようにする。`eth0` はAruba（家のLANと同じL2）につながっているので、MacのそのL2につながるIFに別名を足す。IFの名前は `route -n get 192.168.2.1` の `interface:` で確かめる。Wi-Fiで入る場合は、アクセスポイントがブリッジとして家のLANと同じL2につないでいる必要がある。
+
+```
+sudo ifconfig en0 alias 192.168.255.2 255.255.255.0    # en0 は上で確かめたIF。段階Cで外す
+ssh -o HostName=192.168.255.1 pc02 true                 # 鍵で入れること
+```
+
+3.	入れたら、`~/.ssh/config` の `pc02` の `HostName` を `192.168.255.1` に直す（Yusukeの作業）。以後、段階A・Bの `pc02-commit.sh` はこのアドレスで入り、確かめる。
 
 ### 段階A: IPv6だけを通す（家のLANはまだRTX830のまま）
 
-1.	RTX830のWANケーブルを抜き、PC02の `eth2` にONUをつなぐ。
+1.	RTX830のWANケーブルを抜く。PC02の `eth2` からPC03とのケーブルを外し、ONUをつなぐ。
 	-	RTX830がPDを受けていた場合、NGNのDHCPv6サーバが前のリースを覚えていて、すぐには委任しないことがある。ONUの電源を入れ直すか、数分待つ。
-2.	`00-base`、`20-wan-common`、`20-wan-pd56`、`30-firewall`（MAP-Eの行を除く）を `pc02-commit.sh` で入れる。
-3.	確かめること:
+2.	`--from-lab` を付けて描く。`--mape` は付けない（MAP-Eは段階Bで入れる）。
+
+```
+python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local/stage-a --from-lab
+```
+
+3.	描いた全部（`00-base`・`01-migrate-from-lab`・`10-lan`・`20-wan-common`・`20-wan-pd56`・`30-firewall`・`50-monitor`）を、**1回の** `pc02-commit.sh` で入れる: `scripts/pc02-commit.sh site/home.local/stage-a/*.cmds`
+	-	`01-migrate-from-lab` は、同じcommitに入る他の部分が `set` する所を消さないように描かれている（`vyos/prod/README.md` の「検証環境から移る」）。描いたときの部分の組と、入れる組を同じにする。一部だけを入れたり、分けて入れたりしない。
+	-	2回目以降（入れ直すとき）は `--from-lab` を付けずに描く。無い所を `delete` するとVyOSが拒否する。
+4.	**このcommitで、SSHが一度切れる見込み。** `eth0` がVRF MGMTから既定のVRFへ移り、SSHも既定のVRFで `192.168.2.1` と `192.168.255.1` を待ち受け直す（`00-base`）。2026-10-25 にVRF MGMTへ移したとき（コミット b83f0ed）と同じ形で、向きが逆になる。そのときは `commit-confirm 5` で入れ、鍵のSSHで入り直せることを確かめてからconfirmした。
+	-	`pc02-commit.sh` が途中で切れて、exit 3（「commit-confirm が始まらなかった」）や exit 5（「鍵の SSH が通らない」）を返したり、止まったまま戻らなかったりしても、**すぐに流し直さない**。exit 3でも、commitを流していた接続が切れただけで、PC02ではconfirm待ちになっていることがある。
+	-	新しい接続で、confirm待ちかを見る: `ssh pc02 'pgrep -f "[c]ommit-confirm-notify"'`
+	-	入れてconfirm待ちなら、`show interfaces` と `show configuration commands | match vrf` で、`eth0` が 192.168.255.1 だけを持ち、VRFが残っていないことを見てから、5分以内に手で `confirm` する（`timeout 60 ssh pc02 vbash -s` に `source /opt/vyatta/etc/functions/script-template`・`configure`・`confirm`・`exit` を流す）。
+	-	入れなければ、待つ。5分たつとPC02が再起動し、保存済みの設定（基準＋前段の 192.168.255.1）に戻る。戻ったらSSHはVRF MGMTの中でまた 192.168.255.1 を待ち受けるので、同じ `ssh pc02` で入れる。原因を見てから入れ直す。
+5.	**段階A・Bのあいだ、`eth1` を家のLANにつながない。** このcommitで `eth1` は 192.168.2.1/24 を持ち、DHCPv4とRAを配る。RTX830も 192.168.2.1 なので、つなぐとアドレスがぶつかる。`eth1` は今のままPC01と直結しておき、段階Bの判定用の端末にする（PC01は管理系の `eno1` も 192.168.2.0/24 にいるので、判定のときは `sfp0` をnetwork namespaceに入れて使う）。
+	-	`50-monitor` のSNMPとnode-exporterは `192.168.2.1` で待ち受けるので、PC03のPrometheusとthin-k8sから読めるのは段階Cから。
+	-	`30-firewall` は、`eth0` から入るものをすべて受ける（ipv4 inputの rule 40 が `inbound-interface name 'eth0'`、送信元のアドレスは絞らない）。192.168.255.0/24 から `eth0` に届くSSHも通る。IPv6のinputには `eth0` の行が無いので、救出用の口はIPv4で使う。
+	-	家のLANの機器が 192.168.2.1 を引いたときに、PC02の `eth0` が答えないこと（RTX830のMACのままであること）を、Macの `arp -n 192.168.2.1` で見る。
+6.	確かめること:
 	-	`show interfaces ethernet eth2`: RAでアドレスが付いている
-	-	`show ipv6 route`: 既定経路がNGNのリンクローカルに向いている
+	-	`show ipv6 route`: 既定経路がNGNのリンクローカルに向いている（検証用の `route6 ::/0 next-hop 2001:db8:20::2` は移行の段で消えている）
 	-	`show log | match dhcp6` でPDを受けている。`eth1` に `<委任プレフィックス>:1::1/64` が付いている
 	-	プレフィックスが `240b:10::/31`、`240b:12::/31`、`240b:250::/31`、`240b:252::/31` のどれかに入っている（入っていなければv6プラスではない。VNEを確かめる）
 	-	PC02から `ping 2001:4860:4860::8888`（Google Public DNSのIPv6）が通る
-	-	DNSの上流（2026-11-05 Yusuke決定: siteの `dns.upstream` は空のまま、ここで確かめる）: `show dns forwarding nameservers` に上流が載っているか、PC02から `dig @<LANのアドレス> www.flets-east.jp AAAA` が答えるかを見る。型A・BはPDだけを求めるので、DHCPv6でDNSが来ない見込み。答えなければ、`dns.upstream` にNGNかVNEのDNSを書いて描き直すか、WANに `address dhcpv6` を足すかを、その場で決める
-4.	観測した委任プレフィックスを控える。**gitには入れない**。
+	-	DNSの上流（2026-11-05 Yusuke決定: siteの `dns.upstream` は空のまま、ここで確かめる）: `show dns forwarding nameservers` に上流が載っているか、PC02から `dig @<LANのアドレス> www.flets-east.jp AAAA` が答えるかを見る。型A・BはPDだけを求めるので、DHCPv6でDNSが来ない見込み。答えなければ、`dns.upstream` にNGNかVNEのDNSを書いて描き直すか、WANに `address dhcpv6` を足すかを、その場で決める（描き直すときは `--from-lab` を付けない）
+7.	観測した委任プレフィックスを控える。**gitには入れない**。
 
 ### 段階B: MAP-EでIPv4を通す
 
+段階Aの移行の段は、検証用の既定経路 `route 0.0.0.0/0` を経路ごと消している（同じcommitにMAP-Eの段が無いので、`MIGRATE_DELETE` の広い方の候補が選ばれる）。段階Bの `40-mape` が `route 0.0.0.0/0 interface 'tun0'` を新しく入れる。
+
 1.	値を確かめる: `python3 -I scripts/mape_calc.py <委任プレフィックス>`。警告が出ていないこと、ルールに一致していること。
-2.	set行を作る: `python3 -I scripts/mape_calc.py --cmds --wan-if eth2 --lan 192.168.2.0/24 <委任プレフィックス> > /tmp/mape-prod.cmds`
-3.	`scripts/pc02-commit.sh /tmp/mape-prod.cmds` で入れる。
+2.	siteの `wan.prefix` に委任プレフィックスを書き、`--mape` を付け、`--from-lab` を付けずに、段階Aとは別の出力先へ描く。
+
+```
+python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local/stage-b --mape
+```
+
+	-	`mape_calc.py --cmds` の出力をそのまま入れない。先頭に `delete protocols static route 0.0.0.0/0` があり、段階Aで経路が消えているので、無い所の `delete` になる。また、tun0をflowtableに入れる行が無い。`render_config.py --mape` の `40-mape` は、`delete` の行を除き、`set firewall flowtable FT10G interface 'tun0'` を足してある。
+3.	`scripts/pc02-commit.sh site/home.local/stage-b/*.cmds` で入れる。`40-mape` 以外の部分は段階Aで入れたものと同じなので、変わるのは `40-mape` の分だけになる。
 4.	確かめること:
 	-	`show interfaces tunnel tun0` が up
 	-	PC02から `ping 8.8.8.8` が通る
-	-	LANの端末（段階CでつなぐまではPC01を `eth1` に直結）から `curl -4 https://ifconfig.io` を実行し、表示されたIPv4が計算したIPv4と一致する
+	-	LANの端末（段階CでつなぐまではPC01の `sfp0` を、`eth1` に直結のままnetwork namespaceに入れて使う）から `curl -4 https://ifconfig.io` を実行し、表示されたIPv4が計算したIPv4と一致する
 	-	`sudo tcpdump -ni eth2 -c 20 'ip6 proto 4'` で、外側のNext Headerが4、宛先がBR（2404:9200:225:100::64）、内側の送信元ポートが割当範囲に収まっている
 	-	JPNE切り分けサイト（kiriwake.jpne.co.jp）で、v6プラスの接続が判定される
 	-	通らなければ `--iid-format rfc7597` で作り直して試す（§7）
 5.	通ったら `save` し、`show configuration commands` を、グローバルアドレスとcommunityを印に戻してから `configs/pc02/` に保存する。
 
-### 段階C: 家のLANを切り替える
+### 段階C: 家のLANを切り替える（ケーブルの差し替えだけ）
 
-1.	RTX830のLAN側をArubaから外し、PC02の `eth1` をArubaのSFP+の口につなぐ。
-2.	`10-lan`、`50-monitor` を入れる。
-3.	確かめること:
+設定は段階A・Bで入っている。この段では設定を入れない。
+
+1.	RTX830のLAN側をArubaから外す。
+2.	PC02の `eth1` をPC01から外し、ArubaのSFP+の口につなぐ（PC01の `sfp0` をnetwork namespaceに入れていたら、`sudo ip netns del <名前>` で戻し、`sudo netplan apply` する）。
+3.	`~/.ssh/config` の `pc02` の `HostName` を `192.168.2.1` に直す（Yusukeの作業）。Macの別名を外す: `sudo ifconfig en0 -alias 192.168.255.2`
+4.	`eth0` をArubaにつないだままにするか、抜いて救出用の口（D2、ノートPCを直結）に戻すかを決める。つないだままでも、家のLANの端末からは 192.168.255.1 に届かない（別名を足した機器だけが届く）。
+5.	確かめること:
 	-	端末がDHCPで 192.168.2.x を受け取る（固定割り当ての機器は同じアドレス）
 	-	端末がRAでGUAとULAを受け取る。`nslookup` がULAのDNS（`@ULA_PREFIX@::1`）で引ける
 	-	PC03のPrometheusでPC02（192.168.2.1:9100）がup。thin-k8sからSNMPでプレフィックスが読める
-	-	作業用のMacから、`~/.ssh/config` の `pc02` を 192.168.2.1 に直してSSHで入れる
+	-	作業用のMacから、`ssh pc02`（192.168.2.1）で入れる
 
 ### 段階D: NGN特有の確認
 
@@ -317,9 +370,11 @@ set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
 
 ### 戻し方
 
--	段階のどこで失敗しても、**WANとLANのケーブルをRTX830に差し戻せば元に戻る**。
--	PC02の設定は `scripts/pc02-commit.sh --restore-saved` で、保存済みの状態に戻す。
--	救出用の口（`eth0`）は、どの段階でも入れる。
+-	段階のどこで失敗しても、**WANとLANのケーブルをRTX830に差し戻せば、家のLANとインターネットは元に戻る**。
+-	PC02の設定は `scripts/pc02-commit.sh --restore-saved` で、保存済みの状態に戻す。段階Bの `save` の前なら、保存済みの状態は基準（`configs/pc02/baseline.cmds`）に前段の 192.168.255.1 を足したもの。
+	-	段階Aの後に戻すと、`eth0` がVRF MGMTへ戻るので、段階Aと同じくSSHが一度切れる見込み。段階Aの4.と同じ確かめ方をする。戻った後もSSHはVRF MGMTの中で 192.168.255.1 を待ち受けるので、`~/.ssh/config` はそのままで入れる。
+	-	検証環境の状態まで戻すなら、`eth2` をPC03に、`eth1` をPC01につなぎ直し、`~/.ssh/config` の `pc02` を 192.168.2.14 に戻してMacの別名を外す。
+-	救出用の口（`eth0`、192.168.255.1）は、前段の後はどの段階でも入れる（段階A・BはArubaとMacの別名から、段階Cの後は、Arubaにつないだままなら別名を足したMacから、抜いたならノートPCの直結で）。
 
 ---
 
@@ -328,7 +383,7 @@ set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
 
 | # | 中身 |
 |---|---|
-| I1 | `vyos/prod/` のテンプレート（`00-base`、`10-lan`、`20-wan-common`、`20-wan-pd56`・`pd60`・`ra64`、`30-firewall`、`50-monitor`）と、siteのyamlから設定を作る `scripts/render_config.py`。印は `scripts/pc02-commit.sh` が環境変数で置き換える |
+| I1 | `vyos/prod/` のテンプレート（`00-base`、`10-lan`、`20-wan-common`、`20-wan-pd56`・`pd60`・`ra64`、`30-firewall`、`50-monitor`）と、siteのyamlから設定を作る `scripts/render_config.py`（`--from-lab` で検証環境の状態から移る `01-migrate-from-lab`、`--mape` でMAP-Eの `40-mape` も描く）。印は `scripts/pc02-commit.sh` が環境変数で置き換える |
 | I2 | `vyos/dscp-firewall.cmds` のルール番号を5に振り直し、flowtableのrule 10との衝突をなくす（§3-3） |
 | I3 | `scripts/mape_calc.py` に、型C用の `--ce-plen 128` を足す。型B用に、WANの/64をそのまま渡す使い方を `--help` に書く |
 | I4 | CI（`vyos-config.yaml`）に、型A・B・Cごとに生成した設定がcommitできるかの検査を足す。印には文書用のアドレスを入れて検査する |
