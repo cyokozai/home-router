@@ -12,7 +12,12 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${here}/placeholders.sh"
 
 [[ $# -gt 0 ]] || { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1; }
-lines=$(cat "$@" | grep -E '^(set|delete) ' || true)
+# 読めないファイルがあれば止める（grep の「一致なし」だけを許すために、cat の失敗を先に見る）
+for f in "$@"; do
+  [[ -f "${f}" && -r "${f}" ]] || { echo "fill-placeholders: ファイルを読めない: ${f}" >&2; exit 1; }
+done
+all=$(cat "$@")
+lines=$(grep -E '^(set|delete) ' <<<"${all}" || true)
 if ! fill_placeholders "${lines}"; then
   echo "fill-placeholders: 置き換えられない印がある（何も出していない）" >&2
   exit 1

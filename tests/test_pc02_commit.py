@@ -244,6 +244,26 @@ def test_at_signs_in_the_community_value_are_not_placeholders(tmp_path, communit
     assert f"key '{PUBKEY}'" in sent
 
 
+def test_fill_placeholders_stops_when_an_input_file_is_unreadable(tmp_path):
+    # 一部のファイルを読めないまま残りだけを出すと、CI が欠けた設定を検査してしまう
+    good = tmp_path / "good.cmds"
+    good.write_text("set system host-name 'x'\n")
+    env = {k: v for k, v in os.environ.items() if k not in PLACEHOLDER_VARS}
+    out = subprocess.run(["bash", str(FILL), str(good), str(tmp_path / "missing.cmds")],
+                         env=env, capture_output=True, text=True)
+    assert out.returncode != 0 and out.stdout == ""
+    assert "missing.cmds" in out.stderr
+
+
+def test_fill_placeholders_allows_files_without_commands(tmp_path):
+    # コメントだけのファイル（set / delete の行が無い）は誤りではない
+    only_comment = tmp_path / "c.cmds"
+    only_comment.write_text("# コメントだけ\n")
+    env = {k: v for k, v in os.environ.items() if k not in PLACEHOLDER_VARS}
+    out = subprocess.run(["bash", str(FILL), str(only_comment)], env=env, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+
+
 def test_fill_placeholders_stops_on_unknown_or_missing(tmp_path):
     assert run_fill(tmp_path, "set system host-name '@NOPE@'\n", {}).returncode != 0
     out = run_fill(tmp_path, PROD_LINES, {})

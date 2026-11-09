@@ -15,7 +15,7 @@
 #           VYOS_KEEP=1 で終了後もコンテナを残す（調査用）
 set -euo pipefail
 
-[[ $# -ge 1 ]] || { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1; }
+[[ $# -ge 1 ]] || { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1; }
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "${here}/.." && pwd)"
 image="${VYOS_IMAGE:-home-router/vyos:rolling}"
