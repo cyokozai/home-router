@@ -492,7 +492,7 @@ set service router-advert interface eth1 prefix ::/64
 
 1.	**通知を受ける。** 通知にある新しいプレフィックスと、前のプレフィックスを控える。
 2.	**新しいプレフィックスを確かめる。** PC02で `show interfaces ethernet <WAN>` と `show ipv6 route` を見て、委任されたプレフィックス（/56、ひかり電話なしは/64）が通知と一致することを確かめる。
-3.	**set の行を作る。** まず値だけを表示して確かめ（警告が出ていないか、ルールに一致したか）、続けてset行を出す。`--old-prefix` を付けると、前のCEアドレスとIPv4アドレスを消すdeleteが先頭に付く。
+3.	**set の行を作る。** まず値だけを表示して確かめ（警告が出ていないか、ルールに一致したか）、続けてset行を出す。`--old-prefix` を付けると、前のCEアドレスとIPv4アドレスを消すdeleteが先頭に付く。本番の切り替え（`docs/production-cutover.md` の段階B）で `--iid-format rfc7597` に切り替えて通った場合は、ここでも同じ引数を付ける（`--old-prefix` の前のCEアドレスも同じ形で計算されるため）。
 
 ```
 python3 -I scripts/mape_calc.py <新しいプレフィックス>

@@ -309,7 +309,8 @@ python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local/stag
 
 3.	描いた全部（`00-base`・`01-migrate-from-lab`・`10-lan`・`20-wan-common`・`20-wan-pd56`・`30-firewall`・`50-monitor`）を、**1回の** `pc02-commit.sh` で入れる: `scripts/pc02-commit.sh site/home.local/stage-a/*.cmds`
 	-	`01-migrate-from-lab` は、同じcommitに入る他の部分が `set` する所を消さないように描かれている（`vyos/prod/README.md` の「検証環境から移る」）。描いたときの部分の組と、入れる組を同じにする。一部だけを入れたり、分けて入れたりしない。
-	-	2回目以降（入れ直すとき）は `--from-lab` を付けずに描く。無い所を `delete` するとVyOSが拒否する。
+	-	段階Aがconfirmされて入った後に入れ直すときは、`--from-lab` を付けずに描く。無い所を `delete` するとVyOSが拒否する。
+	-	段階Aがconfirmされずに戻ったとき（下の4.で時間切れになったときや `--restore-saved` の後）は、PC02は基準＋前段の 192.168.255.1 に戻っている。入れ直すときは、もう一度 `--from-lab` を付けて描く。付けないと、移行の段が描かれず、VRF MGMTや検証用の経路が残る。
 4.	**このcommitで、SSHが一度切れる見込み。** `eth0` がVRF MGMTから既定のVRFへ移り、SSHも既定のVRFで `192.168.2.1` と `192.168.255.1` を待ち受け直す（`00-base`）。2026-10-25 にVRF MGMTへ移したとき（コミット b83f0ed）と同じ形で、向きが逆になる。そのときは `commit-confirm 5` で入れ、鍵のSSHで入り直せることを確かめてからconfirmした。
 	-	`pc02-commit.sh` が途中で切れて、exit 3（「commit-confirm が始まらなかった」）や exit 5（「鍵の SSH が通らない」）を返したり、止まったまま戻らなかったりしても、**すぐに流し直さない**。exit 3でも、commitを流していた接続が切れただけで、PC02ではconfirm待ちになっていることがある。
 	-	新しい接続で、confirm待ちかを見る: `ssh pc02 'pgrep -f "[c]ommit-confirm-notify"'`
@@ -357,6 +358,7 @@ scripts/pc02-commit.sh /tmp/mape-old-ce.cmds /tmp/mape-rfc7597.cmds
 ```
 
 	-	`mape_calc.py --cmds` の先頭の `delete protocols static route 0.0.0.0/0` は、段階Bの3.で経路が入っているので、ここでは通る。tun0のflowtableの行は `40-mape` で入っている。どちらのファイルにもグローバルアドレスが入るので、リポジトリには入れない。
+	-	RFC 7597の形で通ったら、そのことを記録する。以後、プレフィックスが変わったとき（`CLAUDE.md` §6-5の手順）も `mape_calc.py` に `--iid-format rfc7597` を付ける。`--old-prefix` は前のCEアドレスを同じ形で計算するので、形を揃えないと前のCEアドレスを消せない。`render_config.py --mape` はdraft-03の形で描くので、この場合は使わない。
 5.	通ったら、`save` の前に、今の保存済みの設定（基準＋前段の 192.168.255.1）を別名で残す: `ssh pc02 'cp /config/config.boot /config/config.boot.lab'`。`save` すると `--restore-saved` は本番の設定を読み直すので、検証環境へ戻るときにこのファイルを使う（戻し方）。
 6.	`save` し、`show configuration commands` を、グローバルアドレスとcommunityを印に戻してから `configs/pc02/` に保存する。
 
@@ -403,7 +405,7 @@ scripts/pc02-commit.sh /tmp/mape-old-ce.cmds /tmp/mape-rfc7597.cmds
 
 | # | 中身 |
 |---|---|
-| I1 | `vyos/prod/` のテンプレート（`00-base`、`10-lan`、`20-wan-common`、`20-wan-pd56`・`pd60`・`ra64`、`30-firewall`、`50-monitor`）と、siteのyamlから設定を作る `scripts/render_config.py`（`--from-lab` で検証環境の状態から移る `01-migrate-from-lab`、`--mape` でMAP-Eの `40-mape` も描く）。`render_config.py` は印（`@SSH_PUBKEY@`・`@ULA_PREFIX@`・`@SNMP_COMMUNITY@`・`@WAN_PREFIX64@`・`@NGN_GW_LLA@`）を置き換えずに出し、`scripts/pc02-commit.sh` が投入時に、`scripts/placeholders.sh` の一覧と値の形で、同じ名前の環境変数から置き換える。一覧に無い印・未設定・形の合わない値があれば、PC02に何も送らずに止まる |
+| I1 | `vyos/prod/` のテンプレート（`00-base`、`10-lan`、`20-wan-common`、`20-wan-pd56`・`pd60`・`ra64`、`30-firewall`、`50-monitor`）と、siteのyamlから設定を作る `scripts/render_config.py`（`--from-lab` で検証環境の状態から移る `01-migrate-from-lab`、`--mape` でMAP-Eの `40-mape` も描く）。`render_config.py` は、印（`@SSH_PUBKEY@`・`@ULA_PREFIX@`・`@SNMP_COMMUNITY@`・`@WAN_PREFIX64@`・`@NGN_GW_LLA@`）のうちsiteに値を書いていないもの（`lan.ula_prefix` などがsiteで印のまま）を置き換えずに出し、`scripts/pc02-commit.sh` が投入時に、`scripts/placeholders.sh` の一覧と値の形で、同じ名前の環境変数から置き換える。一覧に無い印・未設定・形の合わない値があれば、PC02に何も送らずに止まる |
 | I2 | `vyos/dscp-firewall.cmds` のルール番号を5に振り直し、flowtableのrule 10との衝突をなくす（§3-3） |
 | I3 | `scripts/mape_calc.py` に、型C用の `--ce-plen 128` を足す。型B用に、WANの/64をそのまま渡す使い方を `--help` に書く |
 | I4 | CI（`vyos-config.yaml`）に、型A・B・Cごとに生成した設定がcommitできるかの検査を足す。印には文書用のアドレスを入れて検査する |
