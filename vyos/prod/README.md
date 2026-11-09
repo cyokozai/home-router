@@ -6,12 +6,18 @@
 
 `scripts/render_config.py` は Jinja2 と PyYAML を使う（`requirements-dev.txt`）。作業用の Mac には入れず、コンテナの中で動かす。
 
+1 回だけ描くなら、コマンドごとに `docker run` する（描いたらコンテナは終わって消える）。
+
 ```
 docker run --rm -v "$PWD":/w -w /w python:3.12-slim sh -c \
   'pip install -q -r requirements-dev.txt && python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local'
 ```
 
-下の例は、そのコンテナの中で打つコマンド。
+続けていくつも描くなら、対話のコンテナを起動して、その中で `pip install -q -r requirements-dev.txt` を 1 回打ってから、下の例を打つ（`exit` でコンテナは消える）。
+
+```
+docker run --rm -it -v "$PWD":/w -w /w python:3.12-slim sh
+```
 
 ```
 python3 -I scripts/render_config.py site/example.yaml -o <出力先>
@@ -49,6 +55,8 @@ python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --fr
 ```
 
 - `01-migrate-from-lab.cmds` は、`baseline.cmds` にある次のものを消す: `eth0` の DHCP と `vrf`、`eth1`・`eth2` の検証用のアドレス、検証用の既定経路（IPv4・IPv6）、SSH・NTP・node-exporter の `vrf`、NTP サーバ 192.168.2.13、`vrf name MGMT`。
+- **管理系（VRF MGMT・`eth0` の DHCP・SSH の待ち受け）を変える投入なので、`scripts/pc02-commit.sh` に `01-migrate-from-lab.cmds` を渡す前に Yusuke の承認を得る**（CLAUDE.md §1 ルール 1）。
+- この commit の後、PC02 は管理系の DHCP のアドレス（`~/.ssh/config` の `pc02` が指す 192.168.2.14）を失う。`scripts/pc02-commit.sh` は同じ `pc02` に入り直せたときだけ confirm するので、入り直す経路（新しい LAN の 192.168.2.1 か、救出用の 192.168.255.1）と接続先を先に用意しないと、5 分後に元の設定へ戻る。その手順はまだ決めていない（切り替えの手順書で決める）。
 - **最初の commit だけ**で使う。2 回目からは `--from-lab` を付けずに描く。無い所を `delete` すると VyOS が拒否し、`scripts/pc02-commit.sh` が失敗する。
 - つなぐ順によらない。同じ commit で入れる部分が `set` する所とその上は消さない（例: 予行の site が LAN に 192.168.10.1/24 を使うなら、その行は消さずにコメントに残す。MAP-E の段や型C が既定経路を `set` するなら、経路ごとではなく検証用の `next-hop` だけを消す）。説明とホスト名は、部分が上書きするので消さない。
 - 残すもの: `hw-id`・`offload`・`loopback`・NTP の `allow-client` と VyOS の既定の NTP サーバ・`disable-password-authentication`・ログイン（今の鍵 `claude-lab` を含む）・コンソール・syslog など。
