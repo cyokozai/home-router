@@ -5,6 +5,7 @@ ssh は偽物に差し替える（PATH の先頭に置く）。偽物は渡さ�
 """
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -136,3 +137,134 @@ def test_key_ssh_check_opens_a_fresh_connection(tmp_path):
     for c in checks:
         for opt in ("BatchMode=yes", "ConnectTimeout=5", "ControlMaster=no", "ControlPath=none"):
             assert f"-o {opt}" in c, c
+
+
+# ---- 印の一般化（@SNMP_COMMUNITY@ 以外の印も、投入時に環境変数で置き換える） -------------------
+
+PLACEHOLDER_VARS = ("SNMP_COMMUNITY", "SSH_PUBKEY", "ULA_PREFIX", "WAN_PREFIX64", "NGN_GW_LLA")
+FILL = ROOT / "scripts" / "fill-placeholders.sh"
+PUBKEY = "AAAAC3NzaC1lZDI1NTE5AAAAIExampleExampleExampleExampleExampleExample"
+
+
+def run_env(tmp_path: Path, text: str, values: dict[str, str]) -> subprocess.CompletedProcess:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    ssh = bin_dir / "ssh"
+    ssh.write_text(FAKE_SSH)
+    ssh.chmod(0o755)
+    cmds = tmp_path / "in.cmds"
+    cmds.write_text(text)
+    env = {k: v for k, v in os.environ.items() if k not in PLACEHOLDER_VARS}
+    env |= {"PATH": f"{bin_dir}:{env['PATH']}", "FAKE_LOG": str(tmp_path), **values}
+    return subprocess.run(["bash", str(SCRIPT), str(cmds)], env=env, capture_output=True, text=True)
+
+
+PROD_LINES = """set system login user vyos authentication public-keys admin key '@SSH_PUBKEY@'
+set interfaces ethernet eth1 address '@ULA_PREFIX@::1/64'
+set service ndp-proxy interface eth2 prefix '@WAN_PREFIX64@::/64' mode 'static'
+set protocols static route6 ::/0 next-hop '@NGN_GW_LLA@' interface 'eth2'
+"""
+GOOD = {"SSH_PUBKEY": PUBKEY, "ULA_PREFIX": "fd12:3456:789a:1", "WAN_PREFIX64": "2001:db8:0:1",
+        "NGN_GW_LLA": "fe80::1"}
+
+
+def test_every_placeholder_is_replaced(tmp_path):
+    out = run_env(tmp_path, PROD_LINES, GOOD)
+    assert out.returncode == 0, out.stderr
+    sent = (tmp_path / "stdin").read_text()
+    assert not re.search(r"@[A-Z][A-Z0-9_]*@", sent)
+    assert f"key '{PUBKEY}'" in sent
+    assert "address 'fd12:3456:789a:1::1/64'" in sent
+    assert "prefix '2001:db8:0:1::/64'" in sent
+    assert "next-hop 'fe80::1'" in sent
+
+
+@pytest.mark.parametrize("missing", sorted(GOOD))
+def test_missing_variable_stops_before_ssh(tmp_path, missing):
+    out = run_env(tmp_path, PROD_LINES, {k: v for k, v in GOOD.items() if k != missing})
+    assert out.returncode != 0
+    assert missing in out.stderr
+    assert not (tmp_path / "calls").exists()
+
+
+@pytest.mark.parametrize(("name", "bad"), [
+    ("SSH_PUBKEY", "ssh-ed25519 AAAA"), ("SSH_PUBKEY", "x'y"),
+    ("ULA_PREFIX", "2001:db8:0:1"), ("ULA_PREFIX", "fd12:3456::"), ("ULA_PREFIX", "fd12:3456:789a:1::/64"),
+    ("WAN_PREFIX64", "2001:db8::/64"), ("WAN_PREFIX64", "2001:db8:0:1:2"),
+    ("NGN_GW_LLA", "2001:db8::1"), ("NGN_GW_LLA", "fe80::1'"),
+])
+def test_bad_value_stops_before_ssh(tmp_path, name, bad):
+    out = run_env(tmp_path, PROD_LINES, GOOD | {name: bad})
+    assert out.returncode != 0
+    assert name in out.stderr
+    assert not (tmp_path / "calls").exists()
+
+
+def test_unknown_placeholder_stops_before_ssh(tmp_path):
+    out = run_env(tmp_path, "set system host-name '@NO_SUCH_THING@'\n", {})
+    assert out.returncode != 0
+    assert "@NO_SUCH_THING@" in out.stderr
+    assert not (tmp_path / "calls").exists()
+
+
+def run_fill(tmp_path: Path, text: str, values: dict[str, str]) -> subprocess.CompletedProcess:
+    cmds = tmp_path / "in.cmds"
+    cmds.write_text(text)
+    env = {k: v for k, v in os.environ.items() if k not in PLACEHOLDER_VARS} | values
+    return subprocess.run(["bash", str(FILL), str(cmds)], env=env, capture_output=True, text=True)
+
+
+def test_fill_placeholders_prints_the_filled_lines(tmp_path):
+    out = run_fill(tmp_path, PROD_LINES, GOOD)
+    assert out.returncode == 0, out.stderr
+    assert "@SSH_PUBKEY@" not in out.stdout and "fd12:3456:789a:1::1/64" in out.stdout
+
+
+@pytest.mark.parametrize("token", ["@snmp_community@", "@Ula_Prefix@", "@_X@", "@NGN-GW@", "@9X@"])
+def test_malformed_placeholder_stops(tmp_path, token):
+    # 決まった形（@大文字_数字@）に合わない印も、置き換えずに残さない
+    out = run_env(tmp_path, f"set service snmp community '{token}' authorization 'ro'\n",
+                  {"SNMP_COMMUNITY": "Ab9-x_y!z*"})
+    assert out.returncode != 0
+    assert token in out.stderr
+    assert not (tmp_path / "calls").exists()
+    assert run_fill(tmp_path, f"set system host-name '{token}'\n", {}).returncode != 0
+
+
+@pytest.mark.parametrize("community", ["a@B@c", "@x@", "x@SSH_PUBKEY@y"])
+def test_at_signs_in_the_community_value_are_not_placeholders(tmp_path, community):
+    # community には @ が使える。置き換えた値の中の @ を印と読まない
+    # 同じ投入に別の印があっても、community の値の中を置き換えない
+    text = ("set service snmp community '@SNMP_COMMUNITY@' authorization 'ro'\n"
+            "set system login user vyos authentication public-keys admin key '@SSH_PUBKEY@'\n")
+    out = run_env(tmp_path, text, {"SNMP_COMMUNITY": community, "SSH_PUBKEY": PUBKEY})
+    assert out.returncode == 0, out.stderr
+    sent = (tmp_path / "stdin").read_text()
+    assert f"community '{community}' authorization" in sent
+    assert f"key '{PUBKEY}'" in sent
+
+
+def test_fill_placeholders_stops_when_an_input_file_is_unreadable(tmp_path):
+    # 一部のファイルを読めないまま残りだけを出すと、CI が欠けた設定を検査してしまう
+    good = tmp_path / "good.cmds"
+    good.write_text("set system host-name 'x'\n")
+    env = {k: v for k, v in os.environ.items() if k not in PLACEHOLDER_VARS}
+    out = subprocess.run(["bash", str(FILL), str(good), str(tmp_path / "missing.cmds")],
+                         env=env, capture_output=True, text=True)
+    assert out.returncode != 0 and out.stdout == ""
+    assert "missing.cmds" in out.stderr
+
+
+def test_fill_placeholders_allows_files_without_commands(tmp_path):
+    # コメントだけのファイル（set / delete の行が無い）は誤りではない
+    only_comment = tmp_path / "c.cmds"
+    only_comment.write_text("# コメントだけ\n")
+    env = {k: v for k, v in os.environ.items() if k not in PLACEHOLDER_VARS}
+    out = subprocess.run(["bash", str(FILL), str(only_comment)], env=env, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+
+
+def test_fill_placeholders_stops_on_unknown_or_missing(tmp_path):
+    assert run_fill(tmp_path, "set system host-name '@NOPE@'\n", {}).returncode != 0
+    out = run_fill(tmp_path, PROD_LINES, {})
+    assert out.returncode != 0 and out.stdout == ""

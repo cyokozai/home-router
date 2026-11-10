@@ -1,0 +1,100 @@
+# firewall: ステートフルの forward と flowtable、ルータ宛ての input、NGN 向けの DSCP の書き換え
+{% set lan = i.lan %}
+{% set wan = i.wan %}
+{% set port = firewall.dscp_udp_port %}
+
+# flowtable（vyos/tuning-3-flowtable.cmds の形）。IPv4 の WAN 側の tun0 は、tun0 を作る MAP-E の段（40-mape）で足す
+set firewall flowtable FT10G interface '{{ lan }}'
+set firewall flowtable FT10G interface '{{ wan }}'
+set firewall flowtable FT10G offload 'software'
+
+# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜135 で判定する
+{% for family in ("ipv4", "ipv6") %}
+{% set f = "set firewall " ~ family ~ " forward filter" %}
+{{ f }} default-action 'drop'
+{% if family == "ipv6" %}
+# rule 5: NGN は DSCP 0x88（AF41）の IPv6 を捨てるか 0 に書き換える。WireGuard（UDP {{ port }}）の DSCP を 0 にして通す
+# （vyos/dscp-firewall.cmds の形）。offload（rule 10）より先に置く: offload された後のパケットは forward の規則を通らない。
+# outbound-interface で WAN へ出る分だけにする: 書かないと、WAN から来た送信元ポート {{ port }} の新しい通信が
+# rule 100〜120 の判定より前に通ってしまう
+{{ f }} rule 5 action 'accept'
+{{ f }} rule 5 outbound-interface name '{{ wan }}'
+{{ f }} rule 5 protocol 'udp'
+{{ f }} rule 5 source port '{{ port }}'
+{{ f }} rule 5 set dscp '0'
+# rule 6: WAN から返る WireGuard（宛先ポート {{ port }}）を offload させずに通す。rule 10 で offload されると、
+# flowtable は双方向を登録するので、以後の LAN から WAN への送信も rule 5 を通らず、DSCP が書き換わらなくなる。
+# state を付ける: 付けないと、WAN から来た宛先ポート {{ port }} の新しい通信が rule 100〜120 の判定より前に通ってしまう
+{{ f }} rule 6 action 'accept'
+{{ f }} rule 6 inbound-interface name '{{ wan }}'
+{{ f }} rule 6 protocol 'udp'
+{{ f }} rule 6 destination port '{{ port }}'
+{{ f }} rule 6 state 'established'
+{{ f }} rule 6 state 'related'
+{% endif %}
+{{ f }} rule 10 action 'offload'
+{{ f }} rule 10 offload-target 'FT10G'
+{{ f }} rule 10 state 'established'
+{{ f }} rule 10 state 'related'
+{{ f }} rule 100 action 'accept'
+{{ f }} rule 100 state 'established'
+{{ f }} rule 100 state 'related'
+{{ f }} rule 110 action 'drop'
+{{ f }} rule 110 state 'invalid'
+{{ f }} rule 120 action 'accept'
+{{ f }} rule 120 inbound-interface name '{{ lan }}'
+{% if family == "ipv6" %}
+# rule 130〜135: RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6 だけを通す（type 1〜4・128・129）。
+# PMTUD に packet-too-big が要る。type-name は 1 規則に 1 つしか書けないので、種類ごとに規則を分ける
+{% for name in ("destination-unreachable", "packet-too-big", "time-exceeded", "parameter-problem", "echo-request", "echo-reply") %}
+{{ f }} rule {{ 130 + loop.index0 }} action 'accept'
+{{ f }} rule {{ 130 + loop.index0 }} protocol 'ipv6-icmp'
+{{ f }} rule {{ 130 + loop.index0 }} icmpv6 type-name '{{ name }}'
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+# input（ルータ宛て）。LAN と救出用の IF から、および戻りの通信だけを受ける
+{% set f = "set firewall ipv4 input filter" %}
+{{ f }} default-action 'drop'
+{{ f }} rule 10 action 'accept'
+{{ f }} rule 10 state 'established'
+{{ f }} rule 10 state 'related'
+{{ f }} rule 20 action 'accept'
+{{ f }} rule 20 protocol 'icmp'
+{{ f }} rule 30 action 'accept'
+{{ f }} rule 30 inbound-interface name '{{ lan }}'
+{{ f }} rule 40 action 'accept'
+{{ f }} rule 40 inbound-interface name '{{ i.rescue }}'
+{{ f }} rule 50 action 'accept'
+{{ f }} rule 50 inbound-interface name 'lo'
+
+{% set f = "set firewall ipv6 input filter" %}
+{{ f }} default-action 'drop'
+{{ f }} rule 10 action 'accept'
+{{ f }} rule 10 state 'established'
+{{ f }} rule 10 state 'related'
+# ND・RA・PMTUD に要る
+{{ f }} rule 20 action 'accept'
+{{ f }} rule 20 protocol 'ipv6-icmp'
+# DHCPv6 のクライアント（NGN の DHCPv6 サーバはリンクローカルから 546 番へ返す）
+{{ f }} rule 30 action 'accept'
+{{ f }} rule 30 protocol 'udp'
+{{ f }} rule 30 source address 'fe80::/10'
+{{ f }} rule 30 destination port '546'
+{{ f }} rule 40 action 'accept'
+{{ f }} rule 40 inbound-interface name '{{ lan }}'
+# MAP-E: BR から届く IPv4 入りの IPv6（ipip6）
+{{ f }} rule 50 action 'accept'
+{{ f }} rule 50 protocol 'ipencap'
+{{ f }} rule 50 source address '{{ br }}'
+{{ f }} rule 60 action 'accept'
+{{ f }} rule 60 inbound-interface name 'lo'
+{% if firewall.router_wireguard %}
+
+# WireGuard をルータで終端するとき: ルータ自身が送る分の DSCP も 0 にする（vyos/dscp-firewall.cmds の output の行）
+set firewall ipv6 output filter rule 5 action 'accept'
+set firewall ipv6 output filter rule 5 protocol 'udp'
+set firewall ipv6 output filter rule 5 source port '{{ port }}'
+set firewall ipv6 output filter rule 5 set dscp '0'
+{% endif %}

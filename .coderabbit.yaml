@@ -37,7 +37,8 @@ reviews:
     - "!**/*.jsonl"
 
   path_instructions:
-    - path: "vyos/**/*.cmds"
+    # *.cmds と、vyos/prod/ のテンプレート *.cmds.j2 の両方に当てる
+    - path: "vyos/**/*.cmds*"
       instructions: |
         VyOS へ投入する設定の差分。次を確かめる。
         - 本番で使う機能は VyOS の `set` だけで書けているか（CLAUDE.md §1 ルール 10）。シェル・生の nftables・起動スクリプト（vyos-postconfig-bootup.script など）で補っていないか。
@@ -46,6 +47,7 @@ reviews:
         - 秘密の値（SNMP の community・鍵・パスワード・WireGuard の private-key など）を直接書いていないか。置き換え用の印にする。
         - `CLAUDE.md` §6 のコードブロックと食い違っていないか（`tests/test_vyos_cmds.py` が検査している。片方だけ直していないか）。
         - コンテナで確かめられない行を足したなら、`vyos/container-unsupported.txt` に理由つきで載せているか。
+        - 例外: `vyos/prod/`（本番の PC02 の設定。テンプレート `*.cmds.j2` と、それを描いた `vyos/prod/example/*.cmds`）は本番の設計で、`eth0` は救出用（description 'RESCUE'、ゲートウェイなし）、管理は LAN 側（`service ssh` と node-exporter の listen-address が LAN のアドレス）、VRF `MGMT` は使わない。ここでは「管理系に触れていないか」の観点を当てない。代わりに、管理の待ち受けが LAN と救出用のアドレスだけになっているか、WAN（`eth2`）から届く input を default drop で落としているかを見る。`vyos/prod/example/` は `scripts/render_config.py` が描いたもので、手で直していないか（`tests/test_render_config.py` が再生成と一致を確かめる）。
     - path: "scripts/**/*.sh"
       instructions: |
         シェルスクリプト。次を確かめる。
@@ -59,11 +61,13 @@ reviews:
       instructions: |
         Python のスクリプト。次を確かめる。
         - 標準ライブラリだけで動くか（作業用の Mac に何も入れない方針。外部パッケージを import していないか）。
+          例外は `scripts/render_config.py` だけ。ユーザーが Jinja2 での生成を求めたので、Jinja2 と PyYAML を使う（`requirements-dev.txt` にある）。作業用の Mac には入れず、コンテナ（`python:3.12-slim` に requirements-dev.txt を入れたもの）か CI で動かす。ほかのスクリプトがこの 2 つを import していたら指摘する。
         - 試験の結果を、手で丸めた数字だけで残していないか（§1 ルール 4）。`results/<試験ID>/` に JSON とログの生の値を残しているか。
     - path: "tests/**"
       instructions: |
         テスト。次を確かめる。
         - 標準ライブラリ（と requirements-dev.txt にある pytest）だけで動くか。作業用の Mac に何も入れない方針。
+          例外: `scripts/render_config.py` を検査するテスト（`tests/test_render_config.py`）は、同じく requirements-dev.txt の Jinja2 と PyYAML を使う。どちらも作業用の Mac には入れず、コンテナか CI で動かす。
         - 試験の結果を手で丸めた数字だけで期待値にしていないか（§1 ルール 4）。
         - 検査の対象（CLAUDE.md の節、`vyos/*.cmds`、`lab/`）と実物が食い違ったときに、ちゃんと落ちる書き方になっているか。
     - path: "CLAUDE.md"

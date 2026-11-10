@@ -1,0 +1,35 @@
+# 基本: ホスト名・時刻・NTP・ログイン・SSH・救出用の IF・オフロードとリング・conntrack
+# 本番では VRF MGMT を使わない（管理は LAN の {{ lan.ip }} から）。{{ i.rescue }} は救出用で、ゲートウェイを持たない。
+set system host-name '{{ host_name }}'
+set system time-zone '{{ time_zone }}'
+{% for server in ntp_servers %}
+set service ntp server '{{ server }}'
+{% endfor %}
+{% if tuning.performance %}
+set system option performance '{{ tuning.performance }}'
+{% endif %}
+
+# ログインは鍵だけ。鍵の本体は印 @SSH_PUBKEY@ のまま出し、投入時に環境変数 SSH_PUBKEY で置き換える
+set system login user {{ login.user }} authentication public-keys {{ login.key_name }} type '{{ login.key_type }}'
+set system login user {{ login.user }} authentication public-keys {{ login.key_name }} key '@SSH_PUBKEY@'
+set service ssh listen-address '{{ lan.ip }}'
+set service ssh listen-address '{{ rescue.ip }}'
+set service ssh disable-password-authentication
+
+# 救出用（直結した PC から入る。ゲートウェイなし）
+set interfaces ethernet {{ i.rescue }} description 'RESCUE'
+set interfaces ethernet {{ i.rescue }} address '{{ rescue.address }}'
+
+# vyos/tuning-1-offload.cmds の形（RPS は入れない。実機の試験で 64B の転送性能が半分になった）
+{% for ifname in (i.lan, i.wan) %}
+set interfaces ethernet {{ ifname }} offload gro
+set interfaces ethernet {{ ifname }} offload gso
+set interfaces ethernet {{ ifname }} offload sg
+set interfaces ethernet {{ ifname }} offload tso
+set interfaces ethernet {{ ifname }} ring-buffer rx '{{ tuning.ring_buffer }}'
+set interfaces ethernet {{ ifname }} ring-buffer tx '{{ tuning.ring_buffer }}'
+{% endfor %}
+
+# vyos/conntrack-large.cmds の形（1 件約 256 バイト）
+set system conntrack table-size '{{ tuning.conntrack_table_size }}'
+set system conntrack hash-size '{{ tuning.conntrack_hash_size }}'

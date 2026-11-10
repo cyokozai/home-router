@@ -6,6 +6,10 @@ VyOS には MAP-E を自動で組む機能が無いので、計算した値を�
   python3 -I scripts/mape_calc.py <委任プレフィックス>                     値を表示する
   python3 -I scripts/mape_calc.py --cmds --wan-if <WAN の IF> <委任プレフィックス> [--old-prefix <前のプレフィックス>]
                                                                           入れ直す set の行を出す
+  （本番の WAN の型。vyos/prod/ の 20-wan-*.cmds）
+  型A（pd56、ONU 直結）: DHCPv6-PD で受けた /56 を渡す
+  型B（pd60、HGW 配下）: WAN で観測した /64（HGW が RA で配る /64）をそのまま渡す。上位 56 ビットで計算する
+  型C（ra64、RA の /64 だけ）: 受けた /64 を渡し、--ce-plen 128 を付ける（/64 は LAN 側に置くため、CE は /128）
 
 計算（v6プラスの 4 ルールは EA 25 ビット、PSID の長さ k=8、オフセット a=4）:
   委任プレフィックス（/56、または /64 の上位 56 ビット）を 128 ビットの整数 P とし、Rule IPv6（/31）でルールを選ぶ。
@@ -36,6 +40,7 @@ LAB_LAN = gen.LAB_LAN
 TUNNEL_MTU = 1460
 ADJUST_MSS = 1420
 CE_PREFIX_LEN = 64
+CE_PREFIX_LENS = (64, 128)  # WAN に置く CE のアドレスの長さ。型C は 128
 
 
 class MapeError(ValueError):
@@ -140,16 +145,23 @@ def calc(prefix: str, rule: Rule | None = None, iid_format: str = "draft03") -> 
     return Result(net, rule, ipv4, psid, ports, ce, ipaddress.IPv6Address(rule.br), warnings)
 
 
+def check_ce_plen(ce_plen: int) -> int:
+    if ce_plen not in CE_PREFIX_LENS:
+        raise MapeError(f"CE のアドレスの長さは {' か '.join(map(str, CE_PREFIX_LENS))}: /{ce_plen}")
+    return ce_plen
+
+
 def cmds_lines(ipv4: str, psid: int, ce: str, br: str, wan_if: str, lan: str = LAB_LAN,
-               ports: list[tuple[int, int]] | None = None) -> list[str]:
-    """vyos/mape-portsets.cmds と同じ構成の set の行（値だけ差し替える）。"""
+               ports: list[tuple[int, int]] | None = None, ce_plen: int = CE_PREFIX_LEN) -> list[str]:
+    """vyos/mape-portsets.cmds と同じ構成の set の行（値だけ差し替える）。ce_plen は WAN に置く CE のアドレスの長さ。"""
+    check_ce_plen(ce_plen)
     ipv4 = str(ipaddress.IPv4Address(ipv4))
     ce = str(ipaddress.IPv6Address(ce))
     br = str(ipaddress.IPv6Address(br))
     lan = str(ipaddress.IPv4Network(lan))
     return [
         "delete protocols static route 0.0.0.0/0",
-        f"set interfaces ethernet {wan_if} address '{ce}/{CE_PREFIX_LEN}'",
+        f"set interfaces ethernet {wan_if} address '{ce}/{ce_plen}'",
         "set interfaces tunnel tun0 encapsulation 'ipip6'",
         f"set interfaces tunnel tun0 source-address '{ce}'",
         f"set interfaces tunnel tun0 remote '{br}'",
@@ -166,15 +178,23 @@ def cmds_lines(ipv4: str, psid: int, ce: str, br: str, wan_if: str, lan: str = L
     ]
 
 
-def result_cmds(r: Result, wan_if: str, lan: str = LAB_LAN, old: Result | None = None) -> list[str]:
-    """入れ直す行。old（前のプレフィックスの結果）を渡すと、前の CE と IPv4 のアドレスを先に消す。"""
+def result_cmds(r: Result, wan_if: str, lan: str = LAB_LAN, old: Result | None = None,
+                ce_plen: int = CE_PREFIX_LEN, old_ce_plen: int | None = None) -> list[str]:
+    """入れ直す行。old（前のプレフィックスの結果）を渡すと、前の CE と IPv4 のアドレスを先に消す。
+
+    old_ce_plen は前の CE を付けていた長さ（既定は ce_plen と同じ。WAN の型を変えたときに別にする）。
+    CE はアドレスと長さの両方で比べ、どちらかが違えば前の行を消す。
+    """
+    check_ce_plen(ce_plen)
+    old_ce_plen = check_ce_plen(ce_plen if old_ce_plen is None else old_ce_plen)
     lines = []
     if old is not None:
-        if old.ce != r.ce:
-            lines.append(f"delete interfaces ethernet {wan_if} address '{old.ce}/{CE_PREFIX_LEN}'")
+        if (old.ce, old_ce_plen) != (r.ce, ce_plen):
+            lines.append(f"delete interfaces ethernet {wan_if} address '{old.ce}/{old_ce_plen}'")
         if old.ipv4 != r.ipv4:
             lines.append(f"delete interfaces tunnel tun0 address '{old.ipv4}/32'")
-    return lines + cmds_lines(str(r.ipv4), r.psid, str(r.ce), str(r.br), wan_if, lan, ports=r.ports)
+    return lines + cmds_lines(str(r.ipv4), r.psid, str(r.ce), str(r.br), wan_if, lan, ports=r.ports,
+                              ce_plen=ce_plen)
 
 
 def summary(r: Result) -> str:
@@ -192,14 +212,21 @@ def summary(r: Result) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="v6プラス（MAP-E）の値を委任プレフィックスから計算する")
+    p = argparse.ArgumentParser(description="v6プラス（MAP-E）の値を委任プレフィックスから計算する",
+                                epilog="WAN の型ごとの渡し方: 型A（pd56）は受けた /56。"
+                                       "型B（pd60、HGW 配下）は WAN で観測した /64 をそのまま渡す。"
+                                       "型C（ra64）は受けた /64 に --ce-plen 128 を付ける")
     p.add_argument("prefix", help="NGN から受けた委任プレフィックス（例 240b:10:aabb:cc00::/56、/64 も可）")
     p.add_argument("--iid-format", choices=["draft03", "rfc7597"], default="draft03",
                    help="CE のインターフェース ID の形（既定 draft03。v6プラスはこちら）")
     p.add_argument("--cmds", action="store_true", help="入れ直す VyOS の set の行を出す")
     p.add_argument("--wan-if", help="CE アドレスを置く WAN 側の ethernet の名前（--cmds で必須）")
     p.add_argument("--lan", default=LAB_LAN, help=f"NAT する LAN 側の網（既定 {LAB_LAN}）")
+    p.add_argument("--ce-plen", type=int, choices=CE_PREFIX_LENS, default=CE_PREFIX_LEN,
+                   help="WAN に置く CE のアドレスの長さ（既定 64。型C は 128）")
     p.add_argument("--old-prefix", help="前のプレフィックス。前の CE と IPv4 のアドレスを消す delete を先頭に出す")
+    p.add_argument("--old-ce-plen", type=int, choices=CE_PREFIX_LENS,
+                   help="前の CE を付けていた長さ（既定は --ce-plen と同じ。WAN の型を変えたときに指定する）")
     args = p.parse_args(argv)
     if args.cmds and not args.wan_if:
         p.error("--cmds には --wan-if が要る")
@@ -212,7 +239,8 @@ def main(argv: list[str] | None = None) -> int:
     for w in r.warnings:
         print(f"mape_calc: 警告: {w}", file=sys.stderr)
     if args.cmds:
-        print("\n".join(result_cmds(r, wan_if=args.wan_if, lan=args.lan, old=old)))
+        print("\n".join(result_cmds(r, wan_if=args.wan_if, lan=args.lan, old=old, ce_plen=args.ce_plen,
+                                    old_ce_plen=args.old_ce_plen)))
     else:
         print(summary(r))
     return 0

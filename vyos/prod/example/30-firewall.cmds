@@ -1,0 +1,106 @@
+# 生成: scripts/render_config.py（site: example.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/30-firewall.cmds.j2）か site を直して描き直す
+# firewall: ステートフルの forward と flowtable、ルータ宛ての input、NGN 向けの DSCP の書き換え
+
+# flowtable（vyos/tuning-3-flowtable.cmds の形）。IPv4 の WAN 側の tun0 は、tun0 を作る MAP-E の段（40-mape）で足す
+set firewall flowtable FT10G interface 'eth1'
+set firewall flowtable FT10G interface 'eth2'
+set firewall flowtable FT10G offload 'software'
+
+# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜135 で判定する
+set firewall ipv4 forward filter default-action 'drop'
+set firewall ipv4 forward filter rule 10 action 'offload'
+set firewall ipv4 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv4 forward filter rule 10 state 'established'
+set firewall ipv4 forward filter rule 10 state 'related'
+set firewall ipv4 forward filter rule 100 action 'accept'
+set firewall ipv4 forward filter rule 100 state 'established'
+set firewall ipv4 forward filter rule 100 state 'related'
+set firewall ipv4 forward filter rule 110 action 'drop'
+set firewall ipv4 forward filter rule 110 state 'invalid'
+set firewall ipv4 forward filter rule 120 action 'accept'
+set firewall ipv4 forward filter rule 120 inbound-interface name 'eth1'
+set firewall ipv6 forward filter default-action 'drop'
+# rule 5: NGN は DSCP 0x88（AF41）の IPv6 を捨てるか 0 に書き換える。WireGuard（UDP 51820）の DSCP を 0 にして通す
+# （vyos/dscp-firewall.cmds の形）。offload（rule 10）より先に置く: offload された後のパケットは forward の規則を通らない。
+# outbound-interface で WAN へ出る分だけにする: 書かないと、WAN から来た送信元ポート 51820 の新しい通信が
+# rule 100〜120 の判定より前に通ってしまう
+set firewall ipv6 forward filter rule 5 action 'accept'
+set firewall ipv6 forward filter rule 5 outbound-interface name 'eth2'
+set firewall ipv6 forward filter rule 5 protocol 'udp'
+set firewall ipv6 forward filter rule 5 source port '51820'
+set firewall ipv6 forward filter rule 5 set dscp '0'
+# rule 6: WAN から返る WireGuard（宛先ポート 51820）を offload させずに通す。rule 10 で offload されると、
+# flowtable は双方向を登録するので、以後の LAN から WAN への送信も rule 5 を通らず、DSCP が書き換わらなくなる。
+# state を付ける: 付けないと、WAN から来た宛先ポート 51820 の新しい通信が rule 100〜120 の判定より前に通ってしまう
+set firewall ipv6 forward filter rule 6 action 'accept'
+set firewall ipv6 forward filter rule 6 inbound-interface name 'eth2'
+set firewall ipv6 forward filter rule 6 protocol 'udp'
+set firewall ipv6 forward filter rule 6 destination port '51820'
+set firewall ipv6 forward filter rule 6 state 'established'
+set firewall ipv6 forward filter rule 6 state 'related'
+set firewall ipv6 forward filter rule 10 action 'offload'
+set firewall ipv6 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv6 forward filter rule 10 state 'established'
+set firewall ipv6 forward filter rule 10 state 'related'
+set firewall ipv6 forward filter rule 100 action 'accept'
+set firewall ipv6 forward filter rule 100 state 'established'
+set firewall ipv6 forward filter rule 100 state 'related'
+set firewall ipv6 forward filter rule 110 action 'drop'
+set firewall ipv6 forward filter rule 110 state 'invalid'
+set firewall ipv6 forward filter rule 120 action 'accept'
+set firewall ipv6 forward filter rule 120 inbound-interface name 'eth1'
+# rule 130〜135: RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6 だけを通す（type 1〜4・128・129）。
+# PMTUD に packet-too-big が要る。type-name は 1 規則に 1 つしか書けないので、種類ごとに規則を分ける
+set firewall ipv6 forward filter rule 130 action 'accept'
+set firewall ipv6 forward filter rule 130 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 130 icmpv6 type-name 'destination-unreachable'
+set firewall ipv6 forward filter rule 131 action 'accept'
+set firewall ipv6 forward filter rule 131 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 131 icmpv6 type-name 'packet-too-big'
+set firewall ipv6 forward filter rule 132 action 'accept'
+set firewall ipv6 forward filter rule 132 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 132 icmpv6 type-name 'time-exceeded'
+set firewall ipv6 forward filter rule 133 action 'accept'
+set firewall ipv6 forward filter rule 133 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 133 icmpv6 type-name 'parameter-problem'
+set firewall ipv6 forward filter rule 134 action 'accept'
+set firewall ipv6 forward filter rule 134 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 134 icmpv6 type-name 'echo-request'
+set firewall ipv6 forward filter rule 135 action 'accept'
+set firewall ipv6 forward filter rule 135 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 135 icmpv6 type-name 'echo-reply'
+
+# input（ルータ宛て）。LAN と救出用の IF から、および戻りの通信だけを受ける
+set firewall ipv4 input filter default-action 'drop'
+set firewall ipv4 input filter rule 10 action 'accept'
+set firewall ipv4 input filter rule 10 state 'established'
+set firewall ipv4 input filter rule 10 state 'related'
+set firewall ipv4 input filter rule 20 action 'accept'
+set firewall ipv4 input filter rule 20 protocol 'icmp'
+set firewall ipv4 input filter rule 30 action 'accept'
+set firewall ipv4 input filter rule 30 inbound-interface name 'eth1'
+set firewall ipv4 input filter rule 40 action 'accept'
+set firewall ipv4 input filter rule 40 inbound-interface name 'eth0'
+set firewall ipv4 input filter rule 50 action 'accept'
+set firewall ipv4 input filter rule 50 inbound-interface name 'lo'
+
+set firewall ipv6 input filter default-action 'drop'
+set firewall ipv6 input filter rule 10 action 'accept'
+set firewall ipv6 input filter rule 10 state 'established'
+set firewall ipv6 input filter rule 10 state 'related'
+# ND・RA・PMTUD に要る
+set firewall ipv6 input filter rule 20 action 'accept'
+set firewall ipv6 input filter rule 20 protocol 'ipv6-icmp'
+# DHCPv6 のクライアント（NGN の DHCPv6 サーバはリンクローカルから 546 番へ返す）
+set firewall ipv6 input filter rule 30 action 'accept'
+set firewall ipv6 input filter rule 30 protocol 'udp'
+set firewall ipv6 input filter rule 30 source address 'fe80::/10'
+set firewall ipv6 input filter rule 30 destination port '546'
+set firewall ipv6 input filter rule 40 action 'accept'
+set firewall ipv6 input filter rule 40 inbound-interface name 'eth1'
+# MAP-E: BR から届く IPv4 入りの IPv6（ipip6）
+set firewall ipv6 input filter rule 50 action 'accept'
+set firewall ipv6 input filter rule 50 protocol 'ipencap'
+set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
+set firewall ipv6 input filter rule 60 action 'accept'
+set firewall ipv6 input filter rule 60 inbound-interface name 'lo'

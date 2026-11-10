@@ -7,13 +7,15 @@
 # 2. 起動直後の設定に フェーズ1 を入れて commit し、それを基準（baseline）として保存する
 # 3. 差分を 1 本ずつ「基準に戻してから」入れて commit する（差分同士は独立に検査する）
 # 4. QoS の差分（qos-*.cmds）では、commit 後に eth2 の tc filter に pedit が入ったことも確かめる
+#    SNMP の差分（snmp-*.cmds）では snmpd.conf の community を、検証環境から本番へ移る差分（prod-from-lab*.cmds）では
+#    VRF MGMT・検証用のアドレスと経路が消え、SSH が既定の VRF で 192.168.2.1 を待ち受けることを確かめる
 # コンテナで検証できない行は vyos/container-unsupported.txt で扱う（scripts/vyos-check-cmds.sh）。
 #
 # 環境変数: VYOS_IMAGE（既定 home-router/vyos:rolling）、VYOS_CONTAINER（既定 vyos-config-check）、
 #           VYOS_KEEP=1 で終了後もコンテナを残す（調査用）
 set -euo pipefail
 
-[[ $# -ge 1 ]] || { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1; }
+[[ $# -ge 1 ]] || { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1; }
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "${here}/.." && pwd)"
 image="${VYOS_IMAGE:-home-router/vyos:rolling}"
@@ -109,6 +111,60 @@ for delta in "$@"; do
       echo "OK ${delta}: community は 192.168.2.50/32 だけに許されている"
     else
       echo "NG ${delta}: snmpd.conf の community が 192.168.2.50/32 だけになっていない" >&2
+      failed+=("${delta}")
+    fi
+  fi
+  if [[ "$(basename "${delta}")" == prod-from-lab*.cmds ]]; then
+    # 検証環境の状態（実機の PC02 と同じ形の基準）から、移行の段と本番の部分を 1 回で commit したあと、
+    # VRF MGMT・検証用のアドレスと経路・前の NTP サーバが残っておらず、SSH が既定の VRF で本番のアドレスを待ち受けること
+    absent=(
+      "vrf name MGMT"
+      "interfaces ethernet eth0 vrf"
+      "service ssh vrf"
+      "service ntp vrf"
+      "service monitoring prometheus node-exporter vrf"
+      "interfaces ethernet eth0 address dhcp"
+      "interfaces ethernet eth1 address 192.168.10.1/24"
+      "interfaces ethernet eth1 address 2001:db8:10::1/64"
+      "interfaces ethernet eth2 address 192.168.20.1/30"
+      "interfaces ethernet eth2 address 2001:db8:20::1/64"
+      "protocols static route 0.0.0.0/0 next-hop 192.168.20.2"
+      "protocols static route6 ::/0 next-hop 2001:db8:20::2"
+      "service ntp server 192.168.2.13"
+    )
+    # 問い合わせが壊れて何でも「無い」と答える場合に備えて、あるはずの所も問う
+    present=(
+      "service ssh listen-address 192.168.2.1"
+      "interfaces ethernet eth0 address 192.168.255.1/24"
+    )
+    if [[ "$(basename "${delta}")" == *mape*.cmds ]]; then
+      present+=("protocols static route 0.0.0.0/0 interface tun0")
+    else
+      absent+=("protocols static route 0.0.0.0/0" "protocols static route6 ::/0")
+    fi
+    # shellcheck disable=SC2016
+    {
+      echo 'source /opt/vyatta/etc/functions/script-template'
+      echo 'configure'
+      for p in "${absent[@]}"; do echo "if \$API exists ${p}; then echo 'LEFT ${p}'; fi"; done
+      for p in "${present[@]}"; do echo "if ! \$API exists ${p}; then echo 'MISSING ${p}'; fi"; done
+      echo 'echo QUERY_DONE'
+      echo 'exit'
+    } | docker exec -i "${c}" sh -c 'cat > /tmp/vyos-from-lab-check.sh'
+    answer="$(docker exec "${c}" sg vyattacfg -c '/bin/vbash /tmp/vyos-from-lab-check.sh' 2>&1 || true)"
+    vrfs="$(docker exec "${c}" ip -br link show type vrf 2>&1 || true)"
+    ssh22="$(docker exec "${c}" ss -Hltn 'sport = :22' 2>&1 || true)"
+    echo "-- 設定の問い合わせ"; echo "${answer}"
+    echo "-- VRF のデバイス"; echo "${vrfs:-（無し）}"
+    echo "-- 22 番で待ち受けている所"; echo "${ssh22}"
+    ok=1
+    if ! grep -q '^QUERY_DONE' <<< "${answer}" || grep -qE '^(LEFT|MISSING) ' <<< "${answer}"; then ok=0; fi
+    if [[ -n "${vrfs}" ]]; then ok=0; fi
+    if ! grep -qE '(^|[[:space:]])192\.168\.2\.1:22([[:space:]]|$)' <<< "${ssh22}"; then ok=0; fi
+    if ((ok)); then
+      echo "OK ${delta}: 検証環境の名残が無く、SSH は既定の VRF で 192.168.2.1 を待ち受けている"
+    else
+      echo "NG ${delta}: 検証環境の名残がある、または SSH が 192.168.2.1 で待ち受けていない" >&2
       failed+=("${delta}")
     fi
   fi

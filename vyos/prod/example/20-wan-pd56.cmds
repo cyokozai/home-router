@@ -1,0 +1,6 @@
+# 生成: scripts/render_config.py（site: example.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/20-wan-pd56.cmds.j2）か site を直して描き直す
+# 型A: ONU 直結で DHCPv6-PD の /56 を受ける（光クロス、ひかり電話なし）
+# サブネット ID 0 は MAP-E の CE 用なので、LAN には 1 を使う
+set interfaces ethernet eth2 dhcpv6-options pd 0 length '56'
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 sla-id '1'
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 address '1'

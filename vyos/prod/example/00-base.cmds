@@ -1,0 +1,37 @@
+# 生成: scripts/render_config.py（site: example.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/00-base.cmds.j2）か site を直して描き直す
+# 基本: ホスト名・時刻・NTP・ログイン・SSH・救出用の IF・オフロードとリング・conntrack
+# 本番では VRF MGMT を使わない（管理は LAN の 192.168.2.1 から）。eth0 は救出用で、ゲートウェイを持たない。
+set system host-name 'home-router'
+set system time-zone 'Asia/Tokyo'
+set service ntp server 'ntp.nict.jp'
+set service ntp server 'time.google.com'
+set system option performance 'network-throughput'
+
+# ログインは鍵だけ。鍵の本体は印 @SSH_PUBKEY@ のまま出し、投入時に環境変数 SSH_PUBKEY で置き換える
+set system login user vyos authentication public-keys admin type 'ssh-ed25519'
+set system login user vyos authentication public-keys admin key '@SSH_PUBKEY@'
+set service ssh listen-address '192.168.2.1'
+set service ssh listen-address '192.168.255.1'
+set service ssh disable-password-authentication
+
+# 救出用（直結した PC から入る。ゲートウェイなし）
+set interfaces ethernet eth0 description 'RESCUE'
+set interfaces ethernet eth0 address '192.168.255.1/24'
+
+# vyos/tuning-1-offload.cmds の形（RPS は入れない。実機の試験で 64B の転送性能が半分になった）
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 offload gso
+set interfaces ethernet eth1 offload sg
+set interfaces ethernet eth1 offload tso
+set interfaces ethernet eth1 ring-buffer rx '4096'
+set interfaces ethernet eth1 ring-buffer tx '4096'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth2 offload gso
+set interfaces ethernet eth2 offload sg
+set interfaces ethernet eth2 offload tso
+set interfaces ethernet eth2 ring-buffer rx '4096'
+set interfaces ethernet eth2 ring-buffer tx '4096'
+
+# vyos/conntrack-large.cmds の形（1 件約 256 バイト）
+set system conntrack table-size '1048576'
+set system conntrack hash-size '262144'
