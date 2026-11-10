@@ -279,6 +279,55 @@ def test_dscp_rewrite_comes_before_offload_and_only_toward_the_wan():
     assert "set firewall ipv6 forward filter rule 5 outbound-interface name 'eth2'" in fw
 
 
+def forward6_rules(fw: list[str]) -> dict[int, list[str]]:
+    """ipv6 forward の規則を番号ごとに、「rule N 」より後ろの部分の一覧にしたもの。"""
+    head = "set firewall ipv6 forward filter rule "
+    rules: dict[int, list[str]] = {}
+    for line in fw:
+        if line.startswith(head):
+            num, rest = line[len(head):].split(" ", 1)
+            rules.setdefault(int(num), []).append(rest)
+    return rules
+
+
+def test_wireguard_return_is_accepted_before_offload():
+    # WAN から返る WireGuard（宛先ポート 51820）が rule 10 で offload されると、flowtable は双方向を登録するので、
+    # 以後の LAN から WAN への送信も forward の規則（rule 5 の DSCP の書き換え）を通らなくなる
+    fw = commands(parts()["30-firewall.cmds"])
+    rules = forward6_rules(fw)
+    # VyOS は規則を番号の順に当てるので、offload の規則より小さい番号にする
+    assert 6 < min(n for n, r in rules.items() if "action 'offload'" in r)
+    assert sorted(rules[6]) == sorted([
+        "action 'accept'",
+        "inbound-interface name 'eth2'",
+        "protocol 'udp'",
+        "destination port '51820'",
+        "state 'established'",
+        "state 'related'",
+    ])
+    assert fw.index("set firewall ipv6 forward filter rule 6 action 'accept'") < \
+        fw.index("set firewall ipv6 forward filter rule 10 action 'offload'")
+
+
+RFC4890_FORWARD_ICMPV6 = {
+    "destination-unreachable", "packet-too-big", "time-exceeded", "parameter-problem",
+    "echo-request", "echo-reply",
+}
+
+
+def test_forward_icmpv6_allows_only_the_rfc4890_types():
+    # RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6（type 1〜4・128・129）だけを通す
+    rules = forward6_rules(commands(parts()["30-firewall.cmds"]))
+    icmp = {n: r for n, r in rules.items() if "protocol 'ipv6-icmp'" in r}
+    names = []
+    for n, r in icmp.items():
+        assert "action 'accept'" in r
+        typed = [x for x in r if x.startswith("icmpv6 ")]
+        assert len(typed) == 1 and typed[0].startswith("icmpv6 type-name "), f"rule {n}: {r}"
+        names.append(typed[0].split("'")[1])
+    assert sorted(names) == sorted(RFC4890_FORWARD_ICMPV6)
+
+
 def test_router_wireguard_output_dscp_is_optional():
     off = commands(parts()["30-firewall.cmds"])
     assert not [line for line in off if " output " in line]

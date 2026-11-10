@@ -8,7 +8,7 @@ set firewall flowtable FT10G interface '{{ lan }}'
 set firewall flowtable FT10G interface '{{ wan }}'
 set firewall flowtable FT10G offload 'software'
 
-# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜130 で判定する
+# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜135 で判定する
 {% for family in ("ipv4", "ipv6") %}
 {% set f = "set firewall " ~ family ~ " forward filter" %}
 {{ f }} default-action 'drop'
@@ -22,6 +22,15 @@ set firewall flowtable FT10G offload 'software'
 {{ f }} rule 5 protocol 'udp'
 {{ f }} rule 5 source port '{{ port }}'
 {{ f }} rule 5 set dscp '0'
+# rule 6: WAN から返る WireGuard（宛先ポート {{ port }}）を offload させずに通す。rule 10 で offload されると、
+# flowtable は双方向を登録するので、以後の LAN から WAN への送信も rule 5 を通らず、DSCP が書き換わらなくなる。
+# state を付ける: 付けないと、WAN から来た宛先ポート {{ port }} の新しい通信が rule 100〜120 の判定より前に通ってしまう
+{{ f }} rule 6 action 'accept'
+{{ f }} rule 6 inbound-interface name '{{ wan }}'
+{{ f }} rule 6 protocol 'udp'
+{{ f }} rule 6 destination port '{{ port }}'
+{{ f }} rule 6 state 'established'
+{{ f }} rule 6 state 'related'
 {% endif %}
 {{ f }} rule 10 action 'offload'
 {{ f }} rule 10 offload-target 'FT10G'
@@ -35,8 +44,13 @@ set firewall flowtable FT10G offload 'software'
 {{ f }} rule 120 action 'accept'
 {{ f }} rule 120 inbound-interface name '{{ lan }}'
 {% if family == "ipv6" %}
-{{ f }} rule 130 action 'accept'
-{{ f }} rule 130 protocol 'ipv6-icmp'
+# rule 130〜135: RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6 だけを通す（type 1〜4・128・129）。
+# PMTUD に packet-too-big が要る。type-name は 1 規則に 1 つしか書けないので、種類ごとに規則を分ける
+{% for name in ("destination-unreachable", "packet-too-big", "time-exceeded", "parameter-problem", "echo-request", "echo-reply") %}
+{{ f }} rule {{ 130 + loop.index0 }} action 'accept'
+{{ f }} rule {{ 130 + loop.index0 }} protocol 'ipv6-icmp'
+{{ f }} rule {{ 130 + loop.index0 }} icmpv6 type-name '{{ name }}'
+{% endfor %}
 {% endif %}
 {% endfor %}
 
