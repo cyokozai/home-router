@@ -1,0 +1,10 @@
+# lab 専用。NGN 役（lab/pc03-ngn.sh pd60: HGW の配下）で、PC02 が WAN（eth2）の RA で SLAAC のアドレスを付け、
+# DHCPv6-PD の /60 を受けて、サブネット ID 1 の /64 を LAN（eth1）に付けて RA する。
+# scripts/lab-e2e.sh がフェーズ1（基準）に足して投入する。CLAUDE.md §6-5 の「HGWの配下なら60」の形。
+set interfaces ethernet eth2 ipv6 address autoconf
+set interfaces ethernet eth2 dhcpv6-options pd 0 length '60'
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 sla-id '1'
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 address '1'
+set service router-advert interface eth1 prefix ::/64
+# RA の間隔を短くする（既定の最大 600 秒では、PD を受けた後の RA を pc01 が待ちきれない）
+set service router-advert interface eth1 interval max '10'

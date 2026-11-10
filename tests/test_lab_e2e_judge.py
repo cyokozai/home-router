@@ -340,6 +340,83 @@ def test_tclass_fails_when_no_packet_from_the_port_was_seen():
     ng("tclass", "0x00", "51999", stdin=DUMP_TCLASS)
 
 
+def test_port_ranges_can_list_every_port_set_of_the_psid():
+    # v6プラスのポートは 15 組に分かれる（scripts/mape_calc.py）。どれかの組に入っていれば通す
+    sets = "4096-4111,8160-8175,12256-12271"
+    ok("inner-src", "2001:db8:20::c", "192.0.2.18", sets, stdin=DUMP_IPIP)
+    out = ng("inner-src", "2001:db8:20::c", "192.0.2.18", sets, stdin=DUMP_IPIP_BAD_PORT)
+    assert "40000" in out
+    ng("src-port-outside", "192.168.10.10", "8160-8175,45120-45135", stdin=DUMP_PC01_SIDE)
+
+
+def test_a_malformed_port_list_is_a_usage_error():
+    rc, _ = judge("inner-src", "2001:db8:20::c", "192.0.2.18", "8160-8175,", stdin=DUMP_IPIP)
+    assert rc == 2
+
+
+# ---- ip -6 addr show（NGN 役で、PD と SLAAC で付いたアドレスを見る） ----------------
+
+# PC02 の eth1。DHCPv6-PD で受けた /56 のサブネット ID 1 に、address '1' が付いた状態
+ADDR_ETH1 = """\
+3: eth1@if12: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether aa:c1:ab:00:00:01 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 240b:10:aabb:cc01::1/64 scope global
+       valid_lft 7190sec preferred_lft 3590sec
+    inet6 2001:db8:10::1/64 scope global
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a8c1:abff:fe00:1/64 scope link
+       valid_lft forever preferred_lft forever
+"""
+
+# PC01 の sfp0。PC02 の RA で SLAAC のアドレスが付いた状態
+ADDR_PC01 = """\
+2: sfp0@if13: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    inet6 240b:10:aabb:cc01:a8c1:abff:fe00:2/64 scope global dynamic mngtmpaddr
+       valid_lft 2591990sec preferred_lft 604790sec
+    inet6 2001:db8:10::10/64 scope global nodad
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a8c1:abff:fe00:2/64 scope link
+       valid_lft forever preferred_lft forever
+"""
+
+
+def test_addr_is_finds_the_address_made_from_the_delegated_prefix():
+    ok("addr-is", "240b:10:aabb:cc01::1/64", stdin=ADDR_ETH1)
+    # 書き方が違っても同じアドレスなら通す
+    ok("addr-is", "240b:10:aabb:cc01:0:0:0:1/64", stdin=ADDR_ETH1)
+
+
+def test_addr_is_fails_when_the_prefix_length_or_the_address_differs():
+    ng("addr-is", "240b:10:aabb:cc01::1/56", stdin=ADDR_ETH1)
+    ng("addr-is", "240b:10:aabb:cc11::1/64", stdin=ADDR_ETH1)
+    ng("addr-is", "240b:10:aabb:cc01::1/64", stdin="")
+
+
+def test_addr_in_reports_the_global_address_inside_the_prefix_first():
+    out = ok("addr-in", "240b:10:aabb:cc01::/64", stdin=ADDR_PC01)
+    # scripts/lab-e2e.sh は、OK の直後の語を ping の送信元に使う
+    assert out.split()[1] == "240b:10:aabb:cc01:a8c1:abff:fe00:2/64"
+
+
+def test_addr_in_fails_when_no_address_is_inside_the_prefix():
+    ng("addr-in", "240b:10:aabb:cc11::/64", stdin=ADDR_PC01)
+    # リンクローカルは数えない
+    ng("addr-in", "fe80::/64", stdin=ADDR_PC01)
+
+
+def test_addr_in_ignores_an_address_whose_dad_failed():
+    text = ADDR_PC01.replace("scope global dynamic mngtmpaddr", "scope global tentative dadfailed")
+    ng("addr-in", "240b:10:aabb:cc01::/64", stdin=text)
+
+
+def test_addr_in_waits_until_dad_is_done():
+    # DAD の途中（tentative）のアドレスはまだ送信元に使えない（ping -I が「Address not available」で落ちる。
+    # 2026-11-05 に CI で実際に起きた）
+    text = ADDR_PC01.replace("scope global dynamic mngtmpaddr", "scope global tentative dynamic mngtmpaddr")
+    ng("addr-in", "240b:10:aabb:cc01::/64", stdin=text)
+    ng("addr-is", "240b:10:aabb:cc01:a8c1:abff:fe00:2/64", stdin=text)
+
+
 # ---- 使い方 ------------------------------------------------------------------
 
 
