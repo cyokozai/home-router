@@ -27,12 +27,14 @@
 
 ### Claude Codeが守るルール
 
-1.	**管理系（自宅LAN 192.168.2.0/24、オンボードの1G。PC02はVRF MGMT）の設定は変更しない。** 変更が必要なときは事前にYusukeに確認する。SSHが切れると、物理コンソールでの復旧が必要になる。本番の設定（`docs/production-cutover.md` のテンプレート）では管理をLAN側に移し、`eth0` は救出用の口にする。これは `docs/production-cutover.md` の切り替え手順の中で、Yusukeの立ち会いのもとで行う。
+1.	**管理系の設定は、Yusukeの承認なしに変更しない。** 管理系を変える投入の前に、事前にYusukeに確認する。SSHが切れると、物理コンソールでの復旧が必要になる。管理系は検証環境と本番で形が違う（2026-11-11 Yusuke決定）。
+	-	検証環境（今のPC02）: 自宅LAN 192.168.2.0/24 にオンボードの1G（`eth0`）でつなぎ、VRF MGMTに分けてある（§6-6）。
+	-	本番（`docs/production-cutover.md` のテンプレート）: 管理はLANの 192.168.2.1 から行う。`eth0` は救出用の口で、192.168.255.1/24（ゲートウェイなし）を持つ。検証環境から本番の形へは、`docs/production-cutover.md` の切り替え手順の中で、Yusukeの立ち会いのもとで移す。
 2.	**VyOSでは原則 `commit-confirm 5` を使う。** 確認後に `confirm` → `save`。管理系に影響しうる変更は必ずこの手順にする。スクリプト（`vbash -s` と `script-template`）から使うときは、`commit-confirm 5` の**次の行に `y`** を書き、全体を `timeout 60` で包む。`commit-confirm` は「Proceed ? [Y/n]」と聞き、答えが無いと同じ質問を出し続けて止まらない（2026-10-25 実害: 出力が 5GB を超えて強制終了し、PC02 に処理が残った）。`confirm` は別の接続から鍵で入り直せることを確かめてから行う。
 3.	**変更の前後で設定を保存する。** VyOSは `show configuration commands`、Ubuntuは対象ファイルを、このリポジトリの `configs/<host>/` に保存してgitにcommitする。保存する前に、グローバルなIPアドレス・機体のシリアルやUUID・秘密の値は伏せ字にする（`tests/test_no_sensitive_data.py` が確かめる）。
 4.	**試験の結果は `results/<試験ID>/` にJSONとログで保存する。** 手入力で丸めた数字だけを残さない。
 5.	**ハードウェアの作業が必要になったら止まって依頼する。** BIOS、再インストール、配線、NICの差し替えなどは、Yusukeへの依頼文を出して待つ。
-6.	**10Gの経路でSSHや監視をしない。** 計測の邪魔になるため。
+6.	**計測のあいだは、10Gの経路でSSHや監視をしない。** 計測の邪魔になるため。対象は計測（`docs/performance-evaluation.md` の試験）のときだけで、本番の運用ではLANの `eth1`（10G）からSSH・監視（node-exporter・SNMP）を行ってよい（`docs/production-cutover.md` のD2、2026-11-11 Yusuke決定）。
 7.	**VyOSへスクリプトから設定を投入するときは `scripts/vyos-apply.sh` を使う。** VyOS rollingの `set` や `commit` は、失敗しても終了コード 0 を返す（2026-10のrollingで確認）。このスクリプトは、設定セッションの状態（各行が反映されたか、commit後に未反映の差分が残っていないか）で成否を判定し、拒否は 2、commitの失敗は 3 で返す。実機のPC02へは `scripts/pc02-commit.sh`（`commit-confirm 5` → 鍵のSSHを確かめて `confirm`、戻すときは保存済みの設定を `load`）を使う。
 8.	**OSインストールの依頼文には、インストーラが出す質問をすべて答えと一緒に書く。** 特にRAID・インストール先の選択・「全データを消す」の確認。インストール先は容量と型番で特定させ、起動用以外のUSBメモリ・外付けディスクは先に抜いてもらう（2026-10-22 実害: 書き漏らしたため、PC02のVyOSインストーラが起動中のVentoy USBをRAID-1の相手に選び、ユーザーのUSBを上書きした）。
 9.	**ディスク装置を直接読み書きする操作（dd・diskutil erase・mkfs・パーティション操作・Ventoy2Diskなど）は自分で実行しない。** `bash-guard.sh` が拒否する。ユーザーに渡すときは、対象の装置・消えるもの・使う容量と時間・より軽い代わり（直接読む、公式から取り直す）を先に示し、ユーザーの道具（VentoyはWindowsのRufus）を確かめてからにする。
