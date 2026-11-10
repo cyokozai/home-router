@@ -27,12 +27,14 @@
 
 ### Claude Codeが守るルール
 
-1.	**管理系（自宅LAN 192.168.2.0/24、オンボードの1G。PC02はVRF MGMT）の設定は変更しない。** 変更が必要なときは事前にYusukeに確認する。SSHが切れると、物理コンソールでの復旧が必要になる。
+1.	**管理系の設定は、Yusukeの承認なしに変更しない。** 管理系を変える投入の前に、事前にYusukeに確認する。SSHが切れると、物理コンソールでの復旧が必要になる。管理系は検証環境と本番で形が違う（2026-11-11 Yusuke決定）。
+	-	検証環境（今のPC02）: 自宅LAN 192.168.2.0/24 にオンボードの1G（`eth0`）でつなぎ、VRF MGMTに分けてある（§6-6）。
+	-	本番（`docs/production-cutover.md` のテンプレート）: 管理はLANの 192.168.2.1 から行う。`eth0` は救出用の口で、192.168.255.1/24（ゲートウェイなし）を持つ。検証環境から本番の形へは、`docs/production-cutover.md` の切り替え手順の中で、Yusukeの立ち会いのもとで移す。
 2.	**VyOSでは原則 `commit-confirm 5` を使う。** 確認後に `confirm` → `save`。管理系に影響しうる変更は必ずこの手順にする。スクリプト（`vbash -s` と `script-template`）から使うときは、`commit-confirm 5` の**次の行に `y`** を書き、全体を `timeout 60` で包む。`commit-confirm` は「Proceed ? [Y/n]」と聞き、答えが無いと同じ質問を出し続けて止まらない（2026-10-25 実害: 出力が 5GB を超えて強制終了し、PC02 に処理が残った）。`confirm` は別の接続から鍵で入り直せることを確かめてから行う。
 3.	**変更の前後で設定を保存する。** VyOSは `show configuration commands`、Ubuntuは対象ファイルを、このリポジトリの `configs/<host>/` に保存してgitにcommitする。保存する前に、グローバルなIPアドレス・機体のシリアルやUUID・秘密の値は伏せ字にする（`tests/test_no_sensitive_data.py` が確かめる）。
 4.	**試験の結果は `results/<試験ID>/` にJSONとログで保存する。** 手入力で丸めた数字だけを残さない。
 5.	**ハードウェアの作業が必要になったら止まって依頼する。** BIOS、再インストール、配線、NICの差し替えなどは、Yusukeへの依頼文を出して待つ。
-6.	**10Gの経路でSSHや監視をしない。** 計測の邪魔になるため。
+6.	**計測のあいだは、10Gの経路でSSHや監視をしない。** 計測の邪魔になるため。対象は計測（`docs/performance-evaluation.md` の試験）のときだけで、本番の運用ではLANの `eth1`（10G）からSSH・監視（node-exporter・SNMP）を行ってよい（`docs/production-cutover.md` のD2、2026-11-11 Yusuke決定）。
 7.	**VyOSへスクリプトから設定を投入するときは `scripts/vyos-apply.sh` を使う。** VyOS rollingの `set` や `commit` は、失敗しても終了コード 0 を返す（2026-10のrollingで確認）。このスクリプトは、設定セッションの状態（各行が反映されたか、commit後に未反映の差分が残っていないか）で成否を判定し、拒否は 2、commitの失敗は 3 で返す。実機のPC02へは `scripts/pc02-commit.sh`（`commit-confirm 5` → 鍵のSSHを確かめて `confirm`、戻すときは保存済みの設定を `load`）を使う。
 8.	**OSインストールの依頼文には、インストーラが出す質問をすべて答えと一緒に書く。** 特にRAID・インストール先の選択・「全データを消す」の確認。インストール先は容量と型番で特定させ、起動用以外のUSBメモリ・外付けディスクは先に抜いてもらう（2026-10-22 実害: 書き漏らしたため、PC02のVyOSインストーラが起動中のVentoy USBをRAID-1の相手に選び、ユーザーのUSBを上書きした）。
 9.	**ディスク装置を直接読み書きする操作（dd・diskutil erase・mkfs・パーティション操作・Ventoy2Diskなど）は自分で実行しない。** `bash-guard.sh` が拒否する。ユーザーに渡すときは、対象の装置・消えるもの・使う容量と時間・より軽い代わり（直接読む、公式から取り直す）を先に示し、ユーザーの道具（VentoyはWindowsのRufus）を確かめてからにする。
@@ -465,15 +467,17 @@ set qos interface eth2 egress 'NGN-OUT'    # 検証環境ではWAN役のeth2。�
 
 ### 6-5. 本番向け: DHCPv6-PD
 
+本番の回線は光クロス 10G・ひかり電話なし・enひかり（v6プラス）に決まった（2026-11-05）。設計と当日の切り替え手順は `docs/production-cutover.md`。
+
 ```
-set interfaces ethernet eth0 ipv6 address autoconf
-set interfaces ethernet eth0 dhcpv6-options pd 0 length '56'      # HGWの配下なら60
-set interfaces ethernet eth0 dhcpv6-options pd 0 interface eth1 sla-id '1'
-set interfaces ethernet eth0 dhcpv6-options pd 0 interface eth1 address '1'
+set interfaces ethernet eth2 ipv6 address autoconf
+set interfaces ethernet eth2 dhcpv6-options pd 0 length '56'      # HGWの配下なら60
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 sla-id '1'
+set interfaces ethernet eth2 dhcpv6-options pd 0 interface eth1 address '1'
 set service router-advert interface eth1 prefix ::/64
 ```
 
--	上の `eth0` は本番でのWAN側IFの例。検証環境の `eth0`（管理系）にはこの設定を入れない。
+-	本番のWANはONUにつなぐ `eth2`、LANは `eth1`。`eth0` は救出用の口で、WANの設定を入れない（`docs/production-cutover.md` の「決まったこと」の表と D2）。
 -	WAN側の入力フィルタで、UDP 546番とICMPv6を許可すること。
 -	ひかり電話ありでは、DHCPv6-PDで/56が来る。ひかり電話なしのネクストはRAで/64のみで、NDプロキシが必要になる。光クロスはPDで/56と言われているが、実機で要確認。
 -	プレフィックスは半固定なので変わりうる。MAP-EのCE値やIPIPトンネルを作り直す仕組みは自作が必要。
@@ -483,14 +487,14 @@ set service router-advert interface eth1 prefix ::/64
 -	v6プラスのMAPルールは 240b:10::/31、240b:12::/31、240b:250::/31、240b:252::/31 の4件（EA 25ビット、PSIDの長さ8、オフセット4、BR 2404:9200:225:100::64）。どれにも入らないプレフィックス（BIGLOBE・OCNなど）はエラーになる。
 -	CEのインターフェースIDは、v6プラスが採用する draft-ietf-softwire-map-03 の形が既定（`--iid-format rfc7597` でRFC 7597の形）。
 -	ひかり電話なしの/64で、第4 hextetの下位8ビットが0でないと、CEアドレスが自分の/64の外になる。このときは警告が出る。
--	家の監視（thin-k8s）は、PC02のSNMP（`vyos/snmp-mgmt.cmds`。読み取り専用のv2c、VRF MGMTの中、問い合わせは 192.168.2.50 だけ）でプレフィックスを見張り、変わったらDiscordに通知する。communityの値は秘密なので、ファイルには `@SNMP_COMMUNITY@` だけを書き、`scripts/pc02-commit.sh` が環境変数 `SNMP_COMMUNITY` で置き換える（未設定なら止まる）。
+-	家の監視（thin-k8s）は、PC02のSNMP（`vyos/snmp-mgmt.cmds`。読み取り専用のv2c、問い合わせは 192.168.2.50 だけ。検証環境の今の形はVRF MGMTの中。本番ではVRF MGMTをやめ、`vrf` を外してLANの 192.168.2.1 で読む。`docs/production-cutover.md` の「3-4. 監視」）でプレフィックスを見張り、変わったらDiscordに通知する。communityの値は秘密なので、ファイルには `@SNMP_COMMUNITY@` だけを書き、`scripts/pc02-commit.sh` が環境変数 `SNMP_COMMUNITY` で置き換える（未設定なら止まる）。
 	-	communityを替えるときは、旧値の `delete service snmp community '<旧値>'` を、新しい値のsetと**同じcommit**で `scripts/pc02-commit.sh` から入れる（VyOSはcommunityを名前ごとに持つので、新しい値をsetするだけでは旧値が残り、旧値でも読める）。旧値を書いたcmdsはリポジトリに置かない。
 
 **プレフィックスが変わったとき（Discordに通知が来たとき）の手順**: プレフィックスが変わると、IPv6は通るままIPv4だけが止まる。
 
 1.	**通知を受ける。** 通知にある新しいプレフィックスと、前のプレフィックスを控える。
 2.	**新しいプレフィックスを確かめる。** PC02で `show interfaces ethernet <WAN>` と `show ipv6 route` を見て、委任されたプレフィックス（/56、ひかり電話なしは/64）が通知と一致することを確かめる。
-3.	**set の行を作る。** まず値だけを表示して確かめ（警告が出ていないか、ルールに一致したか）、続けてset行を出す。`--old-prefix` を付けると、前のCEアドレスとIPv4アドレスを消すdeleteが先頭に付く。
+3.	**set の行を作る。** まず値だけを表示して確かめ（警告が出ていないか、ルールに一致したか）、続けてset行を出す。`--old-prefix` を付けると、前のCEアドレスとIPv4アドレスを消すdeleteが先頭に付く。本番の切り替え（`docs/production-cutover.md` の段階B）で `--iid-format rfc7597` に切り替えて通った場合は、ここでも同じ引数を付ける（`--old-prefix` の前のCEアドレスも同じ形で計算されるため）。
 
 ```
 python3 -I scripts/mape_calc.py <新しいプレフィックス>
@@ -607,12 +611,12 @@ set service monitoring prometheus node-exporter vrf 'MGMT'
 -	[ ] Grafanaの導入
 -	[x] T0〜T8と、L1・L2を除く追加の試験（2026-10-25〜30）。結果は `results/`、まとめは `docs/performance-evaluation.md`。試験の後、3台とも基準の状態に戻した
 -	[x] MAP-Eのポートセット全数利用（§6-3のB2、`vyos/mape-portsets.cmds`）
--	[ ] 本番の設定（WAN側IF・ステートフルFW・MAP-Eの実値・DHCPv6-PDまたはNDプロキシ・SNMP）をまとめたcmds。本番回線の種別が決まってから作る
+-	[ ] 本番の設定のテンプレートと生成器、閉域網での予行演習（`docs/production-cutover.md` §4・§6）
 -	[ ] VyOSとNixOSの比較（§7）
 
 ### 未決定・要確認
 
--	本番回線の種別（ネクスト / クロス）と、ひかり電話の有無。DHCPv6-PDとNDプロキシのどちらを使うか、DSCPの扱いが変わる。
+-	家のLANのアドレス・VRF MGMTの扱い・LANの配線・ULA（`docs/production-cutover.md` §0 のD1〜D5）。
 -	v6プラスのCEアドレスのIIDの形式。非公開のドラフト版の形式なので、実機で観測するか、コミュニティの計算方法と照合する。
 -	QoSの set-dscp が、NGNの実回線で効くかどうか。
 -	光クロスでのDHCPv6-PDの挙動。
