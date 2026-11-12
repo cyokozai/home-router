@@ -8,7 +8,7 @@ name: booth-home-map
 
 x-netbox: &netbox
   image: docker.io/netboxcommunity/netbox:v4.7-5.1.1
-  user: "unit:root"
+  user: "netbox:root"
   # keys ボリュームの nb_vars.sh（SECRET_KEY・API_TOKEN_PEPPER_1・DB_PASSWORD）を読んでから、元の入口へ渡す
   entrypoint: ["/usr/bin/tini", "--", "/bin/sh", "/booth-setup/with-vars.sh"]
   environment:

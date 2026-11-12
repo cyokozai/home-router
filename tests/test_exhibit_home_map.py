@@ -209,9 +209,12 @@ class FakeShumoku:
             self.sources[parts[2]].append(s)
             return s
         if parts[1] == "topologies" and parts[3:] == ["sync-from-source"]:
+            self.sync_polls = 0
             return {"ok": True}
         if parts[1] == "topologies" and parts[3:] == ["sync-job"]:
-            return {"status": "completed"}
+            # 実機（0.2.0）の形。取り込みは非同期で、何回か running を返してから done になる
+            self.sync_polls += 1
+            return {"job": {"state": "running" if self.sync_polls < 3 else "done", "steps": []}}
         if parts[1] == "topologies" and parts[3:] == ["share"] and method == "POST":
             t = next(t for t in self.topologies if t["id"] == parts[2])
             t["shareToken"] = "share-" + t["id"]
@@ -239,6 +242,16 @@ def test_configure_is_idempotent(shumoku_setup):
     assert second == first
     assert '"nbt_c.d"' in api.datasources[0]["configJson"], "restore で作り直した読み取り用の値に差し替える"
     assert ("POST", f"/api/topologies/{tid}/sync-from-source") in api.calls
+    assert api.sync_polls == 3, "取り込みが done になるまで待つ"
+
+
+def test_wait_sync_raises_when_sync_fails(shumoku_setup):
+    class Failing:
+        def request(self, method, path, body=None):
+            return {"job": {"state": "failed", "steps": [{"label": "booth-netbox", "status": "failed"}]}}
+
+    with pytest.raises(RuntimeError, match="取り込みに失敗"):
+        shumoku_setup.wait_sync(Failing(), "t", poll_interval=0)
 
 
 # ---- restore.sh の dump の見分け --------------------------------------------

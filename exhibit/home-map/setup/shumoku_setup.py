@@ -86,12 +86,19 @@ def _by_name(items: list[dict], name: str) -> dict | None:
     return next((i for i in items if i.get("name") == name), None)
 
 
-def wait_sync(api, topology_id: str, timeout: int = SYNC_TIMEOUT, poll_interval: float = 2) -> dict:
+def wait_sync(api, topology_id: str, timeout: int = SYNC_TIMEOUT, poll_interval: float = 2,
+              since_ms: float = 0) -> dict:
+    """取り込み（非同期）が終わるまで待つ。0.2.0 の応答は {"job": {"state": "running" | "done" | …, "steps": […]}}。"""
     end = time.time() + timeout
     while True:
-        job = api.request("GET", f"/api/topologies/{topology_id}/sync-job") or {}
-        state = str(job.get("status") or job.get("state") or "").lower()
-        if state not in ("running", "pending", "queued", "in_progress", "started"):
+        res = api.request("GET", f"/api/topologies/{topology_id}/sync-job") or {}
+        job = res.get("job") or {}
+        state = str(job.get("state") or "").lower()
+        if state in ("failed", "error", "cancelled", "canceled"):
+            failed = [s.get("label") for s in job.get("steps", []) if s.get("status") not in ("done", None)]
+            raise RuntimeError(f"NetBox からの取り込みに失敗（{state}、{failed}）")
+        # 前回の取り込みの done を拾わない（コンテナ同士は同じ時計。ずれの余裕を 5 秒みる）
+        if state == "done" and job.get("startedAt", since_ms) >= since_ms - 5000:
             return job
         if time.time() > end:
             raise RuntimeError("NetBox からの取り込みが終わらない")
@@ -121,8 +128,9 @@ def configure(api, netbox_url: str, viewer_value: str, *, topology_name: str = T
         api.request("POST", f"/api/topologies/{tid}/sources",
                     {"dataSourceId": ds["id"], "purpose": "topology", "syncMode": "manual"})
 
+    since_ms = time.time() * 1000
     api.request("POST", f"/api/topologies/{tid}/sync-from-source")
-    wait_sync(api, tid, poll_interval=poll_interval)
+    wait_sync(api, tid, poll_interval=poll_interval, since_ms=since_ms)
 
     share = topo.get("shareToken")
     if not share:
