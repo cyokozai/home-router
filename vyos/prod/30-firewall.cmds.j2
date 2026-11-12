@@ -34,7 +34,7 @@ set firewall flowtable FT10G interface '{{ n.ifname }}'
 {% endif %}
 set firewall flowtable FT10G offload 'software'
 
-# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜{% if b %}300{% else %}135{% endif %} で判定する
+# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜{% if b %}315{% else %}135{% endif %} で判定する
 {% for family in ("ipv4", "ipv6") %}
 {% set f = "set firewall " ~ family ~ " forward filter" %}
 {{ f }} default-action 'drop'
@@ -87,13 +87,14 @@ set firewall flowtable FT10G offload 'software'
 {{ f }} rule 120 action 'accept'
 {{ f }} rule 120 inbound-interface name '{{ lan }}'
 {% endif %}
-{% if family == "ipv6" %}
+{% set icmp_base = 310 if b else 130 %}
+{% if family == "ipv6" and not b %}
 # rule 130〜135: RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6 だけを通す（type 1〜4・128・129）。
 # PMTUD に packet-too-big が要る。type-name は 1 規則に 1 つしか書けないので、種類ごとに規則を分ける
 {% for name in ("destination-unreachable", "packet-too-big", "time-exceeded", "parameter-problem", "echo-request", "echo-reply") %}
-{{ f }} rule {{ 130 + loop.index0 }} action 'accept'
-{{ f }} rule {{ 130 + loop.index0 }} protocol 'ipv6-icmp'
-{{ f }} rule {{ 130 + loop.index0 }} icmpv6 type-name '{{ name }}'
+{{ f }} rule {{ icmp_base + loop.index0 }} action 'accept'
+{{ f }} rule {{ icmp_base + loop.index0 }} protocol 'ipv6-icmp'
+{{ f }} rule {{ icmp_base + loop.index0 }} icmpv6 type-name '{{ name }}'
 {% endfor %}
 {% endif %}
 {% if b %}
@@ -121,6 +122,15 @@ set firewall flowtable FT10G offload 'software'
 # rule 300: 残りの LAN から出る新しい通信（行き先は WAN だけになる）を通す
 {{ f }} rule 300 action 'accept'
 {{ f }} rule 300 inbound-interface group 'LAN'
+{% if family == "ipv6" %}
+# rule 310〜315: RFC 4890 §4.3.1 の通過の ICMPv6（単一の LAN の形の 130〜135 と同じ）。網と網のあいだの echo-request を
+# 通さないように、rule 290 の後に置く（WAN と LAN のあいだで通す）
+{% for name in ("destination-unreachable", "packet-too-big", "time-exceeded", "parameter-problem", "echo-request", "echo-reply") %}
+{{ f }} rule {{ icmp_base + loop.index0 }} action 'accept'
+{{ f }} rule {{ icmp_base + loop.index0 }} protocol 'ipv6-icmp'
+{{ f }} rule {{ icmp_base + loop.index0 }} icmpv6 type-name '{{ name }}'
+{% endfor %}
+{% endif %}
 {% endif %}
 {% endfor %}
 

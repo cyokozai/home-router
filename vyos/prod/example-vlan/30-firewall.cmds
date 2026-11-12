@@ -24,7 +24,7 @@ set firewall flowtable FT10G interface 'br0.40'
 set firewall flowtable FT10G interface 'br0.50'
 set firewall flowtable FT10G offload 'software'
 
-# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜300 で判定する
+# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜315 で判定する
 set firewall ipv4 forward filter default-action 'drop'
 set firewall ipv4 forward filter rule 10 action 'offload'
 set firewall ipv4 forward filter rule 10 offload-target 'FT10G'
@@ -99,26 +99,6 @@ set firewall ipv6 forward filter rule 115 destination address-mask '::ffff:ffff:
 # rule 120: access が all の網は、他の網にもインターネットにも出られる
 set firewall ipv6 forward filter rule 120 action 'accept'
 set firewall ipv6 forward filter rule 120 inbound-interface group 'LAN-ALL'
-# rule 130〜135: RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6 だけを通す（type 1〜4・128・129）。
-# PMTUD に packet-too-big が要る。type-name は 1 規則に 1 つしか書けないので、種類ごとに規則を分ける
-set firewall ipv6 forward filter rule 130 action 'accept'
-set firewall ipv6 forward filter rule 130 protocol 'ipv6-icmp'
-set firewall ipv6 forward filter rule 130 icmpv6 type-name 'destination-unreachable'
-set firewall ipv6 forward filter rule 131 action 'accept'
-set firewall ipv6 forward filter rule 131 protocol 'ipv6-icmp'
-set firewall ipv6 forward filter rule 131 icmpv6 type-name 'packet-too-big'
-set firewall ipv6 forward filter rule 132 action 'accept'
-set firewall ipv6 forward filter rule 132 protocol 'ipv6-icmp'
-set firewall ipv6 forward filter rule 132 icmpv6 type-name 'time-exceeded'
-set firewall ipv6 forward filter rule 133 action 'accept'
-set firewall ipv6 forward filter rule 133 protocol 'ipv6-icmp'
-set firewall ipv6 forward filter rule 133 icmpv6 type-name 'parameter-problem'
-set firewall ipv6 forward filter rule 134 action 'accept'
-set firewall ipv6 forward filter rule 134 protocol 'ipv6-icmp'
-set firewall ipv6 forward filter rule 134 icmpv6 type-name 'echo-request'
-set firewall ipv6 forward filter rule 135 action 'accept'
-set firewall ipv6 forward filter rule 135 protocol 'ipv6-icmp'
-set firewall ipv6 forward filter rule 135 icmpv6 type-name 'echo-reply'
 # rule 140〜142: MONITOR から FAMILY・NEKKO へは、ICMP・UDP 161・TCP 9100 だけを通す
 set firewall ipv6 forward filter rule 140 action 'accept'
 set firewall ipv6 forward filter rule 140 inbound-interface name 'br0.30'
@@ -141,6 +121,26 @@ set firewall ipv6 forward filter rule 290 outbound-interface group 'LAN'
 # rule 300: 残りの LAN から出る新しい通信（行き先は WAN だけになる）を通す
 set firewall ipv6 forward filter rule 300 action 'accept'
 set firewall ipv6 forward filter rule 300 inbound-interface group 'LAN'
+# rule 310〜315: RFC 4890 §4.3.1 の通過の ICMPv6（単一の LAN の形の 130〜135 と同じ）。網と網のあいだの echo-request を
+# 通さないように、rule 290 の後に置く（WAN と LAN のあいだで通す）
+set firewall ipv6 forward filter rule 310 action 'accept'
+set firewall ipv6 forward filter rule 310 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 310 icmpv6 type-name 'destination-unreachable'
+set firewall ipv6 forward filter rule 311 action 'accept'
+set firewall ipv6 forward filter rule 311 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 311 icmpv6 type-name 'packet-too-big'
+set firewall ipv6 forward filter rule 312 action 'accept'
+set firewall ipv6 forward filter rule 312 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 312 icmpv6 type-name 'time-exceeded'
+set firewall ipv6 forward filter rule 313 action 'accept'
+set firewall ipv6 forward filter rule 313 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 313 icmpv6 type-name 'parameter-problem'
+set firewall ipv6 forward filter rule 314 action 'accept'
+set firewall ipv6 forward filter rule 314 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 314 icmpv6 type-name 'echo-request'
+set firewall ipv6 forward filter rule 315 action 'accept'
+set firewall ipv6 forward filter rule 315 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 315 icmpv6 type-name 'echo-reply'
 
 # input（ルータ宛て）。LAN と管理用の IF から、および戻りの通信だけを受ける
 set firewall ipv4 input filter default-action 'drop'

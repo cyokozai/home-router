@@ -288,6 +288,19 @@ def test_forward_policy_between_networks(family):
     assert firsts.index(100) < firsts.index(120) < firsts.index(140) < firsts.index(290) < firsts.index(300)
 
 
+def test_icmpv6_pass_through_comes_after_the_drop_between_networks():
+    # 来客用などから他の網へ echo-request を通さない。WAN との ICMPv6（RFC 4890）は 290 の後で通す
+    fw = fw_lines()
+    for n in range(130, 136):
+        assert not rule(fw, "ipv6", n)
+    names = ["destination-unreachable", "packet-too-big", "time-exceeded", "parameter-problem",
+             "echo-request", "echo-reply"]
+    for i, name in enumerate(names):
+        assert rule(fw, "ipv6", 310 + i) == ["action 'accept'", "protocol 'ipv6-icmp'", f"icmpv6 type-name '{name}'"]
+    order = list(dict.fromkeys(int(x.split()[6]) for x in fw if x.startswith("set firewall ipv6 forward filter rule ")))
+    assert order.index(290) < order.index(310)
+
+
 def test_dscp_rules_cover_both_wireguard_ports_and_keep_the_direction():
     fw = fw_lines()
     r5, r6 = rule(fw, "ipv6", 5), rule(fw, "ipv6", 6)
@@ -368,6 +381,8 @@ N = "lan.bridge.networks"
     ({"firewall.wireguard_inbound_iid": "not-an-address"}, "wireguard_inbound_iid"),
     ({"firewall.monitor_ports.tcp": 9100}, "monitor_ports"),
     ({"wan.type": "pd60", f"{N}.1.sla_id": 16}, "1〜15"),
+    ({f"{N}.1.vlan": 1}, "vlan"),
+    ({"firewall.monitor_ports.tcp": []}, "monitor_ports"),
 ])
 def test_bad_site_values_are_rejected(changes, words):
     with pytest.raises(rc.SiteError) as e:

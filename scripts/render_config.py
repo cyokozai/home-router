@@ -329,7 +329,8 @@ def validate_bridge(b, trunk: str) -> dict:
         missing = [k for k in NET_REQUIRED if k not in n]
         if missing:
             raise SiteError(f"{key}.{missing[0]}: 必ず書く")
-        vlan = integer(n["vlan"], f"{key}.vlan", 1, 4094)
+        # VLAN 1 は Linux のブリッジの既定の PVID で、VyOS も native-vlan に使わせない
+        vlan = integer(n["vlan"], f"{key}.vlan", 2, 4094)
         iface = ipv4_interface(n["address"], f"{key}.address")
         access = n["access"]
         if access not in ACCESS:
@@ -500,8 +501,8 @@ def validate(raw: dict) -> dict:
     monitor_ports = {}
     for proto in ("tcp", "udp"):
         v = mon_ports[proto]
-        if not isinstance(v, list):
-            raise SiteError(f"firewall.monitor_ports.{proto}: ポートの一覧にする: {v!r}")
+        if not isinstance(v, list) or not v:
+            raise SiteError(f"firewall.monitor_ports.{proto}: ポートを 1 つ以上並べる: {v!r}")
         monitor_ports[proto] = ",".join(str(integer(p, f"firewall.monitor_ports.{proto}", 1, 65535)) for p in v)
     iid = s["firewall"]["wireguard_inbound_iid"]
     if iid is not None:
