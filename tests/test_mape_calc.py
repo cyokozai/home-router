@@ -269,3 +269,44 @@ def test_generator_takes_psid_and_ipv4():
                           "--psid", "120", "--ipv4", "14.8.52.86"],
                          check=True, capture_output=True, text=True).stdout.splitlines()
     assert out == lines
+
+
+# ---- 複数の LAN の網を MAP-E で出す（VLAN で網を分けた本番。network-group でまとめる） ----------------
+
+
+MULTI_LAN = ["192.168.2.0/24", "192.168.20.0/24", "192.168.50.0/29"]
+
+
+def test_single_lan_in_a_list_keeps_the_lab_shape():
+    lines = mc.cmds_lines(ipv4="192.0.2.18", psid=0xFE, ce="2001:db8:20::c", br="2001:db8:20::b",
+                          wan_if="eth2", lan=["192.168.10.0/24"])
+    assert lines == lab_lines()
+
+
+def test_multiple_lans_use_one_network_group():
+    r = mc.calc(KNOWN[0][0])
+    lines = mc.result_cmds(r, wan_if="eth2", lan=MULTI_LAN)
+    group = [f"set firewall group network-group {mc.LAN_GROUP} network '{n}'" for n in MULTI_LAN]
+    assert [x for x in lines if x.startswith("set firewall group ")] == group
+    # NAT の規則は送信元を網の集まりで書き、source address は使わない
+    nat = [x for x in lines if x.startswith("set nat source rule ")]
+    assert not [x for x in nat if " source address " in x]
+    rules = {x.split()[4] for x in nat}
+    assert rules == {str(n) for n in range(101, 101 + len(r.ports))} | {"199"}
+    for n in rules:
+        assert f"set nat source rule {n} source group network-group '{mc.LAN_GROUP}'" in nat
+    # 網の集まりは、使う規則より前に書く
+    assert lines.index(group[-1]) < min(lines.index(x) for x in nat)
+
+
+@pytest.mark.parametrize("bad", [[], ["192.168.2.0/24", "192.168.2.0/25"], ["192.168.2.0/24", "192.168.2.0/24"]])
+def test_bad_lan_lists_are_rejected(bad):
+    r = mc.calc(KNOWN[0][0])
+    with pytest.raises(ValueError):
+        mc.result_cmds(r, wan_if="eth2", lan=bad)
+
+
+def test_cli_accepts_several_lans(capsys):
+    assert mc.main(["--cmds", "--wan-if", "eth2", "--lan", MULTI_LAN[0], "--lan", MULTI_LAN[1], KNOWN[0][0]]) == 0
+    out = capsys.readouterr().out
+    assert f"set firewall group network-group {mc.LAN_GROUP} network '{MULTI_LAN[1]}'" in out

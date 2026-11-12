@@ -49,7 +49,8 @@ DOC_CORRECTIONS: dict[str, str] = {}
 UNSUPPORTED = VYOS / "container-unsupported.txt"
 # vyos/ の直下には無く、CI が vyos/prod/example/ からつないで作る cmds、または scripts/render_config.py で描いてつなぐ
 # cmds の名前（一覧の 1 列目に出てくる）
-RENDERED = {"prod-example.cmds", "prod-from-lab.cmds", "prod-from-lab-mape.cmds"}
+RENDERED = {"prod-example.cmds", "prod-from-lab.cmds", "prod-from-lab-mape.cmds",
+            "prod-vlan-example.cmds", "vlan-from-lab-mape.cmds"}
 
 
 # ---- 読み取り ---------------------------------------------------------------

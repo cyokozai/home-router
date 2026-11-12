@@ -1,0 +1,106 @@
+# 本番の PC02 の site の例（VLAN で 5 つの網に分ける形・VRF MGMT を残す形）。ここにはリポジトリに置いてよい値だけを書く。
+# 実際の値（委任プレフィックス、端末の MAC、浦和コアルータのインターフェース ID）は site/<名前>.local.yaml に書く（.gitignore 済み）。
+# 書かなかったキーは scripts/render_config.py の既定値になる。site/example.yaml（単一の LAN・救出用の eth0）と違うところだけでなく、
+# 変えられる値も書いてある。
+#
+#   python3 -I scripts/render_config.py site/example-vlan.yaml -o <出力先>
+#
+# 描いた結果は vyos/prod/example-vlan/ に置いてある（--all-wan-types で 3 つの型の WAN を全部描いたもの）。
+
+host_name: home-router
+time_zone: Asia/Tokyo
+ntp_servers: [ntp.nict.jp, time.google.com]
+
+interfaces:
+  rescue: eth0   # mgmt.mode が vrf のときは管理用の IF（VRF MGMT に入れて DHCP で受ける）
+  lan: eth1      # VLAN-aware のブリッジ（lan.bridge）のメンバー
+  wan: eth2
+
+login:
+  user: vyos
+  key_name: admin
+  key_type: ssh-ed25519
+
+# rescue: eth0 を救出用（rescue.address、ゲートウェイなし）にし、SSH は LAN の家族用の網と救出用で待ち受ける（site/example.yaml）
+# vrf:    eth0 を VRF MGMT に入れて DHCP で受け、SSH・NTP・node-exporter・SNMP を VRF MGMT の中だけにする（vyos/mgmt-home.cmds の形）。
+#         eth0 は家族用の網（Aruba のタグなしの口）につなぎ、PC02 自身の DHCP サーバが固定で 192.168.2.14 を配る
+mgmt:
+  mode: vrf
+  vrf_table: 100
+
+lan:
+  ula_prefix: "@ULA_PREFIX@"   # ULA は先頭の網（家族用）にだけ付ける。DNS の転送の IPv6 の口に使う
+  bridge:
+    name: br0
+    # access: all = 他の網とインターネットの両方へ / internet = インターネットだけ（他の網へは通さない）
+    # monitor_to: 監視の通信（ICMP と firewall.monitor_ports）だけを通す先の網の名前
+    # sla_id: 委任プレフィックスのサブネット ID（0 は MAP-E の CE が使うので使わない）。型C（ra64）では先頭の網にだけ /64 を置く
+    networks:
+      - name: FAMILY
+        vlan: 10
+        native: true            # eth1 ではタグなし（Aruba 側はタグなしのまま）
+        address: 192.168.2.1/24
+        sla_id: 1
+        access: internet
+        dhcp:
+          range: {start: 192.168.2.100, stop: 192.168.2.199}
+          # 192.168.2.211（浦和コアルータ、端末に固定で書いてある）は範囲の外
+          static_mappings:
+            - {name: pc02-mgmt, mac: "02:00:00:00:00:14", ip: 192.168.2.14}   # PC02 の eth0（VRF MGMT）
+            - {name: monitor, mac: "02:00:00:00:00:50", ip: 192.168.2.50}
+      - name: SELF
+        vlan: 20
+        address: 192.168.20.1/24
+        sla_id: 2
+        access: all
+        dhcp:
+          range: {start: 192.168.20.100, stop: 192.168.20.199}
+      - name: MONITOR
+        vlan: 30
+        address: 192.168.30.1/24
+        sla_id: 3
+        access: internet
+        monitor_to: [FAMILY, NEKKO]
+        dhcp:
+          range: {start: 192.168.30.100, stop: 192.168.30.199}
+      - name: GUEST
+        vlan: 40
+        address: 192.168.40.1/24
+        sla_id: 4
+        access: internet
+        dhcp:
+          range: {start: 192.168.40.100, stop: 192.168.40.199}
+      - name: NEKKO
+        vlan: 50
+        address: 192.168.50.1/29
+        sla_id: 5
+        access: internet
+        dhcp:
+          range: {start: 192.168.50.2, stop: 192.168.50.6}
+
+wan:
+  type: pd56
+  prefix64: "@WAN_PREFIX64@"
+  ngn_gw_lla: "@NGN_GW_LLA@"
+
+tuning:
+  ring_buffer: 4096
+  conntrack_table_size: 1048576
+  conntrack_hash_size: 262144
+  performance: network-throughput
+
+dns:
+  upstream: []
+
+firewall:
+  dscp_udp_port: [51820, 51821]   # NGN 向けに DSCP を 0 にする WireGuard のポート（1 つなら数だけでもよい）
+  router_wireguard: false
+  monitor_ports: {tcp: [9100], udp: [161]}
+  # NGN から LAN の WireGuard（dscp_udp_port）へ来る新しい通信を通す先。インターフェース ID（下位 64 ビット）だけを書き、
+  # プレフィックスは見ない（ipv6 の destination address-mask）。委任プレフィックスが変わっても書き直さなくてよい。
+  # 実際の値（浦和コアルータの EUI-64）は .local.yaml に書く。ここは文書用のダミー。null なら描かない
+  wireguard_inbound_iid: "::200:ff:fe00:211"
+
+monitor:
+  snmp: {enabled: true, network: 192.168.2.50/32}
+  node_exporter: true

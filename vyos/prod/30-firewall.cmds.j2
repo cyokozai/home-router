@@ -1,14 +1,40 @@
 # firewall: ステートフルの forward と flowtable、ルータ宛ての input、NGN 向けの DSCP の書き換え
+{% set b = lan.bridge %}
 {% set lan = i.lan %}
 {% set wan = i.wan %}
 {% set port = firewall.dscp_udp_port %}
+{% if b %}
+
+# LAN の vif をまとめる（inbound-interface name は物理の口の名前にしか一致せず、vif には一致しない）
+{% for n in b.nets %}
+set firewall group interface-group LAN interface '{{ n.ifname }}'
+{% endfor %}
+{% if b.all_access %}
+# 他の網にも出られる網（access: all）
+{% for ifname in b.all_access %}
+set firewall group interface-group LAN-ALL interface '{{ ifname }}'
+{% endfor %}
+{% endif %}
+{% for n in b.monitor_nets %}
+# {{ n.name }} から監視の通信だけを通す先の網
+{% for ifname in n.monitor_ifnames %}
+set firewall group interface-group {{ n.monitor_group }} interface '{{ ifname }}'
+{% endfor %}
+{% endfor %}
+{% endif %}
 
 # flowtable（vyos/tuning-3-flowtable.cmds の形）。IPv4 の WAN 側の tun0 は、tun0 を作る MAP-E の段（40-mape）で足す
 set firewall flowtable FT10G interface '{{ lan }}'
 set firewall flowtable FT10G interface '{{ wan }}'
+{% if b %}
+# 転送の入口になる vif も並べる
+{% for n in b.nets %}
+set firewall flowtable FT10G interface '{{ n.ifname }}'
+{% endfor %}
+{% endif %}
 set firewall flowtable FT10G offload 'software'
 
-# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜135 で判定する
+# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜{% if b %}300{% else %}135{% endif %} で判定する
 {% for family in ("ipv4", "ipv6") %}
 {% set f = "set firewall " ~ family ~ " forward filter" %}
 {{ f }} default-action 'drop'
@@ -41,8 +67,26 @@ set firewall flowtable FT10G offload 'software'
 {{ f }} rule 100 state 'related'
 {{ f }} rule 110 action 'drop'
 {{ f }} rule 110 state 'invalid'
+{% if family == "ipv6" and firewall.wireguard_inbound_iid %}
+# rule 115: NGN から LAN の WireGuard（UDP {{ port }}）へ来る新しい通信を通す。宛先はインターフェース ID（下位 64 ビット）だけで
+# 比べる（address-mask）ので、委任プレフィックスが変わっても書き直さなくてよい。どの網の /64 でも同じ ID なら通る
+{{ f }} rule 115 action 'accept'
+{{ f }} rule 115 inbound-interface name '{{ wan }}'
+{{ f }} rule 115 protocol 'udp'
+{{ f }} rule 115 destination port '{{ port }}'
+{{ f }} rule 115 destination address '{{ firewall.wireguard_inbound_iid }}'
+{{ f }} rule 115 destination address-mask '{{ firewall.iid_mask }}'
+{% endif %}
+{% if b %}
+{% if b.all_access %}
+# rule 120: access が all の網は、他の網にもインターネットにも出られる
+{{ f }} rule 120 action 'accept'
+{{ f }} rule 120 inbound-interface group 'LAN-ALL'
+{% endif %}
+{% else %}
 {{ f }} rule 120 action 'accept'
 {{ f }} rule 120 inbound-interface name '{{ lan }}'
+{% endif %}
 {% if family == "ipv6" %}
 # rule 130〜135: RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6 だけを通す（type 1〜4・128・129）。
 # PMTUD に packet-too-big が要る。type-name は 1 規則に 1 つしか書けないので、種類ごとに規則を分ける
@@ -52,9 +96,35 @@ set firewall flowtable FT10G offload 'software'
 {{ f }} rule {{ 130 + loop.index0 }} icmpv6 type-name '{{ name }}'
 {% endfor %}
 {% endif %}
+{% if b %}
+{% for n in b.monitor_nets %}
+# rule {{ n.monitor_rule }}〜{{ n.monitor_rule + 2 }}: {{ n.name }} から {{ n.monitor_to | join("・") }} へは、ICMP・UDP {{ firewall.monitor_ports.udp }}・TCP {{ firewall.monitor_ports.tcp }} だけを通す
+{{ f }} rule {{ n.monitor_rule }} action 'accept'
+{{ f }} rule {{ n.monitor_rule }} inbound-interface name '{{ n.ifname }}'
+{{ f }} rule {{ n.monitor_rule }} outbound-interface group '{{ n.monitor_group }}'
+{{ f }} rule {{ n.monitor_rule }} protocol '{{ "icmp" if family == "ipv4" else "ipv6-icmp" }}'
+{{ f }} rule {{ n.monitor_rule + 1 }} action 'accept'
+{{ f }} rule {{ n.monitor_rule + 1 }} inbound-interface name '{{ n.ifname }}'
+{{ f }} rule {{ n.monitor_rule + 1 }} outbound-interface group '{{ n.monitor_group }}'
+{{ f }} rule {{ n.monitor_rule + 1 }} protocol 'udp'
+{{ f }} rule {{ n.monitor_rule + 1 }} destination port '{{ firewall.monitor_ports.udp }}'
+{{ f }} rule {{ n.monitor_rule + 2 }} action 'accept'
+{{ f }} rule {{ n.monitor_rule + 2 }} inbound-interface name '{{ n.ifname }}'
+{{ f }} rule {{ n.monitor_rule + 2 }} outbound-interface group '{{ n.monitor_group }}'
+{{ f }} rule {{ n.monitor_rule + 2 }} protocol 'tcp'
+{{ f }} rule {{ n.monitor_rule + 2 }} destination port '{{ firewall.monitor_ports.tcp }}'
+{% endfor %}
+# rule 290: 網と網のあいだは、ここまでで通したもの以外を捨てる
+{{ f }} rule 290 action 'drop'
+{{ f }} rule 290 inbound-interface group 'LAN'
+{{ f }} rule 290 outbound-interface group 'LAN'
+# rule 300: 残りの LAN から出る新しい通信（行き先は WAN だけになる）を通す
+{{ f }} rule 300 action 'accept'
+{{ f }} rule 300 inbound-interface group 'LAN'
+{% endif %}
 {% endfor %}
 
-# input（ルータ宛て）。LAN と救出用の IF から、および戻りの通信だけを受ける
+# input（ルータ宛て）。LAN と{% if mgmt.mode == "vrf" %}管理用{% else %}救出用{% endif %}の IF から、および戻りの通信だけを受ける
 {% set f = "set firewall ipv4 input filter" %}
 {{ f }} default-action 'drop'
 {{ f }} rule 10 action 'accept'
@@ -63,9 +133,18 @@ set firewall flowtable FT10G offload 'software'
 {{ f }} rule 20 action 'accept'
 {{ f }} rule 20 protocol 'icmp'
 {{ f }} rule 30 action 'accept'
+{% if b %}
+{{ f }} rule 30 inbound-interface group 'LAN'
+{% else %}
 {{ f }} rule 30 inbound-interface name '{{ lan }}'
+{% endif %}
 {{ f }} rule 40 action 'accept'
 {{ f }} rule 40 inbound-interface name '{{ i.rescue }}'
+{% if mgmt.mode == "vrf" %}
+# VRF の中の IF に届いたパケットは、input では VRF の名前（{{ mgmt.vrf }}）の IF から来たように見えることがあるので、両方を許す
+{{ f }} rule 45 action 'accept'
+{{ f }} rule 45 inbound-interface name '{{ mgmt.vrf }}'
+{% endif %}
 {{ f }} rule 50 action 'accept'
 {{ f }} rule 50 inbound-interface name 'lo'
 
@@ -83,7 +162,11 @@ set firewall flowtable FT10G offload 'software'
 {{ f }} rule 30 source address 'fe80::/10'
 {{ f }} rule 30 destination port '546'
 {{ f }} rule 40 action 'accept'
+{% if b %}
+{{ f }} rule 40 inbound-interface group 'LAN'
+{% else %}
 {{ f }} rule 40 inbound-interface name '{{ lan }}'
+{% endif %}
 # MAP-E: BR から届く IPv4 入りの IPv6（ipip6）
 {{ f }} rule 50 action 'accept'
 {{ f }} rule 50 protocol 'ipencap'

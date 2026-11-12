@@ -1,0 +1,181 @@
+# 生成: scripts/render_config.py（site: example-vlan.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/30-firewall.cmds.j2）か site を直して描き直す
+# firewall: ステートフルの forward と flowtable、ルータ宛ての input、NGN 向けの DSCP の書き換え
+
+# LAN の vif をまとめる（inbound-interface name は物理の口の名前にしか一致せず、vif には一致しない）
+set firewall group interface-group LAN interface 'br0.10'
+set firewall group interface-group LAN interface 'br0.20'
+set firewall group interface-group LAN interface 'br0.30'
+set firewall group interface-group LAN interface 'br0.40'
+set firewall group interface-group LAN interface 'br0.50'
+# 他の網にも出られる網（access: all）
+set firewall group interface-group LAN-ALL interface 'br0.20'
+# MONITOR から監視の通信だけを通す先の網
+set firewall group interface-group MON-MONITOR interface 'br0.10'
+set firewall group interface-group MON-MONITOR interface 'br0.50'
+
+# flowtable（vyos/tuning-3-flowtable.cmds の形）。IPv4 の WAN 側の tun0 は、tun0 を作る MAP-E の段（40-mape）で足す
+set firewall flowtable FT10G interface 'eth1'
+set firewall flowtable FT10G interface 'eth2'
+# 転送の入口になる vif も並べる
+set firewall flowtable FT10G interface 'br0.10'
+set firewall flowtable FT10G interface 'br0.20'
+set firewall flowtable FT10G interface 'br0.30'
+set firewall flowtable FT10G interface 'br0.40'
+set firewall flowtable FT10G interface 'br0.50'
+set firewall flowtable FT10G offload 'software'
+
+# forward（vyos/fw-stateful.cmds の形）。rule 10 で established / related を offload し、100〜300 で判定する
+set firewall ipv4 forward filter default-action 'drop'
+set firewall ipv4 forward filter rule 10 action 'offload'
+set firewall ipv4 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv4 forward filter rule 10 state 'established'
+set firewall ipv4 forward filter rule 10 state 'related'
+set firewall ipv4 forward filter rule 100 action 'accept'
+set firewall ipv4 forward filter rule 100 state 'established'
+set firewall ipv4 forward filter rule 100 state 'related'
+set firewall ipv4 forward filter rule 110 action 'drop'
+set firewall ipv4 forward filter rule 110 state 'invalid'
+# rule 120: access が all の網は、他の網にもインターネットにも出られる
+set firewall ipv4 forward filter rule 120 action 'accept'
+set firewall ipv4 forward filter rule 120 inbound-interface group 'LAN-ALL'
+# rule 140〜142: MONITOR から FAMILY・NEKKO へは、ICMP・UDP 161・TCP 9100 だけを通す
+set firewall ipv4 forward filter rule 140 action 'accept'
+set firewall ipv4 forward filter rule 140 inbound-interface name 'br0.30'
+set firewall ipv4 forward filter rule 140 outbound-interface group 'MON-MONITOR'
+set firewall ipv4 forward filter rule 140 protocol 'icmp'
+set firewall ipv4 forward filter rule 141 action 'accept'
+set firewall ipv4 forward filter rule 141 inbound-interface name 'br0.30'
+set firewall ipv4 forward filter rule 141 outbound-interface group 'MON-MONITOR'
+set firewall ipv4 forward filter rule 141 protocol 'udp'
+set firewall ipv4 forward filter rule 141 destination port '161'
+set firewall ipv4 forward filter rule 142 action 'accept'
+set firewall ipv4 forward filter rule 142 inbound-interface name 'br0.30'
+set firewall ipv4 forward filter rule 142 outbound-interface group 'MON-MONITOR'
+set firewall ipv4 forward filter rule 142 protocol 'tcp'
+set firewall ipv4 forward filter rule 142 destination port '9100'
+# rule 290: 網と網のあいだは、ここまでで通したもの以外を捨てる
+set firewall ipv4 forward filter rule 290 action 'drop'
+set firewall ipv4 forward filter rule 290 inbound-interface group 'LAN'
+set firewall ipv4 forward filter rule 290 outbound-interface group 'LAN'
+# rule 300: 残りの LAN から出る新しい通信（行き先は WAN だけになる）を通す
+set firewall ipv4 forward filter rule 300 action 'accept'
+set firewall ipv4 forward filter rule 300 inbound-interface group 'LAN'
+set firewall ipv6 forward filter default-action 'drop'
+# rule 5: NGN は DSCP 0x88（AF41）の IPv6 を捨てるか 0 に書き換える。WireGuard（UDP 51820,51821）の DSCP を 0 にして通す
+# （vyos/dscp-firewall.cmds の形）。offload（rule 10）より先に置く: offload された後のパケットは forward の規則を通らない。
+# outbound-interface で WAN へ出る分だけにする: 書かないと、WAN から来た送信元ポート 51820,51821 の新しい通信が
+# rule 100〜120 の判定より前に通ってしまう
+set firewall ipv6 forward filter rule 5 action 'accept'
+set firewall ipv6 forward filter rule 5 outbound-interface name 'eth2'
+set firewall ipv6 forward filter rule 5 protocol 'udp'
+set firewall ipv6 forward filter rule 5 source port '51820,51821'
+set firewall ipv6 forward filter rule 5 set dscp '0'
+# rule 6: WAN から返る WireGuard（宛先ポート 51820,51821）を offload させずに通す。rule 10 で offload されると、
+# flowtable は双方向を登録するので、以後の LAN から WAN への送信も rule 5 を通らず、DSCP が書き換わらなくなる。
+# state を付ける: 付けないと、WAN から来た宛先ポート 51820,51821 の新しい通信が rule 100〜120 の判定より前に通ってしまう
+set firewall ipv6 forward filter rule 6 action 'accept'
+set firewall ipv6 forward filter rule 6 inbound-interface name 'eth2'
+set firewall ipv6 forward filter rule 6 protocol 'udp'
+set firewall ipv6 forward filter rule 6 destination port '51820,51821'
+set firewall ipv6 forward filter rule 6 state 'established'
+set firewall ipv6 forward filter rule 6 state 'related'
+set firewall ipv6 forward filter rule 10 action 'offload'
+set firewall ipv6 forward filter rule 10 offload-target 'FT10G'
+set firewall ipv6 forward filter rule 10 state 'established'
+set firewall ipv6 forward filter rule 10 state 'related'
+set firewall ipv6 forward filter rule 100 action 'accept'
+set firewall ipv6 forward filter rule 100 state 'established'
+set firewall ipv6 forward filter rule 100 state 'related'
+set firewall ipv6 forward filter rule 110 action 'drop'
+set firewall ipv6 forward filter rule 110 state 'invalid'
+# rule 115: NGN から LAN の WireGuard（UDP 51820,51821）へ来る新しい通信を通す。宛先はインターフェース ID（下位 64 ビット）だけで
+# 比べる（address-mask）ので、委任プレフィックスが変わっても書き直さなくてよい。どの網の /64 でも同じ ID なら通る
+set firewall ipv6 forward filter rule 115 action 'accept'
+set firewall ipv6 forward filter rule 115 inbound-interface name 'eth2'
+set firewall ipv6 forward filter rule 115 protocol 'udp'
+set firewall ipv6 forward filter rule 115 destination port '51820,51821'
+set firewall ipv6 forward filter rule 115 destination address '::200:ff:fe00:211'
+set firewall ipv6 forward filter rule 115 destination address-mask '::ffff:ffff:ffff:ffff'
+# rule 120: access が all の網は、他の網にもインターネットにも出られる
+set firewall ipv6 forward filter rule 120 action 'accept'
+set firewall ipv6 forward filter rule 120 inbound-interface group 'LAN-ALL'
+# rule 130〜135: RFC 4890 §4.3.1 の「落としてはならない」通過の ICMPv6 だけを通す（type 1〜4・128・129）。
+# PMTUD に packet-too-big が要る。type-name は 1 規則に 1 つしか書けないので、種類ごとに規則を分ける
+set firewall ipv6 forward filter rule 130 action 'accept'
+set firewall ipv6 forward filter rule 130 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 130 icmpv6 type-name 'destination-unreachable'
+set firewall ipv6 forward filter rule 131 action 'accept'
+set firewall ipv6 forward filter rule 131 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 131 icmpv6 type-name 'packet-too-big'
+set firewall ipv6 forward filter rule 132 action 'accept'
+set firewall ipv6 forward filter rule 132 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 132 icmpv6 type-name 'time-exceeded'
+set firewall ipv6 forward filter rule 133 action 'accept'
+set firewall ipv6 forward filter rule 133 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 133 icmpv6 type-name 'parameter-problem'
+set firewall ipv6 forward filter rule 134 action 'accept'
+set firewall ipv6 forward filter rule 134 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 134 icmpv6 type-name 'echo-request'
+set firewall ipv6 forward filter rule 135 action 'accept'
+set firewall ipv6 forward filter rule 135 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 135 icmpv6 type-name 'echo-reply'
+# rule 140〜142: MONITOR から FAMILY・NEKKO へは、ICMP・UDP 161・TCP 9100 だけを通す
+set firewall ipv6 forward filter rule 140 action 'accept'
+set firewall ipv6 forward filter rule 140 inbound-interface name 'br0.30'
+set firewall ipv6 forward filter rule 140 outbound-interface group 'MON-MONITOR'
+set firewall ipv6 forward filter rule 140 protocol 'ipv6-icmp'
+set firewall ipv6 forward filter rule 141 action 'accept'
+set firewall ipv6 forward filter rule 141 inbound-interface name 'br0.30'
+set firewall ipv6 forward filter rule 141 outbound-interface group 'MON-MONITOR'
+set firewall ipv6 forward filter rule 141 protocol 'udp'
+set firewall ipv6 forward filter rule 141 destination port '161'
+set firewall ipv6 forward filter rule 142 action 'accept'
+set firewall ipv6 forward filter rule 142 inbound-interface name 'br0.30'
+set firewall ipv6 forward filter rule 142 outbound-interface group 'MON-MONITOR'
+set firewall ipv6 forward filter rule 142 protocol 'tcp'
+set firewall ipv6 forward filter rule 142 destination port '9100'
+# rule 290: 網と網のあいだは、ここまでで通したもの以外を捨てる
+set firewall ipv6 forward filter rule 290 action 'drop'
+set firewall ipv6 forward filter rule 290 inbound-interface group 'LAN'
+set firewall ipv6 forward filter rule 290 outbound-interface group 'LAN'
+# rule 300: 残りの LAN から出る新しい通信（行き先は WAN だけになる）を通す
+set firewall ipv6 forward filter rule 300 action 'accept'
+set firewall ipv6 forward filter rule 300 inbound-interface group 'LAN'
+
+# input（ルータ宛て）。LAN と管理用の IF から、および戻りの通信だけを受ける
+set firewall ipv4 input filter default-action 'drop'
+set firewall ipv4 input filter rule 10 action 'accept'
+set firewall ipv4 input filter rule 10 state 'established'
+set firewall ipv4 input filter rule 10 state 'related'
+set firewall ipv4 input filter rule 20 action 'accept'
+set firewall ipv4 input filter rule 20 protocol 'icmp'
+set firewall ipv4 input filter rule 30 action 'accept'
+set firewall ipv4 input filter rule 30 inbound-interface group 'LAN'
+set firewall ipv4 input filter rule 40 action 'accept'
+set firewall ipv4 input filter rule 40 inbound-interface name 'eth0'
+# VRF の中の IF に届いたパケットは、input では VRF の名前（MGMT）の IF から来たように見えることがあるので、両方を許す
+set firewall ipv4 input filter rule 45 action 'accept'
+set firewall ipv4 input filter rule 45 inbound-interface name 'MGMT'
+set firewall ipv4 input filter rule 50 action 'accept'
+set firewall ipv4 input filter rule 50 inbound-interface name 'lo'
+
+set firewall ipv6 input filter default-action 'drop'
+set firewall ipv6 input filter rule 10 action 'accept'
+set firewall ipv6 input filter rule 10 state 'established'
+set firewall ipv6 input filter rule 10 state 'related'
+# ND・RA・PMTUD に要る
+set firewall ipv6 input filter rule 20 action 'accept'
+set firewall ipv6 input filter rule 20 protocol 'ipv6-icmp'
+# DHCPv6 のクライアント（NGN の DHCPv6 サーバはリンクローカルから 546 番へ返す）
+set firewall ipv6 input filter rule 30 action 'accept'
+set firewall ipv6 input filter rule 30 protocol 'udp'
+set firewall ipv6 input filter rule 30 source address 'fe80::/10'
+set firewall ipv6 input filter rule 30 destination port '546'
+set firewall ipv6 input filter rule 40 action 'accept'
+set firewall ipv6 input filter rule 40 inbound-interface group 'LAN'
+# MAP-E: BR から届く IPv4 入りの IPv6（ipip6）
+set firewall ipv6 input filter rule 50 action 'accept'
+set firewall ipv6 input filter rule 50 protocol 'ipencap'
+set firewall ipv6 input filter rule 50 source address '2404:9200:225:100::64'
+set firewall ipv6 input filter rule 60 action 'accept'
+set firewall ipv6 input filter rule 60 inbound-interface name 'lo'

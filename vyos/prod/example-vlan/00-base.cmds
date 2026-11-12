@@ -1,0 +1,40 @@
+# 生成: scripts/render_config.py（site: example-vlan.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/00-base.cmds.j2）か site を直して描き直す
+# 基本: ホスト名・時刻・NTP・ログイン・SSH・管理用の IF（VRF MGMT）・オフロードとリング・conntrack
+# 管理は VRF MGMT の中（vyos/mgmt-home.cmds の形）。eth0 は家族用の網にタグなしでつなぎ、DHCP で受ける
+# （PC02 自身の DHCP サーバが固定の割り当てで配る）。SSH・NTP・node-exporter・SNMP は VRF MGMT の中だけで待ち受ける
+set system host-name 'home-router'
+set system time-zone 'Asia/Tokyo'
+set service ntp server 'ntp.nict.jp'
+set service ntp server 'time.google.com'
+set system option performance 'network-throughput'
+
+# ログインは鍵だけ。鍵の本体は印 @SSH_PUBKEY@ のまま出し、投入時に環境変数 SSH_PUBKEY で置き換える
+set system login user vyos authentication public-keys admin type 'ssh-ed25519'
+set system login user vyos authentication public-keys admin key '@SSH_PUBKEY@'
+set service ssh vrf 'MGMT'
+set service ssh disable-password-authentication
+set service ntp vrf 'MGMT'
+
+# 管理用（VRF MGMT。DHCP の既定経路は VRF の経路表 100 にだけ入る）
+set vrf name MGMT table '100'
+set interfaces ethernet eth0 description 'MGMT'
+set interfaces ethernet eth0 address 'dhcp'
+set interfaces ethernet eth0 vrf 'MGMT'
+
+# vyos/tuning-1-offload.cmds の形（RPS は入れない。実機の試験で 64B の転送性能が半分になった）
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 offload gso
+set interfaces ethernet eth1 offload sg
+set interfaces ethernet eth1 offload tso
+set interfaces ethernet eth1 ring-buffer rx '4096'
+set interfaces ethernet eth1 ring-buffer tx '4096'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth2 offload gso
+set interfaces ethernet eth2 offload sg
+set interfaces ethernet eth2 offload tso
+set interfaces ethernet eth2 ring-buffer rx '4096'
+set interfaces ethernet eth2 ring-buffer tx '4096'
+
+# vyos/conntrack-large.cmds の形（1 件約 256 バイト）
+set system conntrack table-size '1048576'
+set system conntrack hash-size '262144'
