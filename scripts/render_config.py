@@ -10,7 +10,7 @@ delete は 20-wan-ra64 の 1 行と 01-migrate-from-lab だけ）:
                         delete の行。同じ commit の他の部分が set する所は消さないので、つなぐ順によらない。
                         2 回目からは描かない（無い所の delete は VyOS が拒否する）
   10-lan.cmds           LAN のアドレス（IPv4 と ULA）・DHCPv4 サーバ・DNS の転送・RA
-  20-wan-common.cmds    WAN の説明と RA の受け入れ
+  20-wan-common.cmds    WAN の説明と RA の受け入れ、wan.duid_ll_mac を書いたときは DHCPv6 の DUID（DUID-LL）
   20-wan-<型>.cmds      site の wan.type で選ぶ。pd56（型A、ONU 直結）/ pd60（型B、HGW 配下）/ ra64（型C、RA の /64）
   30-firewall.cmds      ステートフルの forward と flowtable、ルータ宛ての input、NGN 向けの DSCP の書き換え
   40-mape.cmds          --mape のときだけ。site の wan.prefix から scripts/mape_calc.py で MAP-E の行を作る（接続後の段）
@@ -65,6 +65,11 @@ NGN_GW_LLA_PLACEHOLDER = "@NGN_GW_LLA@"
 FOUR_HEXTETS = re.compile(r"[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){3}")
 ULA_FORM = re.compile(r"fd[0-9a-f]{2}(?::[0-9a-f]{1,4}){3}")
 LLA_FORM = re.compile(r"fe80::[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,3}")
+MAC_FORM = r"[0-9a-f]{2}(?::[0-9a-f]{2}){5}"
+# DUID-LL（RFC 8415 11.4）: DUID の種別 3、ハードウェアの種別 1（Ethernet）、続けて MAC。NTT東「IP通信網サービスの
+# インタフェース 第三分冊」第46版 4.4.2.1.4 は、光クロスの端末の DUID を DUID-LL か DUID-LLT にする。VyOS の既定は
+# DUID-UUID（種別 4）で、2026-11-13 に光クロスへつないだ PC02 は DHCPv6-PD に返事をもらえなかった
+DUID_LL_PREFIX = "00:03:00:01"
 
 REQUIRED = ("host_name", "wan.type")
 DEFAULTS: dict = {
@@ -87,7 +92,9 @@ DEFAULTS: dict = {
         # VLAN-aware のブリッジで網を分けるとき（validate_bridge）。null なら interfaces.lan に 1 つの網を置く
         "bridge": None,
     },
-    "wan": {"type": None, "prefix": None, "prefix64": WAN_PREFIX64_PLACEHOLDER, "ngn_gw_lla": NGN_GW_LLA_PLACEHOLDER},
+    # duid_ll_mac: WAN の MAC。書くと DHCPv6 の DUID を DUID-LL にする（光クロスの PD に要る。DUID_LL_PREFIX）。null なら描かない
+    "wan": {"type": None, "prefix": None, "prefix64": WAN_PREFIX64_PLACEHOLDER, "ngn_gw_lla": NGN_GW_LLA_PLACEHOLDER,
+            "duid_ll_mac": None},
     "tuning": {"ring_buffer": 4096, "conntrack_table_size": 1048576, "conntrack_hash_size": 262144,
                "performance": "network-throughput"},
     "dns": {"upstream": []},
@@ -292,7 +299,7 @@ def validate_dhcp(dhcp, key: str, iface: ipaddress.IPv4Interface, default_subnet
             raise SiteError(f"{mkey}.ip: ルータのアドレスと重なる: {ip}")
         mappings.append({
             "name": text(m["name"], f"{mkey}.name", r"[A-Za-z0-9][A-Za-z0-9_-]{0,62}"),
-            "mac": text(m["mac"], f"{mkey}.mac", r"[0-9a-f]{2}(?::[0-9a-f]{2}){5}"),
+            "mac": text(m["mac"], f"{mkey}.mac", MAC_FORM),
             "ip": str(ip),
         })
     for field in ("name", "mac", "ip"):
@@ -469,6 +476,11 @@ def validate(raw: dict) -> dict:
             raise SiteError(f"lan.bridge.networks: 型B（/60）のサブネット ID は 1〜15: {', '.join(big)}")
     prefix64 = placeholder_or(s["wan"]["prefix64"], "wan.prefix64", WAN_PREFIX64_PLACEHOLDER, FOUR_HEXTETS)
     gw = placeholder_or(s["wan"]["ngn_gw_lla"], "wan.ngn_gw_lla", NGN_GW_LLA_PLACEHOLDER, LLA_FORM)
+    duid_mac = s["wan"]["duid_ll_mac"]
+    if duid_mac is not None and not isinstance(duid_mac, str):
+        # yaml（1.1）は引用符の無い 12:34:56:00:00:01 のような MAC を 60 進の整数として読む
+        raise SiteError(f"wan.duid_ll_mac: MAC を引用符で囲んで書く（例 \"02:00:00:00:00:01\"）: {duid_mac!r}")
+    duid = None if duid_mac is None else f"{DUID_LL_PREFIX}:{text(duid_mac, 'wan.duid_ll_mac', MAC_FORM)}"
 
     t = s["tuning"]
     tuning = {
@@ -540,7 +552,7 @@ def validate(raw: dict) -> dict:
         "mgmt": mgmt,
         "lan": {"address": str(lan_if), "ip": str(lan_if.ip), "network": str(lan_net), "ula_prefix": ula,
                 "dhcp": lan_dhcp, "bridge": bridge},
-        "wan": {"type": wan_type, "prefix": prefix, "prefix64": prefix64, "ngn_gw_lla": gw},
+        "wan": {"type": wan_type, "prefix": prefix, "prefix64": prefix64, "ngn_gw_lla": gw, "duid": duid},
         "tuning": tuning,
         "dns": dns,
         "firewall": fw,

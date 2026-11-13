@@ -4,3 +4,6 @@
 # scripts/mape_calc.py）に入っている。tun0 の残りの設定が無いままここで書くと、トンネルが作れず commit が通らない
 set interfaces ethernet eth2 description 'WAN-NGN'
 set interfaces ethernet eth2 ipv6 address autoconf
+# DHCPv6 の DUID を DUID-LL（種別 3・Ethernet・WAN の MAC）にする。光クロスは DUID-LL か DUID-LLT でないと PD に答えない
+# （NTT東「IP通信網サービスのインタフェース 第三分冊」第46版 4.4.2.1.4）。VyOS の既定は DUID-UUID（種別 4）
+set interfaces ethernet eth2 dhcpv6-options duid '00:03:00:01:02:00:00:00:00:01'
