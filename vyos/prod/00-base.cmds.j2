@@ -1,5 +1,10 @@
-# 基本: ホスト名・時刻・NTP・ログイン・SSH・救出用の IF・オフロードとリング・conntrack
+# 基本: ホスト名・時刻・NTP・ログイン・SSH・{% if mgmt.mode == "vrf" %}管理用の IF（VRF {{ mgmt.vrf }}）{% else %}救出用の IF{% endif %}・オフロードとリング・conntrack
+{% if mgmt.mode == "vrf" %}
+# 管理は VRF {{ mgmt.vrf }} の中（vyos/mgmt-home.cmds の形）。{{ i.rescue }} は家族用の網にタグなしでつなぎ、DHCP で受ける
+# （PC02 自身の DHCP サーバが固定の割り当てで配る）。SSH・NTP・node-exporter・SNMP は VRF {{ mgmt.vrf }} の中だけで待ち受ける
+{% else %}
 # 本番では VRF MGMT を使わない（管理は LAN の {{ lan.ip }} から）。{{ i.rescue }} は救出用で、ゲートウェイを持たない。
+{% endif %}
 set system host-name '{{ host_name }}'
 set system time-zone '{{ time_zone }}'
 {% for server in ntp_servers %}
@@ -12,6 +17,17 @@ set system option performance '{{ tuning.performance }}'
 # ログインは鍵だけ。鍵の本体は印 @SSH_PUBKEY@ のまま出し、投入時に環境変数 SSH_PUBKEY で置き換える
 set system login user {{ login.user }} authentication public-keys {{ login.key_name }} type '{{ login.key_type }}'
 set system login user {{ login.user }} authentication public-keys {{ login.key_name }} key '@SSH_PUBKEY@'
+{% if mgmt.mode == "vrf" %}
+set service ssh vrf '{{ mgmt.vrf }}'
+set service ssh disable-password-authentication
+set service ntp vrf '{{ mgmt.vrf }}'
+
+# 管理用（VRF {{ mgmt.vrf }}。DHCP の既定経路は VRF の経路表 {{ mgmt.vrf_table }} にだけ入る）
+set vrf name {{ mgmt.vrf }} table '{{ mgmt.vrf_table }}'
+set interfaces ethernet {{ i.rescue }} description 'MGMT'
+set interfaces ethernet {{ i.rescue }} address 'dhcp'
+set interfaces ethernet {{ i.rescue }} vrf '{{ mgmt.vrf }}'
+{% else %}
 set service ssh listen-address '{{ lan.ip }}'
 set service ssh listen-address '{{ rescue.ip }}'
 set service ssh disable-password-authentication
@@ -19,6 +35,7 @@ set service ssh disable-password-authentication
 # 救出用（直結した PC から入る。ゲートウェイなし）
 set interfaces ethernet {{ i.rescue }} description 'RESCUE'
 set interfaces ethernet {{ i.rescue }} address '{{ rescue.address }}'
+{% endif %}
 
 # vyos/tuning-1-offload.cmds の形（RPS は入れない。実機の試験で 64B の転送性能が半分になった）
 {% for ifname in (i.lan, i.wan) %}
