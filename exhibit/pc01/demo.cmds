@@ -1,0 +1,61 @@
+# 自鯖缶（2026-11-15）の展示用 PC01 の設定。WAN は会場の上流、LAN は MacBook（1G）。
+# eth0（オンボード 1G）は管理用の DHCP のまま触らない。
+# WAN の受け方は会場の回答が来るまで DHCP と SLAAC。LAN の網は会場と重なりにくい 172.30.15.0/24。
+
+# WAN（10G NIC の 1 口目）
+set interfaces ethernet eth1 description 'WAN-venue'
+set interfaces ethernet eth1 address 'dhcp'
+set interfaces ethernet eth1 ipv6 address autoconf
+
+# LAN（10G NIC の 2 口目、MacBook を 1G でつなぐ）
+set interfaces ethernet eth2 description 'LAN-macbook'
+set interfaces ethernet eth2 address '172.30.15.1/24'
+
+# MacBook にアドレスと DNS を配る
+set service dhcp-server shared-network-name LAN subnet 172.30.15.0/24 subnet-id '1'
+set service dhcp-server shared-network-name LAN subnet 172.30.15.0/24 option default-router '172.30.15.1'
+set service dhcp-server shared-network-name LAN subnet 172.30.15.0/24 option name-server '172.30.15.1'
+set service dhcp-server shared-network-name LAN subnet 172.30.15.0/24 range 0 start '172.30.15.100'
+set service dhcp-server shared-network-name LAN subnet 172.30.15.0/24 range 0 stop '172.30.15.199'
+set service dns forwarding listen-address '172.30.15.1'
+set service dns forwarding allow-from '172.30.15.0/24'
+set service dns forwarding system
+set system name-server 'eth1'
+
+# IPv4 の NAT
+set nat source rule 100 outbound-interface name 'eth1'
+set nat source rule 100 source address '172.30.15.0/24'
+set nat source rule 100 translation address 'masquerade'
+
+# 会場側（eth1）から PC01 自身へは、戻りの通信と ICMP と DHCP だけを通す
+set firewall ipv4 input filter default-action 'accept'
+set firewall ipv4 input filter rule 10 action 'accept'
+set firewall ipv4 input filter rule 10 state 'established'
+set firewall ipv4 input filter rule 10 state 'related'
+set firewall ipv4 input filter rule 20 action 'accept'
+set firewall ipv4 input filter rule 20 protocol 'icmp'
+set firewall ipv4 input filter rule 30 action 'accept'
+set firewall ipv4 input filter rule 30 inbound-interface name 'eth1'
+set firewall ipv4 input filter rule 30 protocol 'udp'
+set firewall ipv4 input filter rule 30 destination port '68'
+set firewall ipv4 input filter rule 90 action 'drop'
+set firewall ipv4 input filter rule 90 inbound-interface name 'eth1'
+set firewall ipv6 input filter default-action 'accept'
+set firewall ipv6 input filter rule 10 action 'accept'
+set firewall ipv6 input filter rule 10 state 'established'
+set firewall ipv6 input filter rule 10 state 'related'
+set firewall ipv6 input filter rule 20 action 'accept'
+set firewall ipv6 input filter rule 20 protocol 'ipv6-icmp'
+set firewall ipv6 input filter rule 30 action 'accept'
+set firewall ipv6 input filter rule 30 inbound-interface name 'eth1'
+set firewall ipv6 input filter rule 30 protocol 'udp'
+set firewall ipv6 input filter rule 30 destination port '546'
+set firewall ipv6 input filter rule 90 action 'drop'
+set firewall ipv6 input filter rule 90 inbound-interface name 'eth1'
+# 会場側から LAN へ新しく入ってくる通信は通さない
+set firewall ipv4 forward filter default-action 'accept'
+set firewall ipv4 forward filter rule 10 action 'accept'
+set firewall ipv4 forward filter rule 10 state 'established'
+set firewall ipv4 forward filter rule 10 state 'related'
+set firewall ipv4 forward filter rule 90 action 'drop'
+set firewall ipv4 forward filter rule 90 inbound-interface name 'eth1'
