@@ -10,7 +10,7 @@ delete は 20-wan-ra64 の 1 行と 01-migrate-from-lab だけ）:
                         delete の行。同じ commit の他の部分が set する所は消さないので、つなぐ順によらない。
                         2 回目からは描かない（無い所の delete は VyOS が拒否する）
   10-lan.cmds           LAN のアドレス（IPv4 と ULA）・DHCPv4 サーバ・DNS の転送・RA
-  20-wan-common.cmds    WAN の説明と RA の受け入れ
+  20-wan-common.cmds    WAN の説明と RA の受け入れ、wan.duid_ll_mac を書いたときは DHCPv6 の DUID（DUID-LL）
   20-wan-<型>.cmds      site の wan.type で選ぶ。pd56（型A、ONU 直結）/ pd60（型B、HGW 配下）/ ra64（型C、RA の /64）
   30-firewall.cmds      ステートフルの forward と flowtable、ルータ宛ての input、NGN 向けの DSCP の書き換え
   40-mape.cmds          --mape のときだけ。site の wan.prefix から scripts/mape_calc.py で MAP-E の行を作る（接続後の段）
@@ -65,6 +65,11 @@ NGN_GW_LLA_PLACEHOLDER = "@NGN_GW_LLA@"
 FOUR_HEXTETS = re.compile(r"[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){3}")
 ULA_FORM = re.compile(r"fd[0-9a-f]{2}(?::[0-9a-f]{1,4}){3}")
 LLA_FORM = re.compile(r"fe80::[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,3}")
+MAC_FORM = r"[0-9a-f]{2}(?::[0-9a-f]{2}){5}"
+# DUID-LL（RFC 8415 11.4）: DUID の種別 3、ハードウェアの種別 1（Ethernet）、続けて MAC。NTT東「IP通信網サービスの
+# インタフェース 第三分冊」第46版 4.4.2.1.4 は、光クロスの端末の DUID を DUID-LL か DUID-LLT にする。VyOS の既定は
+# DUID-UUID（種別 4）で、2026-11-13 に光クロスへつないだ PC02 は DHCPv6-PD に返事をもらえなかった
+DUID_LL_PREFIX = "00:03:00:01"
 
 REQUIRED = ("host_name", "wan.type")
 DEFAULTS: dict = {
@@ -74,6 +79,8 @@ DEFAULTS: dict = {
     "interfaces": {"rescue": "eth0", "lan": "eth1", "wan": "eth2"},
     "login": {"user": "vyos", "key_name": "admin", "key_type": "ssh-ed25519"},
     "rescue": {"address": "192.168.255.1/24"},
+    # rescue: interfaces.rescue を救出用の固定アドレスにする（既定）。vrf: VRF MGMT に入れて DHCP で受ける
+    "mgmt": {"mode": "rescue", "vrf_table": 100},
     "lan": {
         "address": "192.168.2.1/24",
         "ula_prefix": ULA_PLACEHOLDER,
@@ -82,14 +89,29 @@ DEFAULTS: dict = {
             "range": {"start": "192.168.2.100", "stop": "192.168.2.199"},
             "static_mappings": [],
         },
+        # VLAN-aware のブリッジで網を分けるとき（validate_bridge）。null なら interfaces.lan に 1 つの網を置く
+        "bridge": None,
     },
-    "wan": {"type": None, "prefix": None, "prefix64": WAN_PREFIX64_PLACEHOLDER, "ngn_gw_lla": NGN_GW_LLA_PLACEHOLDER},
+    # duid_ll_mac: WAN の MAC。書くと DHCPv6 の DUID を DUID-LL にする（光クロスの PD に要る。DUID_LL_PREFIX）。null なら描かない
+    "wan": {"type": None, "prefix": None, "prefix64": WAN_PREFIX64_PLACEHOLDER, "ngn_gw_lla": NGN_GW_LLA_PLACEHOLDER,
+            "duid_ll_mac": None},
     "tuning": {"ring_buffer": 4096, "conntrack_table_size": 1048576, "conntrack_hash_size": 262144,
                "performance": "network-throughput"},
     "dns": {"upstream": []},
-    "firewall": {"dscp_udp_port": 51820, "router_wireguard": False},
+    "firewall": {"dscp_udp_port": 51820, "router_wireguard": False,
+                 # 網ごとの monitor_to で通す監視の通信（ICMP に加えて）
+                 "monitor_ports": {"tcp": [9100], "udp": [161]},
+                 # NGN から LAN の WireGuard へ来る新しい通信を通す先のインターフェース ID（下位 64 ビット）。null なら描かない
+                 "wireguard_inbound_iid": None},
     "monitor": {"snmp": {"enabled": True, "network": "192.168.2.50/32"}, "node_exporter": True},
 }
+
+MGMT_MODES = ("rescue", "vrf")
+ACCESS = ("all", "internet")
+MGMT_VRF = "MGMT"
+NET_NAME = r"[A-Z][A-Z0-9_-]{0,15}"
+BRIDGE_NAME = r"br\d{1,3}"
+IID_MASK = "::ffff:ffff:ffff:ffff"
 
 PARTS_BEFORE_WAN = ("00-base", "10-lan", "20-wan-common")
 PARTS_AFTER_WAN = ("30-firewall", "50-monitor")
@@ -247,6 +269,138 @@ def placeholder_or(value, key: str, placeholder: str, form: re.Pattern, check=No
     return value
 
 
+def validate_dhcp(dhcp, key: str, iface: ipaddress.IPv4Interface, default_subnet_id: int | None = None) -> dict:
+    """DHCPv4 サーバの範囲と固定の割り当て。iface はルータのアドレス（網と、範囲から外すアドレス）。"""
+    if not isinstance(dhcp, dict):
+        raise SiteError(f"{key}: 「キー: 値」の並びにする")
+    unknown = set(dhcp) - {"subnet_id", "range", "static_mappings"}
+    if unknown:
+        raise SiteError(f"{key}.{sorted(unknown)[0]}: 知らないキー（書き間違いでないか）")
+    net = iface.network
+    subnet_id = dhcp.get("subnet_id", default_subnet_id)
+    subnet_id = integer(subnet_id, f"{key}.subnet_id", 1, 2**32 - 1)
+    rng = dhcp.get("range")
+    if not isinstance(rng, dict):
+        raise SiteError(f"{key}.range: start と stop を書く")
+    start = ipv4_host(rng.get("start"), f"{key}.range.start", net)
+    stop = ipv4_host(rng.get("stop"), f"{key}.range.stop", net)
+    if start > stop or start <= iface.ip <= stop:
+        raise SiteError(f"{key}.range: start ≦ stop にし、ルータのアドレス {iface.ip} を含めない: {start}〜{stop}")
+    mappings = []
+    mapping_list = dhcp.get("static_mappings", [])
+    if not isinstance(mapping_list, list):
+        raise SiteError(f"{key}.static_mappings: 一覧にする")
+    for n, m in enumerate(mapping_list):
+        mkey = f"{key}.static_mappings[{n}]"
+        if not isinstance(m, dict) or set(m) != {"name", "mac", "ip"}:
+            raise SiteError(f"{mkey}: name・mac・ip の 3 つを書く: {m!r}")
+        ip = ipv4_host(m["ip"], f"{mkey}.ip", net)
+        if ip == iface.ip:
+            raise SiteError(f"{mkey}.ip: ルータのアドレスと重なる: {ip}")
+        mappings.append({
+            "name": text(m["name"], f"{mkey}.name", r"[A-Za-z0-9][A-Za-z0-9_-]{0,62}"),
+            "mac": text(m["mac"], f"{mkey}.mac", MAC_FORM),
+            "ip": str(ip),
+        })
+    for field in ("name", "mac", "ip"):
+        values = [m[field] for m in mappings]
+        if len(values) != len(set(values)):
+            raise SiteError(f"{key}.static_mappings: {field} が重なっている")
+    return {"subnet_id": subnet_id, "start": str(start), "stop": str(stop), "static_mappings": mappings}
+
+
+NET_KEYS = {"name", "vlan", "native", "address", "sla_id", "access", "monitor_to", "dhcp"}
+NET_REQUIRED = ("name", "vlan", "address", "sla_id", "access", "dhcp")
+MAX_MONITOR_NETS = 4  # forward の規則 140〜179 に収める
+
+
+def validate_bridge(b, trunk: str) -> dict:
+    """lan.bridge: VLAN-aware のブリッジ（trunk をメンバーにする）と、vif ごとの網。"""
+    if not isinstance(b, dict):
+        raise SiteError("lan.bridge: 「キー: 値」の並びにする")
+    unknown = set(b) - {"name", "networks"}
+    if unknown:
+        raise SiteError(f"lan.bridge.{sorted(unknown)[0]}: 知らないキー（書き間違いでないか）")
+    name = text(b.get("name", "br0"), "lan.bridge.name", BRIDGE_NAME)
+    raw_nets = b.get("networks")
+    if not isinstance(raw_nets, list) or not raw_nets:
+        raise SiteError("lan.bridge.networks: 網を 1 つ以上並べる")
+    nets = []
+    for i, n in enumerate(raw_nets):
+        key = f"lan.bridge.networks[{i}]"
+        if not isinstance(n, dict):
+            raise SiteError(f"{key}: 「キー: 値」の並びにする")
+        unknown = set(n) - NET_KEYS
+        if unknown:
+            raise SiteError(f"{key}.{sorted(unknown)[0]}: 知らないキー（書き間違いでないか）")
+        missing = [k for k in NET_REQUIRED if k not in n]
+        if missing:
+            raise SiteError(f"{key}.{missing[0]}: 必ず書く")
+        # VLAN 1 は Linux のブリッジの既定の PVID で、VyOS も native-vlan に使わせない
+        vlan = integer(n["vlan"], f"{key}.vlan", 2, 4094)
+        iface = ipv4_interface(n["address"], f"{key}.address")
+        access = n["access"]
+        if access not in ACCESS:
+            raise SiteError(f"{key}.access: {' / '.join(ACCESS)} のどれか: {access!r}")
+        monitor_to = n.get("monitor_to", [])
+        if not isinstance(monitor_to, list):
+            raise SiteError(f"{key}.monitor_to: 網の名前の一覧にする: {monitor_to!r}")
+        net_name = text(n["name"], f"{key}.name", NET_NAME)
+        nets.append({
+            "name": net_name,
+            "vlan": vlan,
+            "native": boolean(n.get("native", False), f"{key}.native"),
+            "ifname": f"{name}.{vlan}",
+            "path": f"bridge {name} vif {vlan}",
+            "address": str(iface),
+            "ip": str(iface.ip),
+            "network": str(iface.network),
+            # 0 は MAP-E の CE が使う。/56 の中のサブネット ID は 0〜255
+            "sla_id": integer(n["sla_id"], f"{key}.sla_id", 1, 255),
+            "access": access,
+            "monitor_to": [text(t, f"{key}.monitor_to", NET_NAME) for t in monitor_to],
+            "monitor_group": f"MON-{net_name}",
+            "dhcp": validate_dhcp(n["dhcp"], f"{key}.dhcp", iface, default_subnet_id=vlan),
+        })
+    for field in ("name", "vlan", "sla_id"):
+        values = [n[field] for n in nets]
+        if len(values) != len(set(values)):
+            raise SiteError(f"lan.bridge.networks: {field} が重なっている")
+    subnet_ids = [n["dhcp"]["subnet_id"] for n in nets]
+    if len(subnet_ids) != len(set(subnet_ids)):
+        raise SiteError("lan.bridge.networks: dhcp.subnet_id が重なっている（既定は vlan）")
+    for i, a in enumerate(nets):
+        for c in nets[i + 1:]:
+            if ipaddress.IPv4Network(a["network"]).overlaps(ipaddress.IPv4Network(c["network"])):
+                raise SiteError(f"lan.bridge.networks: {a['name']}（{a['network']}）と {c['name']}（{c['network']}）が重なる")
+    natives = [n for n in nets if n["native"]]
+    if len(natives) > 1:
+        raise SiteError(f"lan.bridge.networks: native は 1 つの網だけ: {', '.join(n['name'] for n in natives)}")
+    names = {n["name"] for n in nets}
+    for n in nets:
+        for t in n["monitor_to"]:
+            if t not in names or t == n["name"]:
+                raise SiteError(f"lan.bridge.networks: {n['name']} の monitor_to に、他の網の名前を書く: {t}")
+    monitor_nets = [n for n in nets if n["monitor_to"]]
+    if len(monitor_nets) > MAX_MONITOR_NETS:
+        raise SiteError(f"lan.bridge.networks: monitor_to を書ける網は {MAX_MONITOR_NETS} つまで")
+    by_name = {n["name"]: n for n in nets}
+    for i, n in enumerate(monitor_nets):
+        n["monitor_rule"] = 140 + 10 * i
+        n["monitor_ifnames"] = [by_name[t]["ifname"] for t in n["monitor_to"]]
+    primary = natives[0] if natives else nets[0]
+    return {
+        "name": name,
+        "trunk": trunk,
+        "native_vlan": natives[0]["vlan"] if natives else None,
+        "tagged": sorted(n["vlan"] for n in nets if not n["native"]),
+        "nets": nets,
+        "primary": primary,
+        "all_access": [n["ifname"] for n in nets if n["access"] == "all"],
+        "monitor_nets": monitor_nets,
+    }
+
+
 def validate(raw: dict) -> dict:
     """site の値を確かめ、テンプレートに渡す値にする。"""
     for dotted in REQUIRED:
@@ -273,11 +427,13 @@ def validate(raw: dict) -> dict:
     if login["key_type"] not in KEY_TYPES:
         raise SiteError(f"login.key_type: {', '.join(KEY_TYPES)} のどれか: {login['key_type']!r}")
 
+    mgmt_mode = s["mgmt"]["mode"]
+    if mgmt_mode not in MGMT_MODES:
+        raise SiteError(f"mgmt.mode: {' / '.join(MGMT_MODES)} のどれか: {mgmt_mode!r}")
+    mgmt = {"mode": mgmt_mode, "vrf": MGMT_VRF,
+            "vrf_table": integer(s["mgmt"]["vrf_table"], "mgmt.vrf_table", 100, 65535)}
+
     rescue = ipv4_interface(s["rescue"]["address"], "rescue.address")
-    lan_if = ipv4_interface(s["lan"]["address"], "lan.address")
-    lan_net = lan_if.network
-    if rescue.network.overlaps(lan_net):
-        raise SiteError(f"rescue.address: LAN（{lan_net}）と重ならない網にする: {rescue}")
 
     def ula_check(v: str) -> None:
         if ipaddress.IPv6Network(f"{v}::/64").network_address not in ipaddress.IPv6Network("fd00::/8"):
@@ -285,33 +441,24 @@ def validate(raw: dict) -> dict:
 
     ula = placeholder_or(s["lan"]["ula_prefix"], "lan.ula_prefix", ULA_PLACEHOLDER, ULA_FORM, ula_check)
 
-    dhcp = s["lan"]["dhcp"]
-    subnet_id = integer(dhcp["subnet_id"], "lan.dhcp.subnet_id", 1, 2**32 - 1)
-    rng = dhcp["range"]
-    start = ipv4_host(rng.get("start"), "lan.dhcp.range.start", lan_net)
-    stop = ipv4_host(rng.get("stop"), "lan.dhcp.range.stop", lan_net)
-    if start > stop or start <= lan_if.ip <= stop:
-        raise SiteError(f"lan.dhcp.range: start ≦ stop にし、ルータのアドレス {lan_if.ip} を含めない: {start}〜{stop}")
-    mappings = []
-    mapping_list = dhcp["static_mappings"]
-    if not isinstance(mapping_list, list):
-        raise SiteError("lan.dhcp.static_mappings: 一覧にする")
-    for n, m in enumerate(mapping_list):
-        key = f"lan.dhcp.static_mappings[{n}]"
-        if not isinstance(m, dict) or set(m) != {"name", "mac", "ip"}:
-            raise SiteError(f"{key}: name・mac・ip の 3 つを書く: {m!r}")
-        ip = ipv4_host(m["ip"], f"{key}.ip", lan_net)
-        if ip == lan_if.ip:
-            raise SiteError(f"{key}.ip: ルータのアドレスと重なる: {ip}")
-        mappings.append({
-            "name": text(m["name"], f"{key}.name", r"[A-Za-z0-9][A-Za-z0-9_-]{0,62}"),
-            "mac": text(m["mac"], f"{key}.mac", r"[0-9a-f]{2}(?::[0-9a-f]{2}){5}"),
-            "ip": str(ip),
-        })
-    for field in ("name", "mac", "ip"):
-        values = [m[field] for m in mappings]
-        if len(values) != len(set(values)):
-            raise SiteError(f"lan.dhcp.static_mappings: {field} が重なっている")
+    bridge = None
+    if s["lan"]["bridge"] is not None:
+        given = [k for k in ("address", "dhcp") if k in (raw.get("lan") or {})]
+        if given:
+            raise SiteError(f"lan.{given[0]}: lan.bridge を書いたときは、網ごとの値を lan.bridge.networks に書く")
+        bridge = validate_bridge(s["lan"]["bridge"], ifs["lan"])
+        primary = bridge["primary"]
+        lan_if = ipaddress.IPv4Interface(primary["address"])
+        lan_dhcp = primary["dhcp"]
+    else:
+        lan_if = ipv4_interface(s["lan"]["address"], "lan.address")
+        lan_dhcp = validate_dhcp(s["lan"]["dhcp"], "lan.dhcp", lan_if)
+    lan_net = lan_if.network
+    nets = bridge["nets"] if bridge else [{"network": str(lan_net)}]
+    if mgmt_mode == "rescue":
+        for n in nets:
+            if rescue.network.overlaps(ipaddress.IPv4Network(n["network"])):
+                raise SiteError(f"rescue.address: LAN（{n['network']}）と重ならない網にする: {rescue}")
 
     wan_type = s["wan"]["type"]
     if wan_type not in WAN_TYPES:
@@ -323,8 +470,17 @@ def validate(raw: dict) -> dict:
         except mape_calc.MapeError as e:
             raise SiteError(f"wan.prefix: {e}") from e
         prefix = str(prefix)
+    if bridge and wan_type == "pd60":
+        big = [n["name"] for n in bridge["nets"] if n["sla_id"] > 15]
+        if big:
+            raise SiteError(f"lan.bridge.networks: 型B（/60）のサブネット ID は 1〜15: {', '.join(big)}")
     prefix64 = placeholder_or(s["wan"]["prefix64"], "wan.prefix64", WAN_PREFIX64_PLACEHOLDER, FOUR_HEXTETS)
     gw = placeholder_or(s["wan"]["ngn_gw_lla"], "wan.ngn_gw_lla", NGN_GW_LLA_PLACEHOLDER, LLA_FORM)
+    duid_mac = s["wan"]["duid_ll_mac"]
+    if duid_mac is not None and not isinstance(duid_mac, str):
+        # yaml（1.1）は引用符の無い 12:34:56:00:00:01 のような MAC を 60 進の整数として読む
+        raise SiteError(f"wan.duid_ll_mac: MAC を引用符で囲んで書く（例 \"02:00:00:00:00:01\"）: {duid_mac!r}")
+    duid = None if duid_mac is None else f"{DUID_LL_PREFIX}:{text(duid_mac, 'wan.duid_ll_mac', MAC_FORM)}"
 
     t = s["tuning"]
     tuning = {
@@ -346,9 +502,35 @@ def validate(raw: dict) -> dict:
         except (TypeError, ValueError) as e:
             raise SiteError(f"dns.upstream[{n}]: IP アドレスとして読めない: {v!r}") from e
 
+    ports = s["firewall"]["dscp_udp_port"]
+    ports = ports if isinstance(ports, list) else [ports]
+    if not ports:
+        raise SiteError("firewall.dscp_udp_port: ポートを 1 つ以上書く")
+    ports = [integer(p, "firewall.dscp_udp_port", 1, 65535) for p in ports]
+    if len(ports) != len(set(ports)):
+        raise SiteError(f"firewall.dscp_udp_port: ポートが重なっている: {ports}")
+    mon_ports = s["firewall"]["monitor_ports"]
+    monitor_ports = {}
+    for proto in ("tcp", "udp"):
+        v = mon_ports[proto]
+        if not isinstance(v, list) or not v:
+            raise SiteError(f"firewall.monitor_ports.{proto}: ポートを 1 つ以上並べる: {v!r}")
+        monitor_ports[proto] = ",".join(str(integer(p, f"firewall.monitor_ports.{proto}", 1, 65535)) for p in v)
+    iid = s["firewall"]["wireguard_inbound_iid"]
+    if iid is not None:
+        try:
+            iid_addr = ipaddress.IPv6Address(iid)
+        except (TypeError, ValueError) as e:
+            raise SiteError(f"firewall.wireguard_inbound_iid: 「::」で始まる下位 64 ビットの形で書く: {iid!r}") from e
+        if int(iid_addr) >> 64 or not int(iid_addr):
+            raise SiteError(f"firewall.wireguard_inbound_iid: 上位 64 ビットは 0、下位 64 ビットは 0 以外にする: {iid}")
+        iid = str(iid_addr)
     fw = {
-        "dscp_udp_port": integer(s["firewall"]["dscp_udp_port"], "firewall.dscp_udp_port", 1, 65535),
+        "dscp_udp_port": ",".join(map(str, ports)),
         "router_wireguard": boolean(s["firewall"]["router_wireguard"], "firewall.router_wireguard"),
+        "monitor_ports": monitor_ports,
+        "wireguard_inbound_iid": iid,
+        "iid_mask": IID_MASK,
     }
 
     snmp = s["monitor"]["snmp"]
@@ -367,10 +549,10 @@ def validate(raw: dict) -> dict:
         "i": ifs,
         "login": login,
         "rescue": {"address": str(rescue), "ip": str(rescue.ip)},
+        "mgmt": mgmt,
         "lan": {"address": str(lan_if), "ip": str(lan_if.ip), "network": str(lan_net), "ula_prefix": ula,
-                "dhcp": {"subnet_id": subnet_id, "start": str(start), "stop": str(stop),
-                         "static_mappings": mappings}},
-        "wan": {"type": wan_type, "prefix": prefix, "prefix64": prefix64, "ngn_gw_lla": gw},
+                "dhcp": lan_dhcp, "bridge": bridge},
+        "wan": {"type": wan_type, "prefix": prefix, "prefix64": prefix64, "ngn_gw_lla": gw, "duid": duid},
         "tuning": tuning,
         "dns": dns,
         "firewall": fw,
@@ -443,7 +625,10 @@ def mape_result(ctx: dict) -> mape_calc.Result:
 def render_mape(ctx: dict, source: str) -> str:
     """40-mape.cmds。scripts/mape_calc.py の行（前の値を消す delete は除く）と、tun0 の flowtable。"""
     r = mape_result(ctx)
-    lines = [line for line in mape_calc.result_cmds(r, wan_if=ctx["i"]["wan"], lan=ctx["lan"]["network"],
+    bridge = ctx["lan"]["bridge"]
+    # VLAN で網を分けたときは、すべての網を MAP-E で出す（網の集まり mape_calc.LAN_GROUP にまとめる）
+    lan = [n["network"] for n in bridge["nets"]] if bridge else ctx["lan"]["network"]
+    lines = [line for line in mape_calc.result_cmds(r, wan_if=ctx["i"]["wan"], lan=lan,
                                                     ce_plen=CE_PLEN[ctx["wan"]["type"]])
              if not line.startswith("delete ")]
     body = ("# MAP-E（v6プラス）。scripts/mape_calc.py で wan.prefix から計算した値。プレフィックスが変わったら描き直す\n"

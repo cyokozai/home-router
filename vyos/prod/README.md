@@ -74,6 +74,21 @@ python3 -I scripts/render_config.py site/home.local.yaml -o site/home.local --fr
 - `decrement-lifetime` は付けていない。`::/64` は同じ口の ULA も含むので、ULA まで寿命が減って失効するため。
 - プレフィックスが変わったときに、前の /64 が LAN の端末で本当に廃止されるかは、実機で確かめていない。
 
+## VLAN で網を分ける形と VRF MGMT（`site/example-vlan.yaml`）
+
+2026-11-12 の決定（LAN を 5 つの網に分け、当日は VRF MGMT を残す）に合わせた形。描いた結果は `vyos/prod/example-vlan/`（`--all-wan-types`）。既定値は今の形のままなので、`site/example.yaml` と `vyos/prod/example/` は変わらない。
+
+- `lan.bridge` を書くと、`interfaces.lan`（eth1）をメンバーにした VLAN-aware のブリッジ（`br0`）を作り、`networks` の網ごとに vif（`br0.<VLAN>`）・DHCPv4 サーバ・DNS の転送・RA・PD の sla-id を描く。`native: true` の網は eth1 でタグなし（`native-vlan`）、他の網は `allowed-vlan` を 1 つずつ書く。`lan.bridge` を書いたら `lan.address` と `lan.dhcp` は書かない
+- ULA は先頭の網（native の網）にだけ付け、RA の DNS は全部の網に ULA の `::1` を配る。型C（ra64）では /64 を先頭の網にだけ置く
+- `access: all` の網は他の網にもインターネットにも出られる。`access: internet` の網はインターネットだけ。`monitor_to` に書いた網へは、ICMP と `firewall.monitor_ports`（既定 TCP 9100・UDP 161）だけを通す。VLAN 1 は使えない（2〜4094）。sla-id 0 は MAP-E の CE が使うので使えない
+- forward は interface-group（`LAN`・`LAN-ALL`・`MON-<網>`）で書く。`inbound-interface name 'eth1'` はブリッジの vif に一致しないため。網と網のあいだは rule 290 で捨て、通過の ICMPv6 は rule 310〜315（その後）で通す
+- `mgmt.mode: vrf` では、`interfaces.rescue`（eth0）を VRF MGMT に入れて DHCP で受け、SSH・NTP・node-exporter・SNMP を VRF MGMT の中だけにする（`vyos/mgmt-home.cmds` の形）。eth0 は家族用の網にタグなしでつなぎ、家族用の網の DHCP の固定割り当てで 192.168.2.14 を配る。既定の `rescue` は今のまま（救出用の 192.168.255.1/24）
+- `firewall.dscp_udp_port` は並びで書ける（例 `[51820, 51821]`）。rule 5・6 の向きの絞りは変えていない
+- `firewall.wireguard_inbound_iid` に下位 64 ビット（実値は `.local.yaml`）を書くと、NGN から LAN の WireGuard へ来る新しい通信を、`destination address` と `destination address-mask '::ffff:ffff:ffff:ffff'` で通す（rule 115）。プレフィックスが変わっても書き直さなくてよい。固定した版の VyOS のコンテナで commit が通ることは確かめたが、パケットを流しての確認はしていない
+- MAP-E の段（`--mape`）は、全部の網を `firewall group network-group MAPE-LAN` にまとめて NAT する（`scripts/mape_calc.py --lan` を繰り返したときと同じ）。網の数を変えて入れ直すときは、前の `source address` や消した網のグループの行が残るので、手で消す
+- flowtable には eth1・eth2 と各 vif を並べる。commit が通ることだけを確かめた。offload が効くかと性能は未測定
+- CI（`.github/workflows/vyos-config.yaml`）は、`prod-vlan-example.cmds` を基準に、型 A・B・C と MAP-E の段を 1 本ずつ commit する。実機と同じ形の基準から `--from-lab --mape` の部分を 1 回で入れる検査（`vlan-from-lab-mape.cmds`）も行う
+
 ## 印
 
 リポジトリに書けない値は `@名前@` の印のまま出す。`scripts/pc02-commit.sh` が投入時に、同じ名前の環境変数で置き換える（`scripts/placeholders.sh`）。不明な印・未設定・形の合わない値があれば、PC02 に何も送らずに止まる。

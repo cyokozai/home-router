@@ -25,11 +25,15 @@ SCANNED = ("configs", "results")
 
 MASKS = {"<伏せ字>", "'<伏せ字>'", "@SNMP_COMMUNITY@", "'@SNMP_COMMUNITY@'", "@SSH_PUBKEY@", "'@SSH_PUBKEY@'", "''"}
 
-# 公開されている値（CLAUDE.md §6-5 の v6プラスの MAP ルールと BR）。範囲は書かれた形のまま一致したときだけ通す
-# （範囲の中の個々のアドレスは通さない）。
+# 公開されている値（CLAUDE.md §6-5 の v6プラスの MAP ルールと BR、だれでも使う DNS サーバ）。範囲は書かれた形のまま
+# 一致したときだけ通す（範囲の中の個々のアドレスは通さない）。
 ALLOWED = {
     "240b:10::/31", "240b:12::/31", "240b:250::/31", "240b:252::/31",
     "2404:9200:225:100::64",
+    # NTT東の NGN 網の DNS（フレッツの網に DHCPv6 で配られる、どの契約者も同じ値）と Cloudflare の公開 DNS。
+    # PC02 の dns forwarding name-server（configs/pc02/prod-20261113.cmds）
+    "2404:1a8:7f01:a::3", "2404:1a8:7f01:b::3",
+    "2606:4700:4700::1111",
 }
 
 GLOBAL_UNICAST = ipaddress.ip_network("2000::/3")
@@ -127,6 +131,8 @@ def test_tracked_files_have_no_sensitive_data():
     "filter parent 1: protocol all pref 1 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0",
     "echo \"::endgroup::\"",
     "BR 2404:9200:225:100::64、ルール 240b:12::/31",
+    "set service dns forwarding name-server 2404:1a8:7f01:a::3",
+    "set service dns forwarding name-server 2606:4700:4700::1111",
     # 2000::/3 に入る値の並ぶ RSS の鍵（項目名の直後でも、末尾の 8 組だけを拾わない）
     "net.core.netdev_rss_key = " + ":".join(["2a"] * 52),
     "rss_key:" + ":".join(["2a"] * 52),
@@ -140,6 +146,8 @@ def test_masked_and_harmless_lines_pass(line):
 @pytest.mark.parametrize("line, kind", [
     ("eno1  UP  192.168.2.190/24 2400:4050:1234:5600::1/64", "IPv6"),
     ("inet6 240b:12:3456:7800::1/64 scope global", "IPv6"),
+    # 公開の DNS と同じ網の別のアドレスは通さない（一致したときだけ通す）
+    ("set service dns forwarding name-server 2404:1a8:7f01:a::4", "IPv6"),
     ("Hardware S/N: ABC1234567", "S/N"),
     ("Hardware UUID: 00000000-1111-2222-3333-444444444444", "UUID"),
     ("/sys/class/dmi/id/product_uuid=00000000-1111-2222-3333-444444444444", "product_uuid"),

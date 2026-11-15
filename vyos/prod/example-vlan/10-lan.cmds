@@ -1,0 +1,81 @@
+# 生成: scripts/render_config.py（site: example-vlan.yaml、VyOS 2026.10.16-0024-rolling）。手で直さず、テンプレート（vyos/prod/10-lan.cmds.j2）か site を直して描き直す
+# LAN: VLAN-aware のブリッジ br0（メンバーは eth1）と vif ごとの網。IPv4・DHCPv4 サーバ・DNS の転送・RA
+# ULA は先頭の網（FAMILY、br0.10）にだけ付ける。上位 4 組は印 @ULA_PREFIX@ のまま出し
+# （site の lan.ula_prefix に書けばその値）、投入時に環境変数 ULA_PREFIX で置き換える
+set interfaces ethernet eth1 description 'LAN-TRUNK'
+set interfaces bridge br0 description 'LAN'
+set interfaces bridge br0 enable-vlan
+set interfaces bridge br0 member interface eth1 native-vlan '10'
+set interfaces bridge br0 member interface eth1 allowed-vlan '20'
+set interfaces bridge br0 member interface eth1 allowed-vlan '30'
+set interfaces bridge br0 member interface eth1 allowed-vlan '40'
+set interfaces bridge br0 member interface eth1 allowed-vlan '50'
+set interfaces bridge br0 vif 10 description 'FAMILY'
+set interfaces bridge br0 vif 10 address '192.168.2.1/24'
+set interfaces bridge br0 vif 20 description 'SELF'
+set interfaces bridge br0 vif 20 address '192.168.20.1/24'
+set interfaces bridge br0 vif 30 description 'MONITOR'
+set interfaces bridge br0 vif 30 address '192.168.30.1/24'
+set interfaces bridge br0 vif 40 description 'GUEST'
+set interfaces bridge br0 vif 40 address '192.168.40.1/24'
+set interfaces bridge br0 vif 50 description 'NEKKO'
+set interfaces bridge br0 vif 50 address '192.168.50.1/29'
+set interfaces bridge br0 vif 10 address '@ULA_PREFIX@::1/64'
+
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 subnet-id '10'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 option default-router '192.168.2.1'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 option name-server '192.168.2.1'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 range 0 start '192.168.2.100'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 range 0 stop '192.168.2.199'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 static-mapping pc02-mgmt ip-address '192.168.2.14'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 static-mapping pc02-mgmt mac '02:00:00:00:00:14'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 static-mapping monitor ip-address '192.168.2.50'
+set service dhcp-server shared-network-name FAMILY subnet 192.168.2.0/24 static-mapping monitor mac '02:00:00:00:00:50'
+set service dhcp-server shared-network-name SELF subnet 192.168.20.0/24 subnet-id '20'
+set service dhcp-server shared-network-name SELF subnet 192.168.20.0/24 option default-router '192.168.20.1'
+set service dhcp-server shared-network-name SELF subnet 192.168.20.0/24 option name-server '192.168.20.1'
+set service dhcp-server shared-network-name SELF subnet 192.168.20.0/24 range 0 start '192.168.20.100'
+set service dhcp-server shared-network-name SELF subnet 192.168.20.0/24 range 0 stop '192.168.20.199'
+set service dhcp-server shared-network-name MONITOR subnet 192.168.30.0/24 subnet-id '30'
+set service dhcp-server shared-network-name MONITOR subnet 192.168.30.0/24 option default-router '192.168.30.1'
+set service dhcp-server shared-network-name MONITOR subnet 192.168.30.0/24 option name-server '192.168.30.1'
+set service dhcp-server shared-network-name MONITOR subnet 192.168.30.0/24 range 0 start '192.168.30.100'
+set service dhcp-server shared-network-name MONITOR subnet 192.168.30.0/24 range 0 stop '192.168.30.199'
+set service dhcp-server shared-network-name GUEST subnet 192.168.40.0/24 subnet-id '40'
+set service dhcp-server shared-network-name GUEST subnet 192.168.40.0/24 option default-router '192.168.40.1'
+set service dhcp-server shared-network-name GUEST subnet 192.168.40.0/24 option name-server '192.168.40.1'
+set service dhcp-server shared-network-name GUEST subnet 192.168.40.0/24 range 0 start '192.168.40.100'
+set service dhcp-server shared-network-name GUEST subnet 192.168.40.0/24 range 0 stop '192.168.40.199'
+set service dhcp-server shared-network-name NEKKO subnet 192.168.50.0/29 subnet-id '50'
+set service dhcp-server shared-network-name NEKKO subnet 192.168.50.0/29 option default-router '192.168.50.1'
+set service dhcp-server shared-network-name NEKKO subnet 192.168.50.0/29 option name-server '192.168.50.1'
+set service dhcp-server shared-network-name NEKKO subnet 192.168.50.0/29 range 0 start '192.168.50.2'
+set service dhcp-server shared-network-name NEKKO subnet 192.168.50.0/29 range 0 stop '192.168.50.6'
+
+# DNS の転送は各網のゲートウェイのアドレスと ULA で待ち受ける（上流の扱いは単一の LAN の形と同じ）
+set service dns forwarding listen-address '192.168.2.1'
+set service dns forwarding listen-address '192.168.20.1'
+set service dns forwarding listen-address '192.168.30.1'
+set service dns forwarding listen-address '192.168.40.1'
+set service dns forwarding listen-address '192.168.50.1'
+set service dns forwarding listen-address '@ULA_PREFIX@::1'
+set service dns forwarding allow-from '192.168.2.0/24'
+set service dns forwarding allow-from '192.168.20.0/24'
+set service dns forwarding allow-from '192.168.30.0/24'
+set service dns forwarding allow-from '192.168.40.0/24'
+set service dns forwarding allow-from '192.168.50.0/29'
+set service dns forwarding allow-from '@ULA_PREFIX@::/64'
+set service dns forwarding allow-from '::/0'
+set service dns forwarding dhcp 'eth2'
+
+# RA: 各 vif に付いた /64 を配る（deprecate-prefix の理由は単一の LAN の形と同じ）。DNS は全部の網に ULA の ::1 を配る
+set service router-advert interface br0.10 prefix '::/64' deprecate-prefix
+set service router-advert interface br0.10 name-server '@ULA_PREFIX@::1'
+set service router-advert interface br0.20 prefix '::/64' deprecate-prefix
+set service router-advert interface br0.20 name-server '@ULA_PREFIX@::1'
+set service router-advert interface br0.30 prefix '::/64' deprecate-prefix
+set service router-advert interface br0.30 name-server '@ULA_PREFIX@::1'
+set service router-advert interface br0.40 prefix '::/64' deprecate-prefix
+set service router-advert interface br0.40 name-server '@ULA_PREFIX@::1'
+set service router-advert interface br0.50 prefix '::/64' deprecate-prefix
+set service router-advert interface br0.50 name-server '@ULA_PREFIX@::1'

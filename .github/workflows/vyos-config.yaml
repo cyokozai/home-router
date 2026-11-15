@@ -53,6 +53,7 @@ jobs:
         run: |
           pip install -r requirements-dev.txt
           python3 -I scripts/render_config.py site/example.yaml --check vyos/prod/example --all-wan-types
+          python3 -I scripts/render_config.py site/example-vlan.yaml --check vyos/prod/example-vlan --all-wan-types
 
       - name: Prepare VyOS image
         id: vyos
@@ -109,6 +110,50 @@ jobs:
           cp "${work}/mape/40-mape.cmds" "${work}/40-mape.cmds"
           bash scripts/vyos-config-check.sh "${work}/prod-example.cmds" \
             "${work}/20-wan-pd56.cmds" "${work}/20-wan-pd60.cmds" "${work}/20-wan-ra64.cmds" "${work}/40-mape.cmds"
+
+      - name: Check vyos/prod/ with VLANs and VRF MGMT in VyOS container
+        # site/example-vlan.yaml（eth1 を VLAN-aware のブリッジにして 5 つの網に分け、VRF MGMT を残す形）を描いた
+        # vyos/prod/example-vlan/ を、型によらない部分の基準に、型 A・B・C と複数の網の MAP-E の段を 1 本ずつ入れて commit する。
+        # あわせて、実機の PC02 と同じ形の基準（フェーズ1 と VRF MGMT）から、移行の段（--from-lab）と一緒に 1 回で commit する
+        if: ${{ !cancelled() && steps.vyos.outcome == 'success' }}
+        env:
+          VYOS_IMAGE: ${{ steps.vyos.outputs.image }}
+          VYOS_CONTAINER: vyos-prod-vlan-check
+          # 印に入れる文書用の値（本物の値ではない）。@SSH_PUBKEY@ はこの場で作った使い捨ての鍵
+          SNMP_COMMUNITY: ci-community
+          ULA_PREFIX: fd00:db8:0:1
+          WAN_PREFIX64: 2001:db8:0:1
+          NGN_GW_LLA: fe80::1
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/prod-vlan"
+          mkdir -p "${work}"
+          ssh-keygen -q -t ed25519 -N '' -C ci -f "${work}/ci-key"
+          SSH_PUBKEY="$(cut -d' ' -f2 "${work}/ci-key.pub")"
+          export SSH_PUBKEY
+          e=vyos/prod/example-vlan
+          # 型によらない部分をつないで基準にする（名前は vyos/container-unsupported.txt の 1 列目）
+          bash scripts/fill-placeholders.sh "${e}/00-base.cmds" "${e}/10-lan.cmds" "${e}/20-wan-common.cmds" \
+            "${e}/30-firewall.cmds" "${e}/50-monitor.cmds" > "${work}/prod-vlan-example.cmds"
+          bash scripts/fill-placeholders.sh "${e}/20-wan-pd56.cmds" > "${work}/vlan-20-wan-pd56.cmds"
+          bash scripts/fill-placeholders.sh "${e}/20-wan-pd60.cmds" > "${work}/vlan-20-wan-pd60.cmds"
+          bash scripts/fill-placeholders.sh "${e}/20-wan-ra64.cmds" > "${work}/vlan-20-wan-ra64.cmds"
+          # MAP-E の段: 例の委任プレフィックス（tests/test_mape_calc.py の既知の例と同じ、作った値）で、5 つの網すべてを出す
+          sed 's#^  type: pd56$#  type: pd56\n  prefix: "240b:10:aabb:cc00::/56"#' site/example-vlan.yaml > "${work}/vlan-mape.local.yaml"
+          python3 -I scripts/render_config.py "${work}/vlan-mape.local.yaml" -o "${work}/mape" --mape
+          cp "${work}/mape/40-mape.cmds" "${work}/vlan-40-mape.cmds"
+          bash scripts/vyos-config-check.sh "${work}/prod-vlan-example.cmds" \
+            "${work}/vlan-20-wan-pd56.cmds" "${work}/vlan-20-wan-pd60.cmds" "${work}/vlan-20-wan-ra64.cmds" \
+            "${work}/vlan-40-mape.cmds"
+          # 実機の PC02 と同じ形の基準から、移行の段と本番の部分（型A と MAP-E の段）を 1 回で commit する
+          cat vyos/phase1.cmds vyos/mgmt-home.cmds > "${work}/lab-pc02.cmds"
+          python3 -I scripts/render_config.py "${work}/vlan-mape.local.yaml" -o "${work}/m" --mape --from-lab
+          m="${work}/m"
+          bash scripts/fill-placeholders.sh "${m}/00-base.cmds" "${m}/01-migrate-from-lab.cmds" "${m}/10-lan.cmds" \
+            "${m}/20-wan-common.cmds" "${m}/20-wan-pd56.cmds" "${m}/30-firewall.cmds" "${m}/40-mape.cmds" \
+            "${m}/50-monitor.cmds" > "${work}/vlan-from-lab-mape.cmds"
+          VYOS_CONTAINER=vyos-vlan-from-lab-check bash scripts/vyos-config-check.sh "${work}/lab-pc02.cmds" \
+            "${work}/vlan-from-lab-mape.cmds"
 
       - name: Check migration from the lab state in VyOS container
         # 実機の PC02 は configs/pc02/baseline.cmds（フェーズ1 と VRF MGMT）で動いている。同じ形の基準に、移行の段

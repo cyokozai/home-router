@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -37,6 +38,7 @@ import gen_mape_portsets as gen  # noqa: E402
 
 V6PLUS_BR = "2404:9200:225:100::64"
 LAB_LAN = gen.LAB_LAN
+LAN_GROUP = "MAPE-LAN"  # LAN の網が 2 つ以上のとき、NAT の送信元をまとめる firewall group network-group の名前
 TUNNEL_MTU = 1460
 ADJUST_MSS = 1420
 CE_PREFIX_LEN = 64
@@ -151,14 +153,34 @@ def check_ce_plen(ce_plen: int) -> int:
     return ce_plen
 
 
-def cmds_lines(ipv4: str, psid: int, ce: str, br: str, wan_if: str, lan: str = LAB_LAN,
+def lan_networks(lan: str | Sequence[str]) -> list[str]:
+    """NAT する LAN の網の並び。1 つなら文字列でもよい。空・重複・重なりは止める。"""
+    nets = [ipaddress.IPv4Network(n) for n in ([lan] if isinstance(lan, str) else list(lan))]
+    if not nets:
+        raise ValueError("NAT する LAN の網が 1 つも無い")
+    for i, a in enumerate(nets):
+        for b in nets[i + 1:]:
+            if a.overlaps(b):
+                raise ValueError(f"NAT する LAN の網が重なっている: {a} と {b}")
+    return [str(n) for n in nets]
+
+
+def cmds_lines(ipv4: str, psid: int, ce: str, br: str, wan_if: str, lan: str | Sequence[str] = LAB_LAN,
                ports: list[tuple[int, int]] | None = None, ce_plen: int = CE_PREFIX_LEN) -> list[str]:
-    """vyos/mape-portsets.cmds と同じ構成の set の行（値だけ差し替える）。ce_plen は WAN に置く CE のアドレスの長さ。"""
+    """vyos/mape-portsets.cmds と同じ構成の set の行（値だけ差し替える）。ce_plen は WAN に置く CE のアドレスの長さ。
+
+    lan に網を 2 つ以上渡すと、firewall group network-group（LAN_GROUP）にまとめ、NAT の規則の送信元をその集まりで書く。
+    """
     check_ce_plen(ce_plen)
     ipv4 = str(ipaddress.IPv4Address(ipv4))
     ce = str(ipaddress.IPv6Address(ce))
     br = str(ipaddress.IPv6Address(br))
-    lan = str(ipaddress.IPv4Network(lan))
+    nets = lan_networks(lan)
+    if len(nets) == 1:
+        group_lines, group, source = [], None, f"source address '{nets[0]}'"
+    else:
+        group_lines = [f"set firewall group network-group {LAN_GROUP} network '{n}'" for n in nets]
+        group, source = LAN_GROUP, f"source group network-group '{LAN_GROUP}'"
     return [
         "delete protocols static route 0.0.0.0/0",
         f"set interfaces ethernet {wan_if} address '{ce}/{ce_plen}'",
@@ -170,15 +192,16 @@ def cmds_lines(ipv4: str, psid: int, ce: str, br: str, wan_if: str, lan: str = L
         "set interfaces tunnel tun0 parameters ipv6 encaplimit 'none'",
         f"set interfaces tunnel tun0 ip adjust-mss '{ADJUST_MSS}'",
         "set protocols static route 0.0.0.0/0 interface 'tun0'",
+        *group_lines,
         "set nat source rule 199 outbound-interface name 'tun0'",
-        f"set nat source rule 199 source address '{lan}'",
+        f"set nat source rule 199 {source}",
         f"set nat source rule 199 translation address '{ipv4}'",
         "set interfaces tunnel tun0 parameters ipv6 tclass '0x00'",
-        *gen.rule_lines(psid=psid, ipv4=ipv4, lan=lan, ports=ports),
+        *gen.rule_lines(psid=psid, ipv4=ipv4, lan=nets[0], ports=ports, lan_group=group),
     ]
 
 
-def result_cmds(r: Result, wan_if: str, lan: str = LAB_LAN, old: Result | None = None,
+def result_cmds(r: Result, wan_if: str, lan: str | Sequence[str] = LAB_LAN, old: Result | None = None,
                 ce_plen: int = CE_PREFIX_LEN, old_ce_plen: int | None = None) -> list[str]:
     """入れ直す行。old（前のプレフィックスの結果）を渡すと、前の CE と IPv4 のアドレスを先に消す。
 
@@ -221,7 +244,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="CE のインターフェース ID の形（既定 draft03。v6プラスはこちら）")
     p.add_argument("--cmds", action="store_true", help="入れ直す VyOS の set の行を出す")
     p.add_argument("--wan-if", help="CE アドレスを置く WAN 側の ethernet の名前（--cmds で必須）")
-    p.add_argument("--lan", default=LAB_LAN, help=f"NAT する LAN 側の網（既定 {LAB_LAN}）")
+    p.add_argument("--lan", action="append",
+                   help=f"NAT する LAN 側の網（既定 {LAB_LAN}）。繰り返すと、網の集まり {LAN_GROUP} にまとめる")
     p.add_argument("--ce-plen", type=int, choices=CE_PREFIX_LENS, default=CE_PREFIX_LEN,
                    help="WAN に置く CE のアドレスの長さ（既定 64。型C は 128）")
     p.add_argument("--old-prefix", help="前のプレフィックス。前の CE と IPv4 のアドレスを消す delete を先頭に出す")
@@ -239,8 +263,13 @@ def main(argv: list[str] | None = None) -> int:
     for w in r.warnings:
         print(f"mape_calc: 警告: {w}", file=sys.stderr)
     if args.cmds:
-        print("\n".join(result_cmds(r, wan_if=args.wan_if, lan=args.lan, old=old, ce_plen=args.ce_plen,
-                                    old_ce_plen=args.old_ce_plen)))
+        try:
+            lines = result_cmds(r, wan_if=args.wan_if, lan=args.lan or [LAB_LAN], old=old, ce_plen=args.ce_plen,
+                                old_ce_plen=args.old_ce_plen)
+        except ValueError as e:
+            print(f"mape_calc: --lan: {e}", file=sys.stderr)
+            return 2
+        print("\n".join(lines))
     else:
         print(summary(r))
     return 0

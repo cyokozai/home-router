@@ -54,19 +54,23 @@ def source_ranges(index: int, block: int = BLOCK, count: int = len(A_RANGE)) -> 
 
 
 def rule_lines(psid: int = LAB_PSID, ipv4: str = LAB_IPV4, lan: str = LAB_LAN,
-               ports: list[tuple[int, int]] | None = None) -> list[str]:
+               ports: list[tuple[int, int]] | None = None, lan_group: str | None = None) -> list[str]:
+    """lan_group を渡すと、送信元を網の集まり（firewall group network-group）で書く（lan は使わない）。"""
     ports = port_sets(psid) if ports is None else ports
     if not 1 <= len(ports) <= 98:  # ルール 199 と重ならないこと
         raise ValueError(f"ポートセットの組の数が扱えない: {len(ports)}")
     ipv4 = str(ipaddress.IPv4Address(ipv4))
-    lan = str(ipaddress.IPv4Network(lan))
+    if lan_group is None:
+        source = f"source address '{ipaddress.IPv4Network(lan)}'"
+    else:
+        source = f"source group network-group '{lan_group}'"
     lines = []
     for i, (t_lo, t_hi) in enumerate(ports):
         n = FIRST_RULE + i
         src = ",".join(f"{lo}-{hi}" for lo, hi in source_ranges(i, count=len(ports)))
         lines += [
             f"set nat source rule {n} outbound-interface name 'tun0'",
-            f"set nat source rule {n} source address '{lan}'",
+            f"set nat source rule {n} {source}",
             f"set nat source rule {n} source port '{src}'",
             f"set nat source rule {n} protocol 'tcp_udp'",
             f"set nat source rule {n} translation address '{ipv4}'",

@@ -1,5 +1,13 @@
 # 型B: HGW の配下で DHCPv6-PD の /60 を受ける
 # サブネット ID 0 は使わず、LAN には 1 を使う。MAP-E の値は WAN で観測した /64 から計算する（scripts/mape_calc.py --help）
 set interfaces ethernet {{ i.wan }} dhcpv6-options pd 0 length '60'
+{% if lan.bridge %}
+# VLAN で分けた網ごとに、site の sla_id のサブネット ID の /64 を付ける（/60 なので 1〜15）
+{% for n in lan.bridge.nets %}
+set interfaces ethernet {{ i.wan }} dhcpv6-options pd 0 interface {{ n.ifname }} sla-id '{{ n.sla_id }}'
+set interfaces ethernet {{ i.wan }} dhcpv6-options pd 0 interface {{ n.ifname }} address '1'
+{% endfor %}
+{% else %}
 set interfaces ethernet {{ i.wan }} dhcpv6-options pd 0 interface {{ i.lan }} sla-id '1'
 set interfaces ethernet {{ i.wan }} dhcpv6-options pd 0 interface {{ i.lan }} address '1'
+{% endif %}

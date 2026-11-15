@@ -1,10 +1,25 @@
+{% if mgmt.mode == "vrf" %}
+# 監視: SNMP（読み取り専用の v2c）と node-exporter。どちらも VRF {{ mgmt.vrf }} の中（{{ i.rescue }}）で待ち受ける
+{% else %}
 # 監視: SNMP（読み取り専用の v2c）と node-exporter。どちらも LAN から読む
+{% endif %}
 {% if monitor.snmp.enabled %}
+{% if mgmt.mode == "vrf" %}
+# vyos/snmp-mgmt.cmds の形。network を明示して既定の 0.0.0.0/0 ::/0 を消す。
+{% else %}
 # vyos/snmp-mgmt.cmds の形から vrf を外したもの。network を明示して既定の 0.0.0.0/0 ::/0 を消す。
+{% endif %}
 # 秘密の値（community）は印 @SNMP_COMMUNITY@ のまま出し、投入時に環境変数 SNMP_COMMUNITY で置き換える
 set service snmp community '@SNMP_COMMUNITY@' authorization 'ro'
 set service snmp community '@SNMP_COMMUNITY@' network '{{ monitor.snmp.network }}'
+{% if mgmt.mode == "vrf" %}
+set service snmp vrf '{{ mgmt.vrf }}'
+{% endif %}
 {% endif %}
 {% if monitor.node_exporter %}
+{% if mgmt.mode == "vrf" %}
+set service monitoring prometheus node-exporter vrf '{{ mgmt.vrf }}'
+{% else %}
 set service monitoring prometheus node-exporter listen-address '{{ lan.ip }}'
+{% endif %}
 {% endif %}

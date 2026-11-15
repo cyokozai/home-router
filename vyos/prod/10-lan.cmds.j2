@@ -1,3 +1,57 @@
+{% if lan.bridge %}
+{% set b = lan.bridge %}
+# LAN: VLAN-aware のブリッジ {{ b.name }}（メンバーは {{ b.trunk }}）と vif ごとの網。IPv4・DHCPv4 サーバ・DNS の転送・RA
+# ULA は先頭の網（{{ b.primary.name }}、{{ b.primary.ifname }}）にだけ付ける。上位 4 組は印 @ULA_PREFIX@ のまま出し
+# （site の lan.ula_prefix に書けばその値）、投入時に環境変数 ULA_PREFIX で置き換える
+set interfaces ethernet {{ b.trunk }} description 'LAN-TRUNK'
+set interfaces bridge {{ b.name }} description 'LAN'
+set interfaces bridge {{ b.name }} enable-vlan
+{% if b.native_vlan %}
+set interfaces bridge {{ b.name }} member interface {{ b.trunk }} native-vlan '{{ b.native_vlan }}'
+{% endif %}
+{% for vlan in b.tagged %}
+set interfaces bridge {{ b.name }} member interface {{ b.trunk }} allowed-vlan '{{ vlan }}'
+{% endfor %}
+{% for n in b.nets %}
+set interfaces {{ n.path }} description '{{ n.name }}'
+set interfaces {{ n.path }} address '{{ n.address }}'
+{% endfor %}
+set interfaces {{ b.primary.path }} address '{{ lan.ula_prefix }}::1/64'
+
+{% for n in b.nets %}
+{% set net = "set service dhcp-server shared-network-name " ~ n.name ~ " subnet " ~ n.network %}
+{{ net }} subnet-id '{{ n.dhcp.subnet_id }}'
+{{ net }} option default-router '{{ n.ip }}'
+{{ net }} option name-server '{{ n.ip }}'
+{{ net }} range 0 start '{{ n.dhcp.start }}'
+{{ net }} range 0 stop '{{ n.dhcp.stop }}'
+{% for m in n.dhcp.static_mappings %}
+{{ net }} static-mapping {{ m.name }} ip-address '{{ m.ip }}'
+{{ net }} static-mapping {{ m.name }} mac '{{ m.mac }}'
+{% endfor %}
+{% endfor %}
+
+# DNS の転送は各網のゲートウェイのアドレスと ULA で待ち受ける（上流の扱いは単一の LAN の形と同じ）
+{% for n in b.nets %}
+set service dns forwarding listen-address '{{ n.ip }}'
+{% endfor %}
+set service dns forwarding listen-address '{{ lan.ula_prefix }}::1'
+{% for n in b.nets %}
+set service dns forwarding allow-from '{{ n.network }}'
+{% endfor %}
+set service dns forwarding allow-from '{{ lan.ula_prefix }}::/64'
+set service dns forwarding allow-from '::/0'
+set service dns forwarding dhcp '{{ i.wan }}'
+{% for server in dns.upstream %}
+set service dns forwarding name-server '{{ server }}'
+{% endfor %}
+
+# RA: 各 vif に付いた /64 を配る（deprecate-prefix の理由は単一の LAN の形と同じ）。DNS は全部の網に ULA の ::1 を配る
+{% for n in b.nets %}
+set service router-advert interface {{ n.ifname }} prefix '::/64' deprecate-prefix
+set service router-advert interface {{ n.ifname }} name-server '{{ lan.ula_prefix }}::1'
+{% endfor %}
+{% else %}
 # LAN: IPv4 と ULA のアドレス、DHCPv4 サーバ、DNS の転送、RA
 # ULA の上位 4 組は印 @ULA_PREFIX@ のまま出し（site の lan.ula_prefix に書けばその値）、投入時に環境変数 ULA_PREFIX で置き換える
 set interfaces ethernet {{ i.lan }} description 'LAN'
@@ -33,3 +87,4 @@ set service dns forwarding name-server '{{ server }}'
 # decrement-lifetime は付けない: ::/64 は同じ IF の ULA も含むので、ULA の寿命まで減って失効する
 set service router-advert interface {{ i.lan }} prefix '::/64' deprecate-prefix
 set service router-advert interface {{ i.lan }} name-server '{{ lan.ula_prefix }}::1'
+{% endif %}

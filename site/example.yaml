@@ -41,6 +41,11 @@ wan:
   # 型C だけで使う。印のままなら投入時に環境変数 WAN_PREFIX64 / NGN_GW_LLA で入れる
   prefix64: "@WAN_PREFIX64@"
   ngn_gw_lla: "@NGN_GW_LLA@"
+  # DHCPv6 の DUID を DUID-LL（00:03:00:01:<MAC>）にする WAN の MAC。光クロスは DUID-LL か DUID-LLT でないと PD に答えない
+  # （NTT東「IP通信網サービスのインタフェース 第三分冊」第46版 4.4.2.1.4）。VyOS の既定は DUID-UUID で、2026-11-13 に
+  # 光クロスへつないだ PC02 は PD に返事をもらえず、DUID-LL にしたら /56 を受けられた。値は WAN の IF の MAC（show interfaces の
+  # hw-id）。引用符で囲む（囲まないと、yaml が 12:34:56:… のような値を数として読む）。消すと DUID の行を描かない。例の値は作ったもの
+  duid_ll_mac: "02:00:00:00:00:01"
 
 tuning:
   ring_buffer: 4096

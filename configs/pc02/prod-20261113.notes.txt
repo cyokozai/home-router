@@ -1,0 +1,22 @@
+PC02 の設定 prod-20261113.cmds の注記（2026-11-13）
+
+prod-20261113.cmds は、2026-11-13 に PC02 を光クロス（enひかりクロス・v6プラス）につないだ後の
+show configuration commands を、伏せ字にしてそのまま写したもの。
+
+状態
+- 段階 A・B まで入れたところ。家の LAN はまだつないでいない。
+- WAN と LAN のポートを入れ替えてある: WAN は eth1、LAN（VLAN のトランク、br0 のメンバー）は eth2。
+  10GBASE-T のモジュールが 1 つしかなく、eth1 に挿してあるため。
+  scripts/render_config.py の既定（interfaces.lan: eth1、interfaces.wan: eth2）とは逆。
+- WAN の DHCPv6 の DUID を DUID-LL（00:03:00:01:<eth1 の MAC>）にしてある。VyOS の既定の DUID-UUID では
+  光クロスの DHCPv6-PD に返事が無く、DUID-LL にしたら /56 を受けられた
+  （NTT東「IP通信網サービスのインタフェース 第三分冊」第46版 4.4.2.1.4: DUID-LL か DUID-LLT）。
+  生成器では site の wan.duid_ll_mac で描く。
+- 管理系は eth0 を VRF MGMT に入れて DHCP で受ける形（mgmt.mode: vrf）。
+
+伏せ字
+- 委任プレフィックスから決まるアドレス（eth1 のアドレス、tun0 の source-address）と、MAP-E の IPv4
+  （tun0 のアドレス、nat source の translation address）は <伏せ字>。
+- ログインのパスワードと公開鍵も <伏せ字>。
+- 残っているグローバルな IPv6 アドレスは公開の値だけ: v6プラスの BR、NTT東の NGN 網の DNS 2 つ、
+  Cloudflare の公開 DNS。tests/test_no_sensitive_data.py の ALLOWED に載せてある。

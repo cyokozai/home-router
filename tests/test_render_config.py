@@ -542,6 +542,60 @@ def test_bad_dns_upstream_is_rejected(bad):
         rc.validate(site_with(**{"dns.upstream": bad}))
 
 
+# ---- WAN の DUID（光クロスの DHCPv6-PD） ----------------------------------------------------
+#
+# NTT東「IP通信網サービスのインタフェース 第三分冊」第46版 4.4.2.1.4 は、光クロスの端末の DUID を DUID-LL か DUID-LLT にする。
+# VyOS は既定で DUID-UUID（type 4）を作るので、2026-11-13 に PC02 を光クロスにつないだとき DHCPv6-PD に返事が無かった。
+# DUID-LL（type 3、ハードウェア種別 1 = Ethernet、WAN の MAC）を入れたら /56 を受けられた。
+
+DUID_LINE = "set interfaces ethernet eth2 dhcpv6-options duid '00:03:00:01:02:00:00:00:00:01'"
+
+
+def test_wan_duid_ll_is_drawn_from_the_mac():
+    wan = commands(parts(site_with(**{"wan.duid_ll_mac": "02:00:00:00:00:01"}))["20-wan-common.cmds"])
+    assert DUID_LINE in wan
+
+
+def test_wan_duid_follows_the_wan_interface():
+    p = parts(site_with(**{"wan.duid_ll_mac": "6c:fe:54:00:00:01", "interfaces.wan": "eth1",
+                           "interfaces.lan": "eth2"}))
+    assert ("set interfaces ethernet eth1 dhcpv6-options duid '00:03:00:01:6c:fe:54:00:00:01'"
+            in commands(p["20-wan-common.cmds"]))
+
+
+def test_wan_duid_is_not_drawn_without_the_key():
+    p = parts(site_with(**{"wan.duid_ll_mac": DELETE}))
+    assert not [line for line in all_commands(p) if "duid" in line]
+
+
+def test_example_site_sets_a_dummy_duid():
+    # 例は作った MAC（ローカル管理のアドレス 02:…）で書き、vyos/prod/example/ にも描いてある
+    assert DUID_LINE in file_commands(EXAMPLE_DIR / "20-wan-common.cmds")
+
+
+@pytest.mark.parametrize("bad", ["02-00-00-00-00-01", "02:00:00:00:00", "02:00:00:00:00:01:02", "02:00:00:00:00:0g",
+                                 "02:00:00:00:00:1", "", 12, "0200.0000.0001"])
+def test_bad_wan_duid_mac_is_rejected(bad):
+    with pytest.raises(rc.SiteError, match="wan.duid_ll_mac"):
+        rc.validate(site_with(**{"wan.duid_ll_mac": bad}))
+
+
+def test_unquoted_wan_duid_mac_asks_for_quotes():
+    import yaml
+
+    # yaml（1.1）は、引用符の無い MAC のうち 1〜9 で始まり各組が 59 以下のものを 60 進の整数として読む。引用符を付けるよう知らせる
+    value = yaml.safe_load("m: 12:34:56:00:00:01")["m"]
+    assert isinstance(value, int)
+    with pytest.raises(rc.SiteError, match="引用符"):
+        rc.validate(site_with(**{"wan.duid_ll_mac": value}))
+
+
+def test_wan_duid_mac_is_written_in_lowercase():
+    # VyOS の hw-id や DHCP の static-mapping と同じ小文字に揃える（大文字は受け付けずに知らせる）
+    with pytest.raises(rc.SiteError, match="wan.duid_ll_mac"):
+        rc.validate(site_with(**{"wan.duid_ll_mac": "02:00:00:00:00:0A"}))
+
+
 # ---- 置き場所と CI ------------------------------------------------------------------------
 
 

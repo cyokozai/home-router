@@ -50,3 +50,16 @@ prod-from-lab-mape.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | v
 prod-from-lab-mape.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
 prod-from-lab-mape.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
 prod-from-lab-mape.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
+
+# VLAN で網を分け VRF MGMT を残す形（site/example-vlan.yaml）: 型によらない部分の基準（prod-vlan-example.cmds）と、
+#    実機と同じ形の基準からの移行（vlan-from-lab-mape.cmds）。理由は上と同じ 5 行
+prod-vlan-example.cmds | set interfaces ethernet eth1 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-vlan-example.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-vlan-example.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-vlan-example.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+prod-vlan-example.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
+vlan-from-lab-mape.cmds | set interfaces ethernet eth1 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+vlan-from-lab-mape.cmds | set interfaces ethernet eth1 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+vlan-from-lab-mape.cmds | set interfaces ethernet eth2 ring-buffer rx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+vlan-from-lab-mape.cmds | set interfaces ethernet eth2 ring-buffer tx '4096' | veth のドライバはリングバッファの変更に非対応（commit で Driver does not support RX ring-buffer configuration!）
+vlan-from-lab-mape.cmds | set system option performance 'network-throughput' | コンテナ用イメージでは system option performance の定義が削除されている（iso-to-oci）。set で Configuration path is not valid
