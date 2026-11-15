@@ -1,0 +1,128 @@
+# 展示 D「家の監視画面」を、ブースの PC03 で会場の回線なしに動かす複製。
+# 版は家の thin-k8s と揃える（tests/test_exhibit_home_map.py が確かめる）。構成は netbox-docker 5.1.1 に倣う。
+#
+# 認証情報は compose に書かない。初回の起動で keygen が keys ボリュームに作り、各サービスはそこから読む。
+# ポートは既定で 127.0.0.1 にだけ開く（PC03 の画面で見るため）。切り替えは環境変数で:
+#   BOOTH_NETBOX_PORT（既定 8080）・BOOTH_SHUMOKU_PORT（既定 8081）・BOOTH_BIND（既定 127.0.0.1）
+name: booth-home-map
+
+x-netbox: &netbox
+  image: docker.io/netboxcommunity/netbox:v4.7-5.1.1
+  user: "netbox:root"
+  # keys ボリュームの nb_vars.sh（SECRET_KEY・API_TOKEN_PEPPER_1・DB_PASSWORD）を読んでから、元の入口へ渡す
+  entrypoint: ["/usr/bin/tini", "--", "/bin/sh", "/booth-setup/with-vars.sh"]
+  environment:
+    DB_HOST: postgres
+    DB_NAME: netbox
+    DB_USER: netbox
+    REDIS_HOST: valkey
+    REDIS_DATABASE: "0"
+    REDIS_CACHE_HOST: valkey
+    REDIS_CACHE_DATABASE: "1"
+    SKIP_SUPERUSER: "true"
+    TIME_ZONE: Asia/Tokyo
+  volumes:
+    - keys:/booth-keys:ro
+    - ./setup:/booth-setup:ro
+    - netbox-media:/opt/netbox/netbox/media
+  depends_on:
+    keygen:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+    valkey:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  keygen:
+    image: docker.io/netboxcommunity/netbox:v4.7-5.1.1
+    user: "0:0"
+    entrypoint: ["/opt/netbox/venv/bin/python", "/booth-setup/keygen.py", "/booth-keys"]
+    volumes:
+      - keys:/booth-keys
+      - ./setup:/booth-setup:ro
+    restart: "no"
+
+  postgres:
+    image: docker.io/postgres:18-alpine
+    environment:
+      POSTGRES_DB: netbox
+      POSTGRES_USER: netbox
+      POSTGRES_PASSWORD_FILE: /booth-keys/db_pw
+    volumes:
+      - keys:/booth-keys:ro
+      - postgres-data:/var/lib/postgresql
+    depends_on:
+      keygen:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -U netbox -d netbox"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  valkey:
+    image: docker.io/valkey/valkey:9.1-alpine
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  netbox:
+    <<: *netbox
+    command: ["/opt/netbox/docker-entrypoint.sh", "/opt/netbox/launch-netbox.sh"]
+    ports:
+      - "${BOOTH_BIND:-127.0.0.1}:${BOOTH_NETBOX_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8080/login/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # 初回と、古い版の dump を戻した直後は、移行（migrate）に数分かかる
+      start_period: 600s
+
+  netbox-worker:
+    <<: *netbox
+    command: ["/opt/netbox/venv/bin/python", "/opt/netbox/netbox/manage.py", "rqworker"]
+    depends_on:
+      netbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "ps -aux | grep -v grep | grep -q rqworker || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+
+  shumoku:
+    image: ghcr.io/konoe-akitoshi/shumoku:0.2.0
+    environment:
+      # 初回の起動でだけ使われる。値は keys ボリュームの中にあり、表示しない
+      SHUMOKU_BOOTSTRAP_ADMIN_PASSWORD_FILE: /booth-keys/shumoku_admin_pw
+      # 会場の回線に出ない
+      SHUMOKU_UPDATE_CHECK: "off"
+      TZ: Asia/Tokyo
+    ports:
+      - "${BOOTH_BIND:-127.0.0.1}:${BOOTH_SHUMOKU_PORT:-8081}:8080"
+    volumes:
+      - keys:/booth-keys:ro
+      - shumoku-data:/data
+    depends_on:
+      keygen:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  keys:
+  postgres-data:
+  valkey-data:
+  netbox-media:
+  shumoku-data:

@@ -1,0 +1,7 @@
+# 家の構成の中身。リポジトリに入れない
+# 家の NetBox の pg_dump の置き場所
+dumps/*
+!dumps/.gitkeep
+# export.sh の書き出し先（図には家の構成が入る）
+exports/*
+!exports/.gitkeep
